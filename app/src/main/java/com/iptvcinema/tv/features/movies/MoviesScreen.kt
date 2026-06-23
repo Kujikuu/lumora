@@ -2,9 +2,7 @@ package com.iptvcinema.tv.features.movies
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -18,19 +16,13 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
-import com.iptvcinema.tv.core.data.repository.CatalogLoadState
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
-import com.iptvcinema.tv.core.design.components.CinemaButton
-import com.iptvcinema.tv.core.design.components.CinemaButtonVariant
 import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
 import com.iptvcinema.tv.core.design.components.FeaturedStrip
 import com.iptvcinema.tv.core.design.components.FilterChipRow
-import com.iptvcinema.tv.core.design.components.PosterCard
-import com.iptvcinema.tv.core.design.theme.CinemaColors
+import com.iptvcinema.tv.core.design.components.PosterGrid
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
@@ -38,7 +30,6 @@ import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
 import com.iptvcinema.tv.core.navigation.rememberCatalogStateCallbacks
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
-import com.iptvcinema.tv.core.util.rememberPrototypeFeedback
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -47,7 +38,6 @@ fun MoviesScreen(
     initialFilter: String = "",
     viewModel: MoviesViewModel = hiltViewModel(),
 ) {
-    val showFeedback = rememberPrototypeFeedback()
     val uiState by viewModel.uiState.collectAsState()
     val chipFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("movies")
@@ -102,8 +92,8 @@ fun MoviesScreen(
                     sourceStatus = uiState.sourceStatus,
                     sourceType = uiState.sourceType,
                     skeletonStyle = CatalogSkeletonStyle.PosterGridWithFeatured,
-                    emptyTitle = "No movies yet",
-                    emptyDescription = "Sync your playlist or try another category.",
+                    emptyTitle = stringResource(R.string.movies_empty_title),
+                    emptyDescription = stringResource(R.string.catalog_empty_sync_desc),
                     onAddSource = catalogCallbacks.onAddSource,
                     onTryDemo = catalogCallbacks.onTryDemo,
                     onRetry = catalogCallbacks.onRetry,
@@ -125,42 +115,25 @@ fun MoviesScreen(
                             )
                         }
                         if (categories.isNotEmpty()) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
-                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                            ) {
-                                FilterChipRow(
-                                    items = categories,
-                                    selectedIndex = selectedFilter.coerceIn(0, categories.lastIndex),
-                                    onSelected = {
-                                        selectedFilter = it
-                                        focusState.saveFocusIndex(it)
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    chipFocusRequester = chipFocus,
-                                    focusedChipIndex = selectedFilter,
-                                )
-                                CinemaButton(
-                                    text = stringResource(R.string.sort_newest),
-                                    variant = CinemaButtonVariant.Ghost,
-                                    onClick = { showFeedback("Sorted by newest") },
-                                )
-                            }
+                            FilterChipRow(
+                                items = categories,
+                                selectedIndex = selectedFilter.coerceIn(0, categories.lastIndex),
+                                onSelected = {
+                                    selectedFilter = it
+                                    focusState.saveFocusIndex(it)
+                                },
+                                chipFocusRequester = chipFocus,
+                                focusedChipIndex = selectedFilter,
+                            )
                         }
-                        uiState.posters.chunked(5).forEach { rowPosters ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap)) {
-                                rowPosters.forEach { poster ->
-                                    PosterCard(
-                                        data = poster,
-                                        onClick = {
-                                            poster.contentId?.let { movieId ->
-                                                navController.navigate(AppRoute.movieDetails(movieId))
-                                            }
-                                        },
-                                    )
+                        PosterGrid(
+                            items = uiState.posters,
+                            onItemClick = { poster ->
+                                poster.contentId?.let { movieId ->
+                                    navController.navigate(AppRoute.movieDetails(movieId))
                                 }
-                            }
-                        }
+                            },
+                        )
                     }
                 }
             }

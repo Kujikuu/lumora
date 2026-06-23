@@ -34,7 +34,6 @@ import kotlinx.coroutines.launch
 data class SearchUiState(
     val query: String = "",
     val keyboardLayout: SearchKeyboardLayout = SearchKeyboardLayout.English,
-    val filters: List<String> = listOf("All", "Movies", "Series", "Live TV"),
     val selectedFilterIndex: Int = 0,
     val loadState: CatalogLoadState = CatalogLoadState.Ready,
     val sourceStatus: SourceStatus? = null,
@@ -223,21 +222,22 @@ class SearchViewModel @Inject constructor(
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     loadState = CatalogLoadState.Error,
-                    message = error.message ?: "Search failed",
+                    message = error.message ?: appStrings.get(R.string.error_search_failed),
                 )
             }
         }
     }
 
-    private fun filterAt(index: Int): CatalogSearchFilter = when (SEARCH_FILTERS[index]) {
-        "Movies" -> CatalogSearchFilter.Movies
-        "Series" -> CatalogSearchFilter.Series
-        "Live TV" -> CatalogSearchFilter.Live
-        else -> CatalogSearchFilter.All
-    }
+    private fun filterAt(index: Int): CatalogSearchFilter =
+        SEARCH_FILTERS[index.coerceIn(0, SEARCH_FILTERS.lastIndex)]
 
     companion object {
-        val SEARCH_FILTERS = listOf("All", "Movies", "Series", "Live TV")
+        private val SEARCH_FILTERS = listOf(
+            CatalogSearchFilter.All,
+            CatalogSearchFilter.Movies,
+            CatalogSearchFilter.Series,
+            CatalogSearchFilter.Live,
+        )
         private const val SEARCH_DEBOUNCE_MS = 300L
     }
 }

@@ -26,6 +26,7 @@ import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.ChannelTile
 import com.iptvcinema.tv.core.design.components.ContentRail
+import com.iptvcinema.tv.core.design.components.EmptyState
 import com.iptvcinema.tv.core.design.components.HeroCarousel
 import com.iptvcinema.tv.core.design.components.PosterCard
 import com.iptvcinema.tv.core.design.components.PosterCardVariant
@@ -83,8 +84,8 @@ fun HomeScreen(
             sourceStatus = uiState.sourceStatus,
             sourceType = uiState.sourceType,
             skeletonStyle = CatalogSkeletonStyle.Home,
-            emptyTitle = "No content yet",
-            emptyDescription = "Connect a source and sync your catalog to see movies and channels.",
+            emptyTitle = stringResource(R.string.home_empty_title),
+            emptyDescription = stringResource(R.string.home_empty_desc),
             onAddSource = catalogCallbacks.onAddSource,
             onTryDemo = catalogCallbacks.onTryDemo,
             onRetry = catalogCallbacks.onRetry,
@@ -121,6 +122,7 @@ fun HomeScreen(
                     ContentRail(
                         title = stringResource(R.string.home_continue_watching),
                         items = uiState.continueWatching.map { it.poster },
+                        countLabel = uiState.continueWatching.size.toString(),
                     ) { poster ->
                         val item = uiState.continueWatching.find { it.poster.contentId == poster.contentId }
                         PosterCard(
@@ -138,7 +140,11 @@ fun HomeScreen(
                 }
 
                 if (uiState.trending.isNotEmpty()) {
-                    ContentRail(title = stringResource(R.string.home_trending), items = uiState.trending) { poster ->
+                    ContentRail(
+                        title = stringResource(R.string.home_trending),
+                        items = uiState.trending,
+                        countLabel = uiState.trending.size.toString(),
+                    ) { poster ->
                         PosterCard(
                             data = poster,
                             onClick = { poster.contentId?.let { navController.navigate(AppRoute.movieDetails(it)) } },
@@ -150,6 +156,7 @@ fun HomeScreen(
                     ContentRail(
                         title = stringResource(R.string.home_popular_series),
                         items = uiState.featuredSeries,
+                        countLabel = uiState.featuredSeries.size.toString(),
                     ) { poster ->
                         PosterCard(
                             data = poster,
@@ -161,7 +168,11 @@ fun HomeScreen(
                 }
 
                 if (uiState.liveChannels.isNotEmpty()) {
-                    ContentRail(title = stringResource(R.string.home_live_channels), items = uiState.liveChannels) { channel ->
+                    ContentRail(
+                        title = stringResource(R.string.home_live_channels),
+                        items = uiState.liveChannels,
+                        countLabel = uiState.liveChannels.size.toString(),
+                    ) { channel ->
                         ChannelTile(
                             data = channel,
                             onClick = {
@@ -174,7 +185,11 @@ fun HomeScreen(
                 }
 
                 if (uiState.newReleases.isNotEmpty()) {
-                    ContentRail(title = stringResource(R.string.home_new_releases), items = uiState.newReleases) { poster ->
+                    ContentRail(
+                        title = stringResource(R.string.home_new_releases),
+                        items = uiState.newReleases,
+                        countLabel = uiState.newReleases.size.toString(),
+                    ) { poster ->
                         PosterCard(
                             data = poster,
                             onClick = { poster.contentId?.let { navController.navigate(AppRoute.movieDetails(it)) } },
@@ -190,7 +205,14 @@ fun HomeScreen(
                     uiState.liveChannels.isEmpty() &&
                     uiState.newReleases.isEmpty()
                 ) {
-                    // Ready but empty featured content — fall through handled by outer state
+                    EmptyState(
+                        title = stringResource(R.string.home_empty_title),
+                        description = stringResource(R.string.home_empty_desc),
+                        primaryAction = stringResource(R.string.btn_manage_sources),
+                        secondaryAction = stringResource(R.string.btn_try_demo),
+                        onPrimary = catalogCallbacks.onManageSources,
+                        onSecondary = catalogCallbacks.onTryDemo,
+                    )
                 }
             }
         }

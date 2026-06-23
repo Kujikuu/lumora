@@ -2,14 +2,15 @@ package com.iptvcinema.tv.features.mylist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.data.repository.CatalogRepository
 import com.iptvcinema.tv.core.data.repository.FavoritesRepository
 import com.iptvcinema.tv.core.data.repository.WatchHistoryRepository
 import com.iptvcinema.tv.core.datastore.AppSessionRepository
 import com.iptvcinema.tv.core.design.components.PosterCardData
-import com.iptvcinema.tv.core.model.FavoriteContentType
 import com.iptvcinema.tv.core.model.FavoriteItem
 import com.iptvcinema.tv.core.model.WatchHistoryItem
+import com.iptvcinema.tv.core.util.AppStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,7 @@ class MyListViewModel @Inject constructor(
     private val catalogRepository: CatalogRepository,
     private val favoritesRepository: FavoritesRepository,
     private val watchHistoryRepository: WatchHistoryRepository,
+    private val appStrings: AppStrings,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<MyListUiState>(MyListUiState.Loading)
     val uiState: StateFlow<MyListUiState> = _uiState.asStateFlow()
@@ -73,18 +75,11 @@ class MyListViewModel @Inject constructor(
                 }
                 _uiState.value = MyListUiState.Ready(favorites, history, recentlyWatchedPosters)
             }.onFailure { error ->
-                _uiState.value = MyListUiState.Error(error.message ?: "Unable to load My List")
+                _uiState.value = MyListUiState.Error(error.message ?: appStrings.get(R.string.error_load_list))
             }
         }
     }
 
-    fun favoritesForCategory(category: String, favorites: List<FavoriteItem>): List<FavoriteItem> = when (category) {
-        "All" -> favorites
-        "Movies" -> favorites.filter { it.contentType == FavoriteContentType.MOVIE }
-        "Series" -> favorites.filter { it.contentType in setOf(FavoriteContentType.SERIES, FavoriteContentType.EPISODE) }
-        "Channels" -> favorites.filter { it.contentType == FavoriteContentType.CHANNEL }
-        else -> favorites
-    }
 }
 
 fun FavoriteItem.toPosterCardData(): PosterCardData = PosterCardData(

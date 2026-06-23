@@ -57,6 +57,12 @@ fun SearchScreen(
     val catalogCallbacks = rememberCatalogStateCallbacks(navController, onRetry = viewModel::retry)
     val hasMultipleInputLanguages = rememberHasMultipleInputLanguages()
     val keyboardController = LocalSoftwareKeyboardController.current
+    val searchFilters = listOf(
+        stringResource(R.string.filter_all),
+        stringResource(R.string.filter_movies),
+        stringResource(R.string.filter_series),
+        stringResource(R.string.filter_live_tv),
+    )
 
     MainShellBackHandler(navController = navController, isHomeTab = false)
 
@@ -109,13 +115,20 @@ fun SearchScreen(
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
             ) {
                 Text(text = stringResource(R.string.search_recent), style = MaterialTheme.typography.titleMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
-                    uiState.recentSearches.forEach { term ->
-                        RecentSearchChip(query = term, onClick = { viewModel.applyRecentSearch(term) })
+                if (uiState.recentSearches.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.search_recent_empty),
+                        style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
+                    )
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
+                        uiState.recentSearches.forEach { term ->
+                            RecentSearchChip(query = term, onClick = { viewModel.applyRecentSearch(term) })
+                        }
                     }
                 }
                 FilterChipRow(
-                    items = uiState.filters,
+                    items = searchFilters,
                     selectedIndex = uiState.selectedFilterIndex,
                     onSelected = {
                         viewModel.selectFilter(it)
@@ -152,7 +165,11 @@ fun SearchScreen(
                         else -> {
                             Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap)) {
                                 if (uiState.movieResults.isNotEmpty()) {
-                                    ContentRail(title = stringResource(R.string.search_top_results), items = uiState.movieResults) { movie ->
+                                    ContentRail(
+                                        title = stringResource(R.string.search_top_results),
+                                        items = uiState.movieResults,
+                                        countLabel = uiState.movieResults.size.toString(),
+                                    ) { movie ->
                                         PosterCard(
                                             data = movie,
                                             onClick = {
@@ -164,7 +181,11 @@ fun SearchScreen(
                                     }
                                 }
                                 if (uiState.seriesResults.isNotEmpty()) {
-                                    ContentRail(title = stringResource(R.string.search_series_results), items = uiState.seriesResults) { series ->
+                                    ContentRail(
+                                        title = stringResource(R.string.search_series_results),
+                                        items = uiState.seriesResults,
+                                        countLabel = uiState.seriesResults.size.toString(),
+                                    ) { series ->
                                         PosterCard(
                                             data = series,
                                             onClick = {
@@ -176,7 +197,11 @@ fun SearchScreen(
                                     }
                                 }
                                 if (uiState.channelResults.isNotEmpty()) {
-                                    ContentRail(title = stringResource(R.string.search_live_channels), items = uiState.channelResults) { channel ->
+                                    ContentRail(
+                                        title = stringResource(R.string.search_live_channels),
+                                        items = uiState.channelResults,
+                                        countLabel = uiState.channelResults.size.toString(),
+                                    ) { channel ->
                                         ChannelTile(
                                             data = channel,
                                             onClick = {

@@ -47,6 +47,9 @@
     <string name="btn_backspace">Backspace</string>
     <string name="btn_watch_fullscreen">Watch Fullscreen</string>
     <string name="btn_link_tv">Link TV now</string>
+    <string name="btn_add_to_favorites">Add to Favorites</string>
+    <string name="btn_favorited">Favorited</string>
+    <string name="btn_play_first">Play First</string>
 
     <!-- Toggle -->
     <string name="toggle_on">On</string>
@@ -174,11 +177,22 @@
     <string name="badge_4k">4K</string>
     <string name="badge_live">LIVE</string>
     <string name="badge_now">NOW</string>
+    <string name="badge_saved">SAVED</string>
+    <string name="home_empty_title">No content yet</string>
+    <string name="home_empty_desc">Connect a source and sync your catalog to see movies, series, and channels.</string>
+    <string name="movies_empty_title">No movies yet</string>
+    <string name="series_empty_title">No series yet</string>
+    <string name="catalog_empty_sync_desc">Sync your playlist or try another category.</string>
+    <string name="filter_all">All</string>
+    <string name="filter_movies">Movies</string>
+    <string name="filter_series">Series</string>
+    <string name="filter_live_tv">Live TV</string>
 
     <!-- Search -->
     <string name="search_title">Search</string>
     <string name="search_subtitle">Find your favorite movies, series, and live channels.</string>
     <string name="search_recent">Recent Searches</string>
+    <string name="search_recent_empty">Your recent searches will appear here.</string>
     <string name="search_no_results">No results found</string>
     <string name="search_no_results_desc">Try a different search term or filter.</string>
     <string name="search_top_results">Top Results</string>
@@ -193,6 +207,10 @@
     <string name="mylist_nothing_saved">Nothing saved yet</string>
     <string name="mylist_nothing_saved_desc">Browse movies and series to add them to your list.</string>
     <string name="mylist_remove_tip">Tip: Long press on any item to remove it from your list.</string>
+    <string name="mylist_filter_all">All</string>
+    <string name="mylist_filter_movies">Movies</string>
+    <string name="mylist_filter_series">Series</string>
+    <string name="mylist_filter_channels">Channels</string>
 
     <!-- Details -->
     <string name="details_cast">Cast</string>
@@ -202,6 +220,13 @@
     <string name="details_season">Season %1$d</string>
     <string name="details_episode_number">E%1$d</string>
     <string name="details_episode_duration">%1$dm</string>
+    <string name="details_runtime_hours_minutes">%1$dh %2$dm</string>
+    <string name="details_rating">Rating %1$s</string>
+    <string name="feedback_rating_blocked">This title exceeds the profile rating limit</string>
+    <string name="feedback_trailer_soon">Trailer preview coming soon</string>
+    <string name="feedback_added_to_mylist">Added to My List</string>
+    <string name="feedback_removed_from_mylist">Removed from My List</string>
+    <string name="error_search_failed">Search failed</string>
 
     <!-- Live TV -->
     <string name="livetv_channels">Channels</string>

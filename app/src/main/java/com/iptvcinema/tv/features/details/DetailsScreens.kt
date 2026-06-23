@@ -17,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -58,6 +59,10 @@ fun MovieDetailsScreen(
     var selectedSub by remember { mutableIntStateOf(0) }
     val isFavorite by viewModel.isFavorite.collectAsState()
     val showFeedback = rememberPrototypeFeedback()
+    val feedbackRatingBlocked = stringResource(R.string.feedback_rating_blocked)
+    val feedbackTrailerSoon = stringResource(R.string.feedback_trailer_soon)
+    val feedbackAddedToMyList = stringResource(R.string.feedback_added_to_mylist)
+    val feedbackRemovedFromMyList = stringResource(R.string.feedback_removed_from_mylist)
     val watchNowFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("movie_details")
 
@@ -111,20 +116,20 @@ fun MovieDetailsScreen(
                             movie.year.takeIf { it > 0 }?.toString(),
                             movie.genres.joinToString(" ").takeIf { it.isNotBlank() },
                             movie.runtimeMinutes.takeIf { it > 0 }?.let {
-                                "${it / 60}h ${it % 60}m"
+                                stringResource(R.string.details_runtime_hours_minutes, it / 60, it % 60)
                             },
                             if (movie.is4K) stringResource(R.string.badge_4k) else "HD",
-                            movie.rating.takeIf { it.isNotBlank() }?.let { "Rating $it" },
+                            movie.rating.takeIf { it.isNotBlank() }?.let { stringResource(R.string.details_rating, it) },
                         ),
                         synopsis = movie.plot,
                         onWatchNow = {
                             if (uiState.playbackBlocked) {
-                                showFeedback("This title exceeds the profile rating limit")
+                                showFeedback(feedbackRatingBlocked)
                             } else {
                                 navController.navigate(AppRoute.player(movie.id, "movie"))
                             }
                         },
-                        onTrailer = { showFeedback("Trailer preview coming soon") },
+                        onTrailer = { showFeedback(feedbackTrailerSoon) },
                         onFavorite = {
                             viewModel.toggleFavorite(
                                 contentId = movie.id,
@@ -132,7 +137,7 @@ fun MovieDetailsScreen(
                                 title = movie.title,
                                 posterUrl = movie.imageUrl,
                             ) { added ->
-                                showFeedback(if (added) "Added to My List" else "Removed from My List")
+                                showFeedback(if (added) feedbackAddedToMyList else feedbackRemovedFromMyList)
                             }
                         },
                         isFavorite = isFavorite,
@@ -193,6 +198,10 @@ fun SeriesDetailsScreen(
     val episodes = seasons.find { it.seasonNumber == selectedSeason }?.episodes.orEmpty()
     val isFavorite by viewModel.isFavorite.collectAsState()
     val showFeedback = rememberPrototypeFeedback()
+    val feedbackRatingBlocked = stringResource(R.string.feedback_rating_blocked)
+    val feedbackTrailerSoon = stringResource(R.string.feedback_trailer_soon)
+    val feedbackAddedToMyList = stringResource(R.string.feedback_added_to_mylist)
+    val feedbackRemovedFromMyList = stringResource(R.string.feedback_removed_from_mylist)
     val watchNowFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("series_details")
 
@@ -254,22 +263,30 @@ fun SeriesDetailsScreen(
                         metadata = listOfNotNull(
                             series.year.takeIf { it > 0 }?.toString(),
                             series.genres.joinToString(" ").takeIf { it.isNotBlank() },
-                            if (series.seasonCount > 0) "${series.seasonCount} Seasons" else null,
+                            if (series.seasonCount > 0) {
+                                pluralStringResource(
+                                    R.plurals.details_season_count,
+                                    series.seasonCount,
+                                    series.seasonCount,
+                                )
+                            } else {
+                                null
+                            },
                             if (series.is4K) stringResource(R.string.badge_4k) else "HD",
-                            series.rating.takeIf { it.isNotBlank() }?.let { "Rating $it" },
+                            series.rating.takeIf { it.isNotBlank() }?.let { stringResource(R.string.details_rating, it) },
                         ),
                         synopsis = series.plot,
-                        primaryActionLabel = "Play First",
+                        primaryActionLabel = stringResource(R.string.btn_play_first),
                         onWatchNow = {
                             if (uiState.playbackBlocked) {
-                                showFeedback("This title exceeds the profile rating limit")
+                                showFeedback(feedbackRatingBlocked)
                             } else {
                                 episodes.firstOrNull()?.let {
                                     navController.navigate(AppRoute.player(it.id, "episode", seriesId))
                                 }
                             }
                         },
-                        onTrailer = { showFeedback("Trailer preview coming soon") },
+                        onTrailer = { showFeedback(feedbackTrailerSoon) },
                         onFavorite = {
                             viewModel.toggleFavorite(
                                 contentId = series.id,
@@ -277,7 +294,7 @@ fun SeriesDetailsScreen(
                                 title = series.title,
                                 posterUrl = series.imageUrl,
                             ) { added ->
-                                showFeedback(if (added) "Added to My List" else "Removed from My List")
+                                showFeedback(if (added) feedbackAddedToMyList else feedbackRemovedFromMyList)
                             }
                         },
                         isFavorite = isFavorite,
@@ -302,7 +319,7 @@ fun SeriesDetailsScreen(
                                     progress = episode.progress,
                                     onClick = {
                                         if (uiState.playbackBlocked) {
-                                            showFeedback("This title exceeds the profile rating limit")
+                                            showFeedback(feedbackRatingBlocked)
                                         } else {
                                             navController.navigate(AppRoute.player(episode.id, "episode", seriesId))
                                         }

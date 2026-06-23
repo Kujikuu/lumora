@@ -122,7 +122,8 @@ fun HeroBanner(
                     Brush.horizontalGradient(
                         colors = listOf(
                             CinemaColors.Background.copy(alpha = if (backdropUrl != null) 0.88f else 0.92f),
-                            CinemaColors.Background.copy(alpha = if (backdropUrl != null) 0.62f else 0.55f),
+                            CinemaColors.Background.copy(alpha = if (backdropUrl != null) 0.68f else 0.58f),
+                            CinemaColors.Background.copy(alpha = if (backdropUrl != null) 0.18f else 0.12f),
                             Color.Transparent,
                         ),
                     ),
@@ -140,7 +141,10 @@ fun HeroBanner(
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     text = stringResource(R.string.hero_featured),
-                    style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.GoldDeep),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = CinemaColors.Gold,
+                        fontWeight = FontWeight.SemiBold,
+                    ),
                 )
                 Text(
                     text = title,
@@ -163,7 +167,7 @@ fun HeroBanner(
                     Text(
                         text = description,
                         style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
-                        maxLines = 2,
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }

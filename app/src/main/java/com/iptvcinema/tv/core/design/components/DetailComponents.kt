@@ -51,11 +51,19 @@ fun DetailHero(
     isFavorite: Boolean = false,
     modifier: Modifier = Modifier,
     primaryActionLabel: String = "",
+    favoriteLabel: String = "",
+    favoritedLabel: String = "",
     backdropUrl: String? = null,
     watchNowFocusRequester: FocusRequester? = null,
 ) {
     val resolvedPrimaryActionLabel = primaryActionLabel.ifBlank {
         stringResource(R.string.btn_watch_now)
+    }
+    val resolvedFavoriteLabel = favoriteLabel.ifBlank {
+        stringResource(R.string.btn_add_to_favorites)
+    }
+    val resolvedFavoritedLabel = favoritedLabel.ifBlank {
+        stringResource(R.string.btn_favorited)
     }
 
     Box(
@@ -77,8 +85,9 @@ fun DetailHero(
                 .background(
                     brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
                         listOf(
-                            CinemaColors.Background.copy(alpha = 0.9f),
-                            CinemaColors.Background.copy(alpha = 0.55f),
+                            CinemaColors.Background.copy(alpha = 0.94f),
+                            CinemaColors.Background.copy(alpha = 0.68f),
+                            CinemaColors.Background.copy(alpha = 0.18f),
                             androidx.compose.ui.graphics.Color.Transparent,
                         ),
                     ),
@@ -127,7 +136,7 @@ fun DetailHero(
                 )
                 CinemaButton(text = stringResource(R.string.btn_trailer), variant = CinemaButtonVariant.SecondaryDark, onClick = onTrailer)
                 CinemaButton(
-                    text = if (isFavorite) "Favorited" else "Add to Favorites",
+                    text = if (isFavorite) resolvedFavoritedLabel else resolvedFavoriteLabel,
                     variant = CinemaButtonVariant.Ghost,
                     icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     onClick = onFavorite,

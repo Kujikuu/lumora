@@ -45,6 +45,9 @@
     <string name="btn_backspace">حذف</string>
     <string name="btn_watch_fullscreen">مشاهدة ملء الشاشة</string>
     <string name="btn_link_tv">ربط التلفاز الآن</string>
+    <string name="btn_add_to_favorites">إضافة إلى المفضلة</string>
+    <string name="btn_favorited">في المفضلة</string>
+    <string name="btn_play_first">تشغيل الأولى</string>
 
     <string name="toggle_on">تشغيل</string>
     <string name="toggle_off">إيقاف</string>
@@ -164,10 +167,21 @@
     <string name="badge_4k">4K</string>
     <string name="badge_live">مباشر</string>
     <string name="badge_now">الآن</string>
+    <string name="badge_saved">محفوظ</string>
+    <string name="home_empty_title">لا يوجد محتوى بعد</string>
+    <string name="home_empty_desc">اربط مصدرًا وزامِن الفهرس لعرض الأفلام والمسلسلات والقنوات.</string>
+    <string name="movies_empty_title">لا توجد أفلام بعد</string>
+    <string name="series_empty_title">لا توجد مسلسلات بعد</string>
+    <string name="catalog_empty_sync_desc">زامِن قائمة التشغيل أو جرّب فئة أخرى.</string>
+    <string name="filter_all">الكل</string>
+    <string name="filter_movies">الأفلام</string>
+    <string name="filter_series">المسلسلات</string>
+    <string name="filter_live_tv">البث المباشر</string>
 
     <string name="search_title">بحث</string>
     <string name="search_subtitle">اعثر على أفلامك ومسلسلاتك وقنواتك المباشرة المفضلة.</string>
     <string name="search_recent">عمليات البحث الأخيرة</string>
+    <string name="search_recent_empty">ستظهر عمليات البحث الأخيرة هنا.</string>
     <string name="search_no_results">لا توجد نتائج</string>
     <string name="search_no_results_desc">جرّب كلمة بحث أو تصفية مختلفة.</string>
     <string name="search_top_results">أفضل النتائج</string>
@@ -181,6 +195,10 @@
     <string name="mylist_nothing_saved">لا يوجد شيء محفوظ بعد</string>
     <string name="mylist_nothing_saved_desc">تصفح الأفلام والمسلسلات لإضافتها إلى قائمتك.</string>
     <string name="mylist_remove_tip">نصيحة: اضغط مطولًا على أي عنصر لإزالته من قائمتك.</string>
+    <string name="mylist_filter_all">الكل</string>
+    <string name="mylist_filter_movies">الأفلام</string>
+    <string name="mylist_filter_series">المسلسلات</string>
+    <string name="mylist_filter_channels">القنوات</string>
 
     <string name="details_cast">طاقم التمثيل</string>
     <string name="details_no_episodes">لا تتوفر حلقات</string>
@@ -189,6 +207,13 @@
     <string name="details_season">الموسم %1$d</string>
     <string name="details_episode_number">ح%1$d</string>
     <string name="details_episode_duration">%1$d د</string>
+    <string name="details_runtime_hours_minutes">%1$d س %2$d د</string>
+    <string name="details_rating">التقييم %1$s</string>
+    <string name="feedback_rating_blocked">هذا العنوان يتجاوز حد التصنيف للملف الشخصي</string>
+    <string name="feedback_trailer_soon">معاينة الإعلان قريبًا</string>
+    <string name="feedback_added_to_mylist">تمت الإضافة إلى قائمتي</string>
+    <string name="feedback_removed_from_mylist">تمت الإزالة من قائمتي</string>
+    <string name="error_search_failed">فشل البحث</string>
 
     <string name="livetv_channels">القنوات</string>
     <string name="livetv_watch_channel">تشغيل</string>

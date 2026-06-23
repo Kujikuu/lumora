@@ -8,4 +8,8 @@
         <item quantity="one">%d m left</item>
         <item quantity="other">%d m left</item>
     </plurals>
+    <plurals name="details_season_count">
+        <item quantity="one">%d Season</item>
+        <item quantity="other">%d Seasons</item>
+    </plurals>
 </resources>

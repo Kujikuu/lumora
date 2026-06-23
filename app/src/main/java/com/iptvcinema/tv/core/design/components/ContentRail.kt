@@ -23,19 +23,44 @@ fun <T> ContentRail(
     title: String,
     items: List<T>,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    countLabel: String? = null,
     itemContent: @Composable (T) -> Unit,
 ) {
     Column(
         modifier = modifier.padding(bottom = CinemaSpacing.CardGap),
-        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.CardGap),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.SemiBold,
-                color = CinemaColors.TextPrimary,
-            ),
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = androidx.compose.ui.Alignment.Bottom,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = CinemaColors.TextPrimary,
+                    ),
+                )
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
+                    )
+                }
+            }
+            if (!countLabel.isNullOrBlank()) {
+                Text(
+                    text = countLabel,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = CinemaColors.GoldSoft,
+                    ),
+                )
+            }
+        }
 
         Row(
             modifier = Modifier

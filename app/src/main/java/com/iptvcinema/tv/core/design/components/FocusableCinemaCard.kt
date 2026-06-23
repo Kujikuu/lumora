@@ -29,10 +29,12 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 
@@ -48,6 +50,8 @@ fun FocusableCinemaCard(
     shape: RoundedCornerShape = CinemaShapes.Medium,
     defaultBorderWidth: Dp = 1.dp,
     focusedBorderWidth: Dp = 2.dp,
+    focusScale: Float = FOCUSED_SCALE,
+    contentDescription: String? = null,
     content: @Composable BoxScope.(focused: Boolean) -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -57,7 +61,7 @@ fun FocusableCinemaCard(
     val targetScale = when {
         !enabled -> 1f
         isPressed -> PRESSED_SCALE
-        isFocused -> FOCUSED_SCALE
+        isFocused -> focusScale
         else -> 1f
     }
     val scale by animateFloatAsState(
@@ -75,14 +79,15 @@ fun FocusableCinemaCard(
 
     Box(
         modifier = modifier
+            .zIndex(if (isFocused && enabled) 1f else 0f)
             .scale(scale)
             .then(
                 if (isFocused && enabled) {
                     Modifier.shadow(
-                        elevation = 12.dp,
+                        elevation = 18.dp,
                         shape = shape,
-                        ambientColor = CinemaColors.Gold.copy(alpha = 0.35f),
-                        spotColor = CinemaColors.Gold.copy(alpha = 0.35f),
+                        ambientColor = CinemaColors.Gold.copy(alpha = 0.44f),
+                        spotColor = CinemaColors.Gold.copy(alpha = 0.36f),
                     )
                 } else {
                     Modifier
@@ -90,7 +95,10 @@ fun FocusableCinemaCard(
             )
             .clip(shape)
             .border(width = borderWidth, color = borderColor, shape = shape)
-            .semantics { role = Role.Button }
+            .semantics {
+                role = Role.Button
+                contentDescription?.let { this.contentDescription = it }
+            }
             .onFocusChanged { isFocused = it.isFocused }
             .onKeyEvent { event ->
                 if (

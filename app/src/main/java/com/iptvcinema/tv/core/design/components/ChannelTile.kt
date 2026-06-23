@@ -62,14 +62,22 @@ fun ChannelTile(
                 } else {
                     Modifier
                 },
-            ),
+        ),
         onClick = onClick,
         shape = CinemaShapes.Medium,
-    ) { _ ->
+        contentDescription = data.channelName,
+    ) { focused ->
         Column(
             modifier = Modifier
-                .background(CinemaColors.SurfaceGlass, CinemaShapes.Medium)
-                .border(1.dp, CinemaColors.Border, CinemaShapes.Medium)
+                .background(
+                    if (focused || data.isNowPlaying) CinemaColors.SurfaceSoft else CinemaColors.SurfaceGlass,
+                    CinemaShapes.Medium,
+                )
+                .border(
+                    1.dp,
+                    if (focused || data.isNowPlaying) CinemaColors.GoldDeep.copy(alpha = 0.5f) else CinemaColors.Border,
+                    CinemaShapes.Medium,
+                )
                 .padding(6.dp),
         ) {
             Box(
@@ -89,6 +97,18 @@ fun ChannelTile(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                     fallbackLabel = data.channelName,
+                )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    CinemaColors.Background.copy(alpha = if (focused) 0.02f else 0f),
+                                    CinemaColors.Background.copy(alpha = 0.32f),
+                                ),
+                            ),
+                        ),
                 )
 
                 if (data.isNowPlaying) {
@@ -145,7 +165,10 @@ fun ChannelTile(
             ) {
                 Text(
                     text = data.channelName,
-                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.GoldSoft),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        color = if (focused || data.isNowPlaying) CinemaColors.Gold else CinemaColors.GoldSoft,
+                        fontWeight = if (focused || data.isNowPlaying) FontWeight.SemiBold else FontWeight.Medium,
+                    ),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )

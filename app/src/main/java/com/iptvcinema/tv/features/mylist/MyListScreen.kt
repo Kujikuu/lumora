@@ -2,7 +2,6 @@ package com.iptvcinema.tv.features.mylist
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -23,9 +22,6 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
-import com.iptvcinema.tv.core.data.fake.FakeDataProvider
-import com.iptvcinema.tv.core.design.components.CinemaButton
-import com.iptvcinema.tv.core.design.components.CinemaButtonVariant
 import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
 import com.iptvcinema.tv.core.design.components.ContentRail
 import com.iptvcinema.tv.core.design.components.EmptyState
@@ -37,12 +33,12 @@ import com.iptvcinema.tv.core.design.components.SkeletonPosterGrid
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.FavoriteContentType
+import com.iptvcinema.tv.core.model.FavoriteItem
 import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
 import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
-import com.iptvcinema.tv.core.util.rememberPrototypeFeedback
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -50,14 +46,13 @@ fun MyListScreen(
     navController: NavController,
     viewModel: MyListViewModel = hiltViewModel(),
 ) {
-    val showFeedback = rememberPrototypeFeedback()
     val chipFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("my_list")
-    val categories = FakeDataProvider.myListCategories
+    val filters = rememberMyListFilters()
     var selectedFilter by remember(focusState.focusIndex) {
         mutableIntStateOf(
             if (focusState.hasSavedFocus) {
-                focusState.focusIndex.coerceIn(0, categories.lastIndex)
+                focusState.focusIndex.coerceIn(0, filters.lastIndex)
             } else {
                 0
             },
@@ -66,7 +61,7 @@ fun MyListScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     MainShellBackHandler(navController = navController, isHomeTab = false)
-    val categoryLabel = categories[selectedFilter]
+    val selectedMyListFilter = filters[selectedFilter.coerceIn(0, filters.lastIndex)]
 
     LaunchedEffect(focusState.hasSavedFocus, selectedFilter) {
         if (focusState.hasSavedFocus) {
@@ -101,8 +96,7 @@ fun MyListScreen(
                 )
             }
             is MyListUiState.Ready -> {
-                val filteredItems = viewModel.favoritesForCategory(categoryLabel, state.favorites)
-                    .map { it.toPosterCardData() }
+                val filteredItems = filterFavorites(selectedMyListFilter, state.favorites).map { it.toPosterCardData() }
                 val recentlyWatched = state.recentlyWatchedPosters
 
                 Column(
@@ -122,32 +116,16 @@ fun MyListScreen(
                         ),
                         style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.Gold),
                     )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                    ) {
-                        FilterChipRow(
-                            items = categories,
-                            selectedIndex = selectedFilter,
-                            onSelected = {
-                                selectedFilter = it
-                                focusState.saveFocusIndex(it)
-                            },
-                            modifier = Modifier.weight(1f),
-                            chipFocusRequester = chipFocus,
-                            focusedChipIndex = selectedFilter,
-                        )
-                        CinemaButton(
-                            text = stringResource(R.string.sort_recently_added),
-                            variant = CinemaButtonVariant.Ghost,
-                            onClick = { showFeedback("Sorted by recently added") },
-                        )
-                        CinemaButton(
-                            text = stringResource(R.string.filter_label),
-                            variant = CinemaButtonVariant.SecondaryDark,
-                            onClick = { showFeedback("Filter options coming soon") },
-                        )
-                    }
+                    FilterChipRow(
+                        items = filters.map { it.label },
+                        selectedIndex = selectedFilter,
+                        onSelected = {
+                            selectedFilter = it
+                            focusState.saveFocusIndex(it)
+                        },
+                        chipFocusRequester = chipFocus,
+                        focusedChipIndex = selectedFilter,
+                    )
                     if (filteredItems.isEmpty()) {
                         EmptyState(
                             title = stringResource(R.string.mylist_nothing_saved),
@@ -177,6 +155,7 @@ fun MyListScreen(
                         ContentRail(
                             title = stringResource(R.string.rail_recently_watched),
                             items = recentlyWatched,
+                            countLabel = recentlyWatched.size.toString(),
                         ) { poster ->
                             PosterCard(
                                 data = poster,
@@ -205,4 +184,27 @@ fun MyListScreen(
             }
         }
     }
+}
+
+@Composable
+private fun rememberMyListFilters(): List<MyListFilter> = listOf(
+    MyListFilter(stringResource(R.string.mylist_filter_all), null),
+    MyListFilter(stringResource(R.string.mylist_filter_movies), FavoriteContentType.MOVIE),
+    MyListFilter(stringResource(R.string.mylist_filter_series), FavoriteContentType.SERIES),
+    MyListFilter(stringResource(R.string.mylist_filter_channels), FavoriteContentType.CHANNEL),
+)
+
+private data class MyListFilter(
+    val label: String,
+    val contentType: FavoriteContentType?,
+)
+
+private fun filterFavorites(filter: MyListFilter, favorites: List<FavoriteItem>): List<FavoriteItem> = when (filter.contentType) {
+    null -> favorites
+    FavoriteContentType.MOVIE -> favorites.filter { it.contentType == FavoriteContentType.MOVIE }
+    FavoriteContentType.SERIES -> favorites.filter {
+        it.contentType == FavoriteContentType.SERIES || it.contentType == FavoriteContentType.EPISODE
+    }
+    FavoriteContentType.CHANNEL -> favorites.filter { it.contentType == FavoriteContentType.CHANNEL }
+    FavoriteContentType.EPISODE -> favorites
 }

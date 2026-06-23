@@ -67,11 +67,19 @@ fun PosterCard(
         modifier = modifier.width(width),
         onClick = onClick,
         shape = CinemaShapes.Medium,
-    ) { _ ->
+        contentDescription = data.title,
+    ) { focused ->
         Column(
             modifier = Modifier
-                .background(CinemaColors.SurfaceGlass, CinemaShapes.Medium)
-                .border(1.dp, CinemaColors.Border, CinemaShapes.Medium)
+                .background(
+                    if (focused) CinemaColors.SurfaceSoft else CinemaColors.SurfaceGlass,
+                    CinemaShapes.Medium,
+                )
+                .border(
+                    1.dp,
+                    if (focused) CinemaColors.GoldDeep.copy(alpha = 0.48f) else CinemaColors.Border,
+                    CinemaShapes.Medium,
+                )
                 .padding(6.dp),
         ) {
             Box(
@@ -92,6 +100,19 @@ fun PosterCard(
                     contentScale = ContentScale.Crop,
                     fallbackLabel = data.title,
                 )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(
+                            androidx.compose.ui.graphics.Brush.verticalGradient(
+                                listOf(
+                                    CinemaColors.Background.copy(alpha = if (focused) 0.04f else 0f),
+                                    CinemaColors.Background.copy(alpha = 0.08f),
+                                    CinemaColors.Background.copy(alpha = 0.42f),
+                                ),
+                            ),
+                        ),
+                )
 
                 if (data.is4K) {
                     BadgeChip(
@@ -100,6 +121,15 @@ fun PosterCard(
                             .align(Alignment.TopEnd)
                             .padding(8.dp),
                         backgroundColor = CinemaColors.GoldDeep,
+                    )
+                }
+                if (data.isFavorite) {
+                    BadgeChip(
+                        text = stringResource(R.string.badge_saved),
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(8.dp),
+                        backgroundColor = CinemaColors.Surface.copy(alpha = 0.9f),
                     )
                 }
 
@@ -130,7 +160,10 @@ fun PosterCard(
             ) {
                 Text(
                     text = data.title,
-                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.GoldSoft),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        color = if (focused) CinemaColors.Gold else CinemaColors.GoldSoft,
+                        fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Medium,
+                    ),
                     maxLines = titleMaxLines,
                     overflow = TextOverflow.Ellipsis,
                 )
