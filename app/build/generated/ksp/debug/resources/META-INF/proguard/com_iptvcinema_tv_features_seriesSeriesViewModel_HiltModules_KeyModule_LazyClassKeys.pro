@@ -1,0 +1,4 @@
+-keep,allowobfuscation,allowshrinking class com.iptvcinema.tv.core.navigation.SessionViewModel
+-keep,allowobfuscation,allowshrinking class com.iptvcinema.tv.core.navigation.SessionViewModel
+-keep,allowobfuscation,allowshrinking class com.iptvcinema.tv.features.series.SeriesViewModel
+-keep,allowobfuscation,allowshrinking class com.iptvcinema.tv.features.series.SeriesViewModel

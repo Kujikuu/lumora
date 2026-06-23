@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.IptvCinema" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/brand_background</item>
+        <item name="android:colorAccent">@color/brand_gold</item>
+        <item name="android:navigationBarColor">@color/brand_background</item>
+        <item name="android:statusBarColor">@color/brand_background</item>
+    </style>
+
+    <style name="Theme.IptvCinema.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/brand_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_brand_mark</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/brand_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.IptvCinema</item>
+    </style>
+</resources>

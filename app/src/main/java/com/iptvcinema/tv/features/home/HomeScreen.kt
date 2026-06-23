@@ -1,0 +1,198 @@
+package com.iptvcinema.tv.features.home
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.navigation.NavController
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.data.repository.CatalogLoadState
+import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
+import com.iptvcinema.tv.core.design.components.CatalogStateContent
+import com.iptvcinema.tv.core.design.components.ChannelTile
+import com.iptvcinema.tv.core.design.components.ContentRail
+import com.iptvcinema.tv.core.design.components.HeroCarousel
+import com.iptvcinema.tv.core.design.components.PosterCard
+import com.iptvcinema.tv.core.design.components.PosterCardVariant
+import com.iptvcinema.tv.core.design.components.SyncStatusBanner
+import com.iptvcinema.tv.core.design.theme.CinemaSpacing
+import com.iptvcinema.tv.core.navigation.AppRoute
+import com.iptvcinema.tv.core.navigation.MainShellBackHandler
+import com.iptvcinema.tv.core.navigation.MainShellScaffold
+import com.iptvcinema.tv.core.navigation.NavItem
+import com.iptvcinema.tv.core.navigation.rememberCatalogStateCallbacks
+import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun HomeScreen(
+    navController: NavController,
+    viewModel: HomeViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val watchNowFocus = remember { FocusRequester() }
+    val focusState = rememberScreenFocusState("home")
+    val catalogCallbacks = rememberCatalogStateCallbacks(navController)
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshContinueWatching()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    MainShellBackHandler(navController = navController, isHomeTab = true)
+
+    LaunchedEffect(focusState.hasSavedFocus) {
+        if (focusState.hasSavedFocus) {
+            focusState.restoreFocus(watchNowFocus)
+        } else {
+            focusState.requestInitialFocus(watchNowFocus)
+            focusState.saveFocusIndex(0)
+        }
+    }
+
+    MainShellScaffold(
+        navController = navController,
+        selectedNavItem = NavItem.Home,
+    ) {
+        CatalogStateContent(
+            loadState = uiState.loadState,
+            message = uiState.message,
+            sourceStatus = uiState.sourceStatus,
+            sourceType = uiState.sourceType,
+            skeletonStyle = CatalogSkeletonStyle.Home,
+            emptyTitle = "No content yet",
+            emptyDescription = "Connect a source and sync your catalog to see movies and channels.",
+            onAddSource = catalogCallbacks.onAddSource,
+            onTryDemo = catalogCallbacks.onTryDemo,
+            onRetry = catalogCallbacks.onRetry,
+            onManageSources = catalogCallbacks.onManageSources,
+            onEditSource = catalogCallbacks.onEditSource,
+        ) {
+            val heroMovies = uiState.heroMovies
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
+            ) {
+                uiState.syncBannerText?.let { bannerText ->
+                    SyncStatusBanner(
+                        text = bannerText,
+                        onClick = catalogCallbacks.onManageSources,
+                    )
+                }
+                if (heroMovies.isNotEmpty()) {
+                    HeroCarousel(
+                        movies = heroMovies,
+                        onWatchNow = { movie ->
+                            navController.navigate(AppRoute.player(movie.id, "movie"))
+                        },
+                        onDetails = { movie ->
+                            navController.navigate(AppRoute.movieDetails(movie.id))
+                        },
+                        watchNowFocusRequester = watchNowFocus,
+                    )
+                }
+
+                if (uiState.continueWatching.isNotEmpty()) {
+                    ContentRail(
+                        title = stringResource(R.string.home_continue_watching),
+                        items = uiState.continueWatching.map { it.poster },
+                    ) { poster ->
+                        val item = uiState.continueWatching.find { it.poster.contentId == poster.contentId }
+                        PosterCard(
+                            data = poster,
+                            variant = PosterCardVariant.LandscapePoster,
+                            onClick = {
+                                item?.let {
+                                    navController.navigate(
+                                        AppRoute.player(it.contentId, it.contentType, it.seriesId),
+                                    )
+                                }
+                            },
+                        )
+                    }
+                }
+
+                if (uiState.trending.isNotEmpty()) {
+                    ContentRail(title = stringResource(R.string.home_trending), items = uiState.trending) { poster ->
+                        PosterCard(
+                            data = poster,
+                            onClick = { poster.contentId?.let { navController.navigate(AppRoute.movieDetails(it)) } },
+                        )
+                    }
+                }
+
+                if (uiState.featuredSeries.isNotEmpty()) {
+                    ContentRail(
+                        title = stringResource(R.string.home_popular_series),
+                        items = uiState.featuredSeries,
+                    ) { poster ->
+                        PosterCard(
+                            data = poster,
+                            onClick = {
+                                poster.contentId?.let { navController.navigate(AppRoute.seriesDetails(it)) }
+                            },
+                        )
+                    }
+                }
+
+                if (uiState.liveChannels.isNotEmpty()) {
+                    ContentRail(title = stringResource(R.string.home_live_channels), items = uiState.liveChannels) { channel ->
+                        ChannelTile(
+                            data = channel,
+                            onClick = {
+                                channel.id?.let { channelId ->
+                                    navController.navigate(AppRoute.player(channelId, "live"))
+                                } ?: navController.navigate(AppRoute.liveTv())
+                            },
+                        )
+                    }
+                }
+
+                if (uiState.newReleases.isNotEmpty()) {
+                    ContentRail(title = stringResource(R.string.home_new_releases), items = uiState.newReleases) { poster ->
+                        PosterCard(
+                            data = poster,
+                            onClick = { poster.contentId?.let { navController.navigate(AppRoute.movieDetails(it)) } },
+                        )
+                    }
+                }
+
+                if (uiState.loadState == CatalogLoadState.Ready &&
+                    heroMovies.isEmpty() &&
+                    uiState.continueWatching.isEmpty() &&
+                    uiState.trending.isEmpty() &&
+                    uiState.featuredSeries.isEmpty() &&
+                    uiState.liveChannels.isEmpty() &&
+                    uiState.newReleases.isEmpty()
+                ) {
+                    // Ready but empty featured content — fall through handled by outer state
+                }
+            }
+        }
+    }
+}

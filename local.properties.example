@@ -1,0 +1,13 @@
+sdk.dir=/path/to/Android/sdk
+
+# Supabase (create a project at https://supabase.com and paste values here)
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+
+# Optional: override activation page URL shown in QR codes (default: https://iptv.afifistudio.com)
+ACTIVATION_LINK_BASE=https://iptv.afifistudio.com
+
+# Optional: debug-only Xtream test credentials (never commit real passwords)
+XTREAM_TEST_SERVER=http://your-server:port
+XTREAM_TEST_USERNAME=
+XTREAM_TEST_PASSWORD=

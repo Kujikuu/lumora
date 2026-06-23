@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="saved_items_count">
+        <item quantity="zero">%d عنصر محفوظ</item>
+        <item quantity="one">عنصر واحد محفوظ</item>
+        <item quantity="two">عنصران محفوظان</item>
+        <item quantity="few">%d عناصر محفوظة</item>
+        <item quantity="many">%d عنصرًا محفوظًا</item>
+        <item quantity="other">%d عنصر محفوظ</item>
+    </plurals>
+    <plurals name="minutes_remaining">
+        <item quantity="zero">%d د متبقية</item>
+        <item quantity="one">%d د متبقية</item>
+        <item quantity="two">%d د متبقيتان</item>
+        <item quantity="few">%d د متبقية</item>
+        <item quantity="many">%d د متبقية</item>
+        <item quantity="other">%d د متبقية</item>
+    </plurals>
+</resources>
