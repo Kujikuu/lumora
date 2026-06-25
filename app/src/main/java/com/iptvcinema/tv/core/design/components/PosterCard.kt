@@ -1,10 +1,10 @@
 package com.iptvcinema.tv.core.design.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -56,42 +57,26 @@ fun PosterCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val (width, imageHeight, titleMaxLines, captionMinHeight) = when (variant) {
-        PosterCardVariant.PortraitPoster -> PosterDimensions(160.dp, 240.dp, 2, 44.dp)
-        PosterCardVariant.LandscapePoster -> PosterDimensions(240.dp, 135.dp, 1, 40.dp)
-        PosterCardVariant.CompactPoster -> PosterDimensions(120.dp, 180.dp, 2, 40.dp)
+    val imageAspectRatio = when (variant) {
+        PosterCardVariant.PortraitPoster -> 2f / 3f
+        PosterCardVariant.LandscapePoster -> 16f / 9f
+        PosterCardVariant.CompactPoster -> 2f / 3f
     }
-    val innerWidth = width - 12.dp
 
     FocusableCinemaCard(
-        modifier = modifier.width(width),
+        modifier = modifier,
         onClick = onClick,
         shape = CinemaShapes.Medium,
         contentDescription = data.title,
+        defaultBorderWidth = 0.dp,
     ) { focused ->
-        Column(
-            modifier = Modifier
-                .background(
-                    if (focused) CinemaColors.SurfaceSoft else CinemaColors.SurfaceGlass,
-                    CinemaShapes.Medium,
-                )
-                .border(
-                    1.dp,
-                    if (focused) CinemaColors.GoldDeep.copy(alpha = 0.48f) else CinemaColors.Border,
-                    CinemaShapes.Medium,
-                )
-                .padding(6.dp),
-        ) {
+        Column {
             Box(
                 modifier = Modifier
-                    .width(innerWidth)
-                    .height(imageHeight)
+                    .fillMaxWidth()
+                    .aspectRatio(imageAspectRatio)
                     .clip(CinemaShapes.Medium)
-                    .background(
-                        androidx.compose.ui.graphics.Brush.verticalGradient(
-                            listOf(CinemaColors.GoldDeep.copy(alpha = 0.28f), CinemaColors.Surface),
-                        ),
-                    ),
+                    .background(CinemaColors.Surface),
             ) {
                 CinemaAsyncImage(
                     imageUrl = data.imageUrl,
@@ -100,93 +85,21 @@ fun PosterCard(
                     contentScale = ContentScale.Crop,
                     fallbackLabel = data.title,
                 )
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(
-                            androidx.compose.ui.graphics.Brush.verticalGradient(
-                                listOf(
-                                    CinemaColors.Background.copy(alpha = if (focused) 0.04f else 0f),
-                                    CinemaColors.Background.copy(alpha = 0.08f),
-                                    CinemaColors.Background.copy(alpha = 0.42f),
-                                ),
-                            ),
-                        ),
-                )
-
-                if (data.is4K) {
-                    BadgeChip(
-                        text = stringResource(R.string.badge_4k),
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp),
-                        backgroundColor = CinemaColors.GoldDeep,
-                    )
-                }
-                if (data.isFavorite) {
-                    BadgeChip(
-                        text = stringResource(R.string.badge_saved),
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(8.dp),
-                        backgroundColor = CinemaColors.Surface.copy(alpha = 0.9f),
-                    )
-                }
 
                 if (data.progress != null && data.progress > 0f) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
-                            .height(4.dp)
-                            .background(CinemaColors.Surface.copy(alpha = 0.7f)),
+                            .height(3.dp)
+                            .background(CinemaColors.SurfaceSoft),
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .fillMaxWidth(data.progress.coerceIn(0f, 1f))
-                                .background(CinemaColors.Gold),
+                                .background(CinemaColors.Accent),
                         )
-                    }
-                }
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = captionMinHeight)
-                    .padding(top = 6.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = data.title,
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        color = if (focused) CinemaColors.Gold else CinemaColors.GoldSoft,
-                        fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Medium,
-                    ),
-                    maxLines = titleMaxLines,
-                    overflow = TextOverflow.Ellipsis,
-                )
-
-                when {
-                    !data.subtitle.isNullOrBlank() -> {
-                        Text(
-                            text = data.subtitle,
-                            style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.TextMuted),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    else -> {
-                        val metadata = listOfNotNull(data.year, data.runtime).joinToString(" · ")
-                        if (metadata.isNotEmpty()) {
-                            Text(
-                                text = metadata,
-                                style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.TextMuted),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
                     }
                 }
             }
@@ -194,31 +107,25 @@ fun PosterCard(
     }
 }
 
-private data class PosterDimensions(
-    val width: Dp,
-    val imageHeight: Dp,
-    val titleMaxLines: Int,
-    val captionMinHeight: Dp,
-)
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun BadgeChip(
     text: String,
     modifier: Modifier = Modifier,
-    backgroundColor: androidx.compose.ui.graphics.Color = CinemaColors.LiveRed,
+    backgroundColor: androidx.compose.ui.graphics.Color = CinemaColors.Accent,
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(4.dp))
+            .clip(RoundedCornerShape(2.dp))
             .background(backgroundColor)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+            .padding(horizontal = 5.dp, vertical = 1.dp),
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.Bold,
-                color = CinemaColors.TextPrimary,
+                color = CinemaColors.White,
             ),
         )
     }

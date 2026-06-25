@@ -9,11 +9,11 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.darkColorScheme
 
 private val CinemaColorScheme = darkColorScheme(
-    primary = CinemaColors.Gold,
+    primary = CinemaColors.White,
     onPrimary = CinemaColors.Background,
-    primaryContainer = CinemaColors.GoldDeep,
-    onPrimaryContainer = CinemaColors.TextPrimary,
-    secondary = CinemaColors.GoldSoft,
+    primaryContainer = CinemaColors.Accent,
+    onPrimaryContainer = CinemaColors.White,
+    secondary = CinemaColors.TextSecondary,
     onSecondary = CinemaColors.Background,
     background = CinemaColors.Background,
     onBackground = CinemaColors.TextPrimary,
@@ -22,7 +22,7 @@ private val CinemaColorScheme = darkColorScheme(
     surfaceVariant = CinemaColors.SurfaceSoft,
     onSurfaceVariant = CinemaColors.TextSecondary,
     error = CinemaColors.Danger,
-    onError = CinemaColors.TextPrimary,
+    onError = CinemaColors.White,
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)

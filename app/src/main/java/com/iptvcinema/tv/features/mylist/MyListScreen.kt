@@ -2,6 +2,7 @@ package com.iptvcinema.tv.features.mylist
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -78,7 +79,10 @@ fun MyListScreen(
     ) {
         when (val state = uiState) {
             MyListUiState.Loading -> {
-                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap)) {
+                Column(
+                    modifier = Modifier.padding(top = CinemaSpacing.ScreenPaddingVertical),
+                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                ) {
                     CinemaSerifTitle(text = stringResource(R.string.mylist_title))
                     SkeletonPosterGrid(columns = 4, rows = 2)
                 }
@@ -100,13 +104,16 @@ fun MyListScreen(
                 val recentlyWatched = state.recentlyWatchedPosters
 
                 Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
+                        .padding(top = CinemaSpacing.ScreenPaddingVertical),
                     verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
                 ) {
                     CinemaSerifTitle(text = stringResource(R.string.mylist_title))
                     Text(
                         text = stringResource(R.string.mylist_subtitle),
                         style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
+                        modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
                     )
                     Text(
                         text = pluralStringResource(
@@ -114,7 +121,8 @@ fun MyListScreen(
                             filteredItems.size,
                             filteredItems.size,
                         ),
-                        style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.Gold),
+                        style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.Accent),
+                        modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
                     )
                     FilterChipRow(
                         items = filters.map { it.label },
@@ -125,6 +133,7 @@ fun MyListScreen(
                         },
                         chipFocusRequester = chipFocus,
                         focusedChipIndex = selectedFilter,
+                        modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
                     )
                     if (filteredItems.isEmpty()) {
                         EmptyState(

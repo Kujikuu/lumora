@@ -151,7 +151,7 @@ fun ActivationScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
                         CinemaButton(
                             text = stringResource(R.string.activation_enter_account),
-                            variant = CinemaButtonVariant.PrimaryGold,
+                            variant = CinemaButtonVariant.PrimaryAccent,
                             onClick = onEnterAccount,
                             modifier = Modifier.focusRequester(primaryButtonFocus),
                             enabled = uiState is ActivationUiState.Ready,

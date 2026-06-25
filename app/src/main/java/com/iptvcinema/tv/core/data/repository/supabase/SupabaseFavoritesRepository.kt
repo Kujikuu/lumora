@@ -22,7 +22,8 @@ class SupabaseFavoritesRepository @Inject constructor(
     private val supabaseClient: SupabaseClient,
 ) : FavoritesRepository {
     override fun observeFavorites(profileId: String): Flow<List<FavoriteItem>> = flow {
-        emit(getFavorites(profileId))
+        // Network read: degrade to empty list instead of crashing on expired JWT / offline.
+        emit(runCatching { getFavorites(profileId) }.getOrDefault(emptyList()))
     }
 
     override suspend fun isFavorite(

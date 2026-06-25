@@ -1,26 +1,49 @@
 package com.iptvcinema.tv.core.design.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.focusGroup
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LiveTv
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
@@ -31,211 +54,152 @@ import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.navigation.NavItem
 
-private val topNavPills = listOf(
-    NavItem.Home,
-    NavItem.LiveTv,
-    NavItem.Movies,
-    NavItem.Series,
+private val RailCollapsedWidth = 56.dp
+private val RailExpandedWidth = 220.dp
+
+private data class RailEntry(
+    val navItem: NavItem,
+    val icon: ImageVector,
+    val onClick: () -> Unit,
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun CinemaTopNav(
+fun CinemaNavRail(
     selected: NavItem,
     onNavigate: (NavItem) -> Unit,
-    onSearchClick: () -> Unit = { onNavigate(NavItem.Search) },
-    onSettingsClick: () -> Unit = { onNavigate(NavItem.Settings) },
-    onProfileClick: () -> Unit = { onNavigate(NavItem.Profile) },
+    onSearchClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onProfileClick: () -> Unit,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    val width by animateDpAsState(
+        targetValue = if (expanded) RailExpandedWidth else RailCollapsedWidth,
+        animationSpec = tween(durationMillis = 200),
+        label = "railWidth",
+    )
+
+    val primaryItems = listOf(
+        RailEntry(NavItem.Home, Icons.Default.Home) { onNavigate(NavItem.Home) },
+        RailEntry(NavItem.Search, Icons.Default.Search, onSearchClick),
+        RailEntry(NavItem.LiveTv, Icons.Default.LiveTv) { onNavigate(NavItem.LiveTv) },
+        RailEntry(NavItem.Movies, Icons.Default.Movie) { onNavigate(NavItem.Movies) },
+        RailEntry(NavItem.Series, Icons.Default.VideoLibrary) { onNavigate(NavItem.Series) },
+        RailEntry(NavItem.MyList, Icons.Default.Favorite) { onNavigate(NavItem.MyList) },
+    )
+
+    Column(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(bottom = CinemaSpacing.NavBottomPadding),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
-    ) {
-        CinemaLogo(navBar = true)
-
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f),
-        ) {
-            items(topNavPills) { item ->
-                CinemaNavPill(
-                    label = stringResource(item.labelRes),
-                    isSelected = item == selected,
-                    onClick = { onNavigate(item) },
-                )
-            }
-        }
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            SearchNavButton(
-                isSelected = selected == NavItem.Search,
-                onClick = onSearchClick,
+            .fillMaxHeight()
+            .width(width)
+            .background(
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        CinemaColors.Background.copy(alpha = if (expanded) 0.95f else 0.85f),
+                        CinemaColors.Background.copy(alpha = 0f),
+                    ),
+                ),
             )
-            NavIconButton(
-                contentDescription = stringResource(R.string.nav_settings),
-                isSelected = selected == NavItem.Settings,
-                onClick = onSettingsClick,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = null,
-                    tint = if (selected == NavItem.Settings) CinemaColors.Gold else CinemaColors.TextSecondary,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-            NavIconButton(
-                contentDescription = stringResource(R.string.nav_profile),
-                isSelected = selected == NavItem.Profile,
-                onClick = onProfileClick,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(
-                            if (selected == NavItem.Profile) CinemaColors.Gold else CinemaColors.SurfaceSoft,
-                            CinemaShapes.Large,
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "M",
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = if (selected == NavItem.Profile) CinemaColors.Background else CinemaColors.TextPrimary,
-                        ),
-                    )
-                }
-            }
+            .focusGroup()
+            .onFocusChanged { onExpandedChange(it.hasFocus) }
+            .padding(vertical = 20.dp, horizontal = 8.dp),
+        horizontalAlignment = Alignment.Start,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        CinemaBrandMark(size = 32.dp)
+
+        Spacer(Modifier.size(16.dp))
+
+        primaryItems.forEach { entry ->
+            RailItemRow(
+                label = stringResource(entry.navItem.labelRes),
+                icon = entry.icon,
+                selected = entry.navItem == selected,
+                expanded = expanded,
+                onClick = entry.onClick,
+            )
         }
+
+        Spacer(Modifier.weight(1f))
+
+        RailItemRow(
+            label = stringResource(R.string.nav_profile),
+            icon = Icons.Default.Person,
+            selected = selected == NavItem.Profile,
+            expanded = expanded,
+            onClick = onProfileClick,
+        )
+        RailItemRow(
+            label = stringResource(NavItem.Settings.labelRes),
+            icon = Icons.Default.Settings,
+            selected = selected == NavItem.Settings,
+            expanded = expanded,
+            onClick = onSettingsClick,
+        )
     }
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun SearchNavButton(
-    isSelected: Boolean,
+private fun RailItemRow(
+    label: String,
+    icon: ImageVector,
+    selected: Boolean,
+    expanded: Boolean,
     onClick: () -> Unit,
 ) {
     FocusableCinemaCard(
+        modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
-        shape = CinemaShapes.Large,
+        shape = CinemaShapes.Small,
+        defaultBorderWidth = 0.dp,
+        focusedBorderWidth = 0.dp,
+        focusScale = 1.0f,
+        contentDescription = label,
     ) { focused ->
+        val contentColor = when {
+            selected -> CinemaColors.White
+            focused -> CinemaColors.White
+            else -> CinemaColors.TextMuted
+        }
         Row(
             modifier = Modifier
+                .fillMaxWidth()
                 .background(
-                    color = when {
-                        isSelected -> CinemaColors.Gold
-                        focused -> CinemaColors.Surface
-                        else -> CinemaColors.SurfaceSoft
+                    when {
+                        selected -> CinemaColors.White.copy(alpha = 0.12f)
+                        focused -> CinemaColors.White.copy(alpha = 0.06f)
+                        else -> CinemaColors.Background.copy(alpha = 0f)
                     },
-                    shape = CinemaShapes.Large,
+                    CinemaShapes.Small,
                 )
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                .padding(horizontal = 10.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Icon(
-                imageVector = Icons.Default.Search,
+                imageVector = icon,
                 contentDescription = null,
-                tint = if (isSelected) CinemaColors.Background else CinemaColors.TextSecondary,
-                modifier = Modifier.size(20.dp),
+                tint = contentColor,
+                modifier = Modifier.size(22.dp),
             )
-            Text(
-                text = stringResource(R.string.nav_search),
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (isSelected) CinemaColors.Background else CinemaColors.TextSecondary,
-                ),
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun NavIconButton(
-    contentDescription: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    FocusableCinemaCard(
-        modifier = modifier.size(40.dp),
-        onClick = onClick,
-        shape = CinemaShapes.Large,
-    ) { _ ->
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .background(
-                    if (isSelected) CinemaColors.Surface else CinemaColors.SurfaceSoft,
-                    CinemaShapes.Large,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            content()
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun CinemaNavPill(
-    label: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-) {
-    FocusableCinemaCard(
-        onClick = onClick,
-        shape = CinemaShapes.Large,
-    ) { focused ->
-        Box(
-            modifier = Modifier
-                .background(
-                    color = when {
-                        isSelected -> CinemaColors.Gold
-                        focused -> CinemaColors.Surface
-                        else -> CinemaColors.SurfaceSoft
-                    },
-                    shape = CinemaShapes.Large,
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn(tween(150)) + expandHorizontally(tween(180)),
+                exit = fadeOut(tween(100)) + shrinkHorizontally(tween(140)),
+            ) {
+                Text(
+                    text = label,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                        color = contentColor,
+                    ),
                 )
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (isSelected) CinemaColors.Background else CinemaColors.TextSecondary,
-                ),
-            )
+            }
         }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-fun StatusFooter(
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.End,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "●●●●○  ${java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date())}",
-            style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
-        )
     }
 }
 
@@ -257,55 +221,62 @@ fun CinemaScreen(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    Column(
+    val showRail = showTopNav && selectedNavItem != null && onNavigate != null
+    var railExpanded by remember { mutableStateOf(false) }
+    val scrimAlpha by animateFloatAsState(
+        targetValue = if (railExpanded) 0.4f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "railScrim",
+    )
+
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                Brush.radialGradient(
-                    colors = listOf(
-                        CinemaColors.GoldDeep.copy(alpha = 0.11f),
-                        CinemaColors.BackgroundSoft,
-                        CinemaColors.Background,
-                    ),
-                ),
-            )
-            .padding(
-                horizontal = CinemaSpacing.ScreenPadding,
-                vertical = CinemaSpacing.ScreenPaddingVertical,
-            ),
+            .background(CinemaColors.Background),
     ) {
-        if (showTopNav && selectedNavItem != null && onNavigate != null) {
-            CinemaTopNav(
-                selected = selectedNavItem,
-                onNavigate = onNavigate,
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.TopStart,
+            ) {
+                content()
+            }
+
+            if (showRemoteHints) {
+                RemoteHintBar(
+                    hints = remoteHints,
+                    modifier = Modifier.padding(
+                        start = CinemaSpacing.ContentStart,
+                        end = CinemaSpacing.ScreenPadding,
+                        bottom = 8.dp,
+                    ),
+                )
+            }
+        }
+
+        if (showRail) {
+            if (scrimAlpha > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(1f)
+                        .background(CinemaColors.Background.copy(alpha = scrimAlpha)),
+                )
+            }
+
+            CinemaNavRail(
+                selected = selectedNavItem!!,
+                onNavigate = onNavigate!!,
                 onSearchClick = onSearchClick ?: { onNavigate(NavItem.Search) },
                 onSettingsClick = onSettingsClick ?: { onNavigate(NavItem.Settings) },
                 onProfileClick = onProfileClick ?: { onNavigate(NavItem.Profile) },
-                modifier = Modifier.padding(bottom = CinemaSpacing.NavBottomPadding),
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            contentAlignment = Alignment.TopStart,
-        ) {
-            content()
-        }
-
-        if (showRemoteHints) {
-            RemoteHintBar(
-                hints = remoteHints,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-        if (showBrowseFooter && onFavoritesClick != null && onRecentlyAddedClick != null && onTopRatedClick != null) {
-            BrowseFooter(
-                onFavorites = onFavoritesClick,
-                onRecentlyAdded = onRecentlyAddedClick,
-                onTopRated = onTopRatedClick,
-                modifier = Modifier.padding(top = 8.dp),
+                expanded = railExpanded,
+                onExpandedChange = { railExpanded = it },
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .zIndex(2f),
             )
         }
     }

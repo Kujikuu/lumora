@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -35,15 +36,17 @@ fun CinemaSerifTitle(
     val titleFont = if (isArabic) {
         FontFamily(Font(R.font.noto_sans_arabic))
     } else {
-        FontFamily.Serif
+        FontFamily.SansSerif
     }
     Text(
         text = text,
-        modifier = modifier,
+        modifier = Modifier
+            .padding(start = CinemaSpacing.ContentStart, end = 24.dp, top = 20.dp)
+            .then(modifier),
         style = MaterialTheme.typography.displaySmall.copy(
             fontFamily = titleFont,
-            fontWeight = FontWeight.Normal,
-            color = CinemaColors.GoldSoft,
+            fontWeight = FontWeight.Bold,
+            color = CinemaColors.White,
         ),
     )
 }
@@ -58,8 +61,8 @@ fun SectionHeader(
         text = title,
         modifier = modifier,
         style = MaterialTheme.typography.titleSmall.copy(
-            fontWeight = FontWeight.SemiBold,
-            color = CinemaColors.GoldSoft,
+            fontWeight = FontWeight.Bold,
+            color = CinemaColors.TextPrimary,
         ),
     )
 }
@@ -72,7 +75,7 @@ fun MetadataRow(
 ) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         items.forEachIndexed { index, item ->
@@ -82,8 +85,8 @@ fun MetadataRow(
             )
             if (index != items.lastIndex) {
                 Text(
-                    text = "•",
-                    style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.GoldDeep),
+                    text = "·",
+                    style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
                 )
             }
         }
@@ -94,14 +97,13 @@ fun MetadataRow(
 @Composable
 fun GlassPanel(
     modifier: Modifier = Modifier,
-    shape: RoundedCornerShape = CinemaShapes.Large,
+    shape: RoundedCornerShape = CinemaShapes.Medium,
     content: @Composable () -> Unit,
 ) {
     Box(
         modifier = modifier
             .clip(shape)
             .background(CinemaColors.SurfaceGlass, shape)
-            .border(1.dp, CinemaColors.Border, shape)
             .padding(CinemaSpacing.ButtonGap),
     ) {
         content()
@@ -117,14 +119,14 @@ fun GoldBadge(
     Box(
         modifier = modifier
             .clip(CinemaShapes.Small)
-            .background(CinemaColors.Gold)
+            .background(CinemaColors.Accent)
             .padding(horizontal = 8.dp, vertical = 3.dp),
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.Bold,
-                color = CinemaColors.Background,
+                color = CinemaColors.White,
             ),
         )
     }

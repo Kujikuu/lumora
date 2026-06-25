@@ -76,7 +76,7 @@ fun PlayerBufferingOverlay(modifier: Modifier = Modifier) {
         Text(
             text = stringResource(R.string.player_buffering),
             style = MaterialTheme.typography.titleLarge.copy(
-                color = CinemaColors.Gold,
+                color = CinemaColors.White,
                 fontWeight = FontWeight.SemiBold,
             ),
         )
@@ -111,7 +111,7 @@ fun TrackPickerOverlay(
                     item {
                         CinemaButton(
                             text = stringResource(R.string.toggle_off),
-                            variant = if (selectedIndex < 0) CinemaButtonVariant.PrimaryGold else CinemaButtonVariant.SecondaryDark,
+                            variant = if (selectedIndex < 0) CinemaButtonVariant.PrimaryAccent else CinemaButtonVariant.SecondaryDark,
                             onClick = onDisable,
                         )
                     }
@@ -120,7 +120,7 @@ fun TrackPickerOverlay(
                     CinemaButton(
                         text = track.label,
                         variant = if (track.index == selectedIndex) {
-                            CinemaButtonVariant.PrimaryGold
+                            CinemaButtonVariant.PrimaryAccent
                         } else {
                             CinemaButtonVariant.SecondaryDark
                         },
@@ -193,7 +193,7 @@ fun PlayerOverlay(
                 resumeHint?.let { hint ->
                     Text(
                         text = hint,
-                        style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.GoldSoft),
+                        style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.Accent),
                     )
                 }
             }
@@ -247,7 +247,7 @@ fun PlayerOverlay(
                     CinemaButton(text = stringResource(R.string.player_subtitles), variant = CinemaButtonVariant.Ghost, onClick = onSubtitles)
                     CinemaButton(text = stringResource(R.string.player_audio), variant = CinemaButtonVariant.Ghost, onClick = onAudio)
                     qualityLabel?.let { label ->
-                        BadgeChip(text = label, backgroundColor = CinemaColors.GoldDeep)
+                        BadgeChip(text = label, backgroundColor = CinemaColors.SurfaceSoft)
                     }
                     CinemaButton(text = stringResource(R.string.btn_back), variant = CinemaButtonVariant.SecondaryDark, onClick = onBack)
                 }
@@ -277,13 +277,13 @@ fun PlaybackControlButton(
         shape = CinemaShapes.Large,
     ) { _ ->
         FocusableCardSurface(
-            backgroundColor = if (large) CinemaColors.Gold else CinemaColors.SurfaceSoft,
-            shape = CinemaShapes.Large,
+            backgroundColor = if (large) CinemaColors.White else CinemaColors.SurfaceSoft.copy(alpha = 0.6f),
+            shape = CircleShape,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (large) CinemaColors.Background else CinemaColors.TextPrimary,
+                tint = if (large) CinemaColors.Background else CinemaColors.White,
                 modifier = Modifier.size(if (large) 36.dp else 24.dp),
             )
         }
@@ -373,7 +373,7 @@ fun SeekableProgressBar(
                     modifier = Modifier
                         .fillMaxWidth(displayProgress.coerceIn(0f, 1f))
                         .height(barHeight)
-                        .background(if (isFocused) CinemaColors.Gold else CinemaColors.Gold.copy(alpha = 0.85f)),
+                        .background(if (isFocused) CinemaColors.Accent else CinemaColors.Accent.copy(alpha = 0.85f)),
                 )
             }
 
@@ -382,7 +382,7 @@ fun SeekableProgressBar(
                     .offset(x = thumbOffset.coerceIn(0.dp, trackWidth - thumbSize))
                     .size(thumbSize)
                     .clip(CircleShape)
-                    .background(if (isFocused) CinemaColors.Gold else CinemaColors.TextPrimary)
+                    .background(if (isFocused) CinemaColors.Accent else CinemaColors.White)
                     .then(
                         if (isFocused) {
                             Modifier.border(2.dp, CinemaColors.Background, CircleShape)
@@ -402,7 +402,7 @@ fun SeekableProgressBar(
             Text(
                 text = elapsed,
                 style = MaterialTheme.typography.labelSmall.copy(
-                    color = if (isFocused) CinemaColors.Gold else CinemaColors.TextMuted,
+                    color = if (isFocused) CinemaColors.White else CinemaColors.TextMuted,
                 ),
             )
             Text(
@@ -435,7 +435,7 @@ fun ProgressTimeline(
                 modifier = Modifier
                     .fillMaxWidth(progress.coerceIn(0f, 1f))
                     .height(6.dp)
-                    .background(CinemaColors.Gold),
+                    .background(CinemaColors.Accent),
             )
         }
         Row(
@@ -474,7 +474,7 @@ fun AutoplayCountdownOverlay(
             Text(
                 text = stringResource(R.string.player_up_next_in, secondsRemaining),
                 style = MaterialTheme.typography.titleMedium.copy(
-                    color = CinemaColors.Gold,
+                    color = CinemaColors.White,
                     fontWeight = FontWeight.SemiBold,
                 ),
             )
@@ -505,7 +505,7 @@ fun ChannelChangeBanner(
                 .background(CinemaColors.SurfaceGlass, CinemaShapes.Medium)
                 .padding(horizontal = 24.dp, vertical = 12.dp),
             style = MaterialTheme.typography.titleMedium.copy(
-                color = CinemaColors.GoldSoft,
+                color = CinemaColors.TextSecondary,
                 fontWeight = FontWeight.SemiBold,
             ),
         )
@@ -526,7 +526,7 @@ fun PlayerRebufferOverlay(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .background(CinemaColors.Background.copy(alpha = 0.75f), CinemaShapes.Small)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.GoldSoft),
+            style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextSecondary),
         )
     }
 }
@@ -740,7 +740,7 @@ fun SearchKeyboard(
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             CinemaButton(
                 text = layoutLabel,
-                variant = CinemaButtonVariant.PrimaryGold,
+                variant = CinemaButtonVariant.PrimaryAccent,
                 onClick = onLayoutToggle,
             )
             if (showDeviceKeyboard) {

@@ -610,7 +610,7 @@ public final class DaggerIptvCinemaApp_HiltComponents_SingletonC {
           return (T) new MoviesViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get());
 
           case 5: // com.iptvcinema.tv.features.mylist.MyListViewModel 
-          return (T) new MyListViewModel(singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.supabaseFavoritesRepositoryProvider.get(), singletonCImpl.supabaseWatchHistoryRepositoryProvider.get());
+          return (T) new MyListViewModel(singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.supabaseFavoritesRepositoryProvider.get(), singletonCImpl.supabaseWatchHistoryRepositoryProvider.get(), singletonCImpl.appStringsProvider.get());
 
           case 6: // com.iptvcinema.tv.features.parental.ParentalControlsViewModel 
           return (T) new ParentalControlsViewModel(singletonCImpl.supabaseProfilesRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.pinHasherProvider.get(), singletonCImpl.parentalGateProvider.get());

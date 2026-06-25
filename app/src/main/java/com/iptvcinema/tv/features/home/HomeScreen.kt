@@ -97,7 +97,7 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
+                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
             ) {
                 uiState.syncBannerText?.let { bannerText ->
                     SyncStatusBanner(

@@ -173,6 +173,11 @@ fun LiveTvScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(
+                        start = CinemaSpacing.ContentStart,
+                        end = 24.dp,
+                        top = CinemaSpacing.ScreenPaddingVertical,
+                    )
                     .onPreviewKeyEvent { event ->
                         if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                         when (event.key) {

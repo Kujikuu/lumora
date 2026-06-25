@@ -5,8 +5,11 @@
 IPTV Cinema uses a premium cinematic design system:
 
 ```text
-Dark cinema + champagne gold + glass panels + poster-led browsing
+Deep space-black canvas + electric blue accent + glass panels + poster-led browsing
 ```
+
+> See `docs/07_REDESIGN_CONCEPT.md` for the full redesign concept (electric-blue
+> system + left expanding navigation rail).
 
 ## Design Keywords
 
@@ -17,7 +20,7 @@ Dark cinema + champagne gold + glass panels + poster-led browsing
 - Dark
 - Focused
 - Remote-friendly
-- Gold-accented
+- Electric-blue accent (red reserved for LIVE)
 - High contrast
 - 10-foot readable
 
@@ -31,18 +34,28 @@ object CinemaColors {
     val SurfaceSoft = Color(0xFF151B22)
     val SurfaceGlass = Color(0xCC121820)
 
-    val Gold = Color(0xFFFFC95C)
-    val GoldSoft = Color(0xFFF6D891)
-    val GoldDeep = Color(0xFFC98A24)
+    // Primary accent: electric blue.
+    val Accent = Color(0xFF3DA9FC)
+    val AccentSoft = Color(0xFF8FD0FF)
+    val AccentDeep = Color(0xFF1E6FD9)
+    val AccentGlow = Color(0xFF3DA9FC)
 
-    val TextPrimary = Color(0xFFF6F1E7)
-    val TextSecondary = Color(0xFFB8B8B8)
+    // Backwards-compatible aliases: the historical Gold* tokens now map to blue.
+    val Gold = Accent
+    val GoldSoft = AccentSoft
+    val GoldDeep = AccentDeep
+
+    // Sparing secondary warmth only (premium / top-rated flourishes).
+    val AmberWarm = Color(0xFFFFC95C)
+
+    val TextPrimary = Color(0xFFF4F7FA)
+    val TextSecondary = Color(0xFFB8C0C8)
     val TextMuted = Color(0xFF747B83)
 
     val Border = Color(0xFF2B3138)
-    val FocusBorder = Color(0xFFFFD36E)
+    val FocusBorder = Color(0xFF6FC2FF)
 
-    val LiveRed = Color(0xFFE02424)
+    val LiveRed = Color(0xFFE02424) // LIVE badges only
     val Success = Color(0xFF45C979)
     val Warning = Color(0xFFFFB84D)
 }
@@ -100,8 +113,8 @@ Remote focus must be obvious.
 Focused item should:
 
 - Scale slightly.
-- Show gold border.
-- Increase shadow/glow.
+- Show electric-blue border.
+- Increase shadow/glow (blue).
 - Raise z-index visually.
 - Never rely only on color.
 - Keep text readable.
@@ -110,7 +123,7 @@ Recommended focus behavior:
 
 ```text
 Default: 1px subtle border
-Focused: 2px gold border + glow + 1.04 scale
+Focused: 2px electric-blue border + blue glow + 1.04 scale
 Pressed: 0.98 scale
 Disabled: low opacity
 ```
@@ -148,43 +161,48 @@ Used by:
 
 ---
 
-### 2. `CinemaTopNav`
+### 2. `CinemaNavRail`
 
 Purpose:
 
-- Top navigation bar for main app screens.
+- Left vertical navigation rail for main app screens (replaces the old top nav).
 
-Items:
+Items (top to bottom):
 
 ```text
+Profile (avatar)
 Home
 Live TV
 Movies
 Series
-Sports
-Kids
-My List
+Favorites
 Search
-Settings
-Profile
+Settings (pinned at the bottom)
 ```
 
 Props:
 
 ```kotlin
 @Composable
-fun CinemaTopNav(
+fun CinemaNavRail(
     selected: NavItem,
-    onNavigate: (NavItem) -> Unit
+    onNavigate: (NavItem) -> Unit,
+    onSearchClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onProfileClick: () -> Unit,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
 )
 ```
 
 Behavior:
 
-- D-pad horizontal movement.
-- Gold pill focus/selected state.
-- Search can be icon + label.
-- Settings/profile can be circular icon buttons.
+- Collapsed (~88dp): icons only.
+- Focused: expands (~248dp) and reveals labels, overlaying content with a scrim
+  so nothing reflows.
+- D-pad up/down moves within the rail; right enters content; left at the content
+  edge returns to the rail.
+- Selected item: blue pill + blue tint. Focused item: scale + blue glow.
 
 ---
 
@@ -443,11 +461,11 @@ Every UI prompt and screen must use:
 ```text
 Brand name: IPTV Cinema
 Background: dark blue-black / graphite
-Accent: champagne gold
+Accent: electric blue (red reserved for LIVE)
 Cards: rounded glass panels
-Focus: gold outline + glow
+Focus: electric-blue outline + glow
 Typography: large readable TV typography
-Navigation: top nav for main app screens
+Navigation: left expanding rail for main app screens
 No phone layout
 No mobile bottom tabs
 No clutter

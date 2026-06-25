@@ -1,8 +1,12 @@
 package com.iptvcinema.tv.features.search
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -11,11 +15,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -24,7 +30,6 @@ import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
-import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
 import com.iptvcinema.tv.core.design.components.ChannelTile
 import com.iptvcinema.tv.core.design.components.ContentRail
 import com.iptvcinema.tv.core.design.components.EmptyState
@@ -80,17 +85,26 @@ fun SearchScreen(
         selectedNavItem = NavItem.Search,
     ) {
         Row(
-            modifier = Modifier.verticalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    start = CinemaSpacing.NavRailWidth + 16.dp,
+                    end = 24.dp,
+                    top = 24.dp,
+                    bottom = 8.dp,
+                ),
+            horizontalArrangement = Arrangement.spacedBy(32.dp),
         ) {
             Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                modifier = Modifier.weight(0.38f),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                CinemaSerifTitle(text = stringResource(R.string.search_title))
                 Text(
-                    text = stringResource(R.string.search_subtitle),
-                    style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
+                    text = stringResource(R.string.search_title),
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = CinemaColors.White,
+                    ),
                 )
                 SearchInput(
                     query = uiState.query,
@@ -110,23 +124,13 @@ fun SearchScreen(
                     onClear = viewModel::clearSearch,
                 )
             }
+
             Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                modifier = Modifier
+                    .weight(0.62f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Text(text = stringResource(R.string.search_recent), style = MaterialTheme.typography.titleMedium)
-                if (uiState.recentSearches.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.search_recent_empty),
-                        style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
-                    )
-                } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
-                        uiState.recentSearches.forEach { term ->
-                            RecentSearchChip(query = term, onClick = { viewModel.applyRecentSearch(term) })
-                        }
-                    }
-                }
                 FilterChipRow(
                     items = searchFilters,
                     selectedIndex = uiState.selectedFilterIndex,
@@ -137,6 +141,22 @@ fun SearchScreen(
                     chipFocusRequester = chipFocus,
                     focusedChipIndex = uiState.selectedFilterIndex,
                 )
+
+                if (uiState.recentSearches.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.search_recent),
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            color = CinemaColors.TextSecondary,
+                            fontWeight = FontWeight.Medium,
+                        ),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        uiState.recentSearches.forEach { term ->
+                            RecentSearchChip(query = term, onClick = { viewModel.applyRecentSearch(term) })
+                        }
+                    }
+                }
+
                 CatalogStateContent(
                     loadState = uiState.loadState,
                     message = uiState.message,
@@ -163,12 +183,11 @@ fun SearchScreen(
                             )
                         }
                         else -> {
-                            Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                                 if (uiState.movieResults.isNotEmpty()) {
                                     ContentRail(
                                         title = stringResource(R.string.search_top_results),
                                         items = uiState.movieResults,
-                                        countLabel = uiState.movieResults.size.toString(),
                                     ) { movie ->
                                         PosterCard(
                                             data = movie,
@@ -184,7 +203,6 @@ fun SearchScreen(
                                     ContentRail(
                                         title = stringResource(R.string.search_series_results),
                                         items = uiState.seriesResults,
-                                        countLabel = uiState.seriesResults.size.toString(),
                                     ) { series ->
                                         PosterCard(
                                             data = series,
@@ -200,7 +218,6 @@ fun SearchScreen(
                                     ContentRail(
                                         title = stringResource(R.string.search_live_channels),
                                         items = uiState.channelResults,
-                                        countLabel = uiState.channelResults.size.toString(),
                                     ) { channel ->
                                         ChannelTile(
                                             data = channel,

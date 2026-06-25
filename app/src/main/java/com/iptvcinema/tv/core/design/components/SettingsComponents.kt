@@ -43,8 +43,8 @@ fun SettingsMenu(
     focusedItemIndex: Int = 0,
 ) {
     Column(
-        modifier = modifier.width(280.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = modifier.width(260.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         items.forEachIndexed { index, item ->
             SettingsRow(
@@ -74,16 +74,21 @@ fun SettingsRow(
     FocusableCinemaCard(
         modifier = modifier.fillMaxWidth(),
         onClick = onClick,
-        shape = CinemaShapes.Medium,
+        shape = CinemaShapes.Small,
+        defaultBorderWidth = 0.dp,
     ) { focused ->
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    if (isSelected || focused) CinemaColors.Surface else CinemaColors.SurfaceSoft.copy(alpha = 0.5f),
-                    CinemaShapes.Medium,
+                    when {
+                        focused -> CinemaColors.Surface
+                        isSelected -> CinemaColors.SurfaceSoft
+                        else -> CinemaColors.Background
+                    },
+                    CinemaShapes.Small,
                 )
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -91,7 +96,7 @@ fun SettingsRow(
                 text = label,
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (isSelected) CinemaColors.Gold else CinemaColors.TextPrimary,
+                    color = if (isSelected) CinemaColors.White else CinemaColors.TextPrimary,
                 ),
             )
             when {
@@ -114,7 +119,7 @@ fun SettingsRow(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = null,
                         tint = CinemaColors.TextMuted,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }
@@ -133,17 +138,21 @@ fun SettingsToggle(
     FocusableCinemaCard(
         modifier = modifier.fillMaxWidth(),
         onClick = onToggle,
-        shape = CinemaShapes.Medium,
-    ) { _ ->
+        shape = CinemaShapes.Small,
+        defaultBorderWidth = 0.dp,
+    ) { focused ->
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CinemaColors.SurfaceSoft, CinemaShapes.Medium)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .background(
+                    if (focused) CinemaColors.Surface else CinemaColors.SurfaceSoft,
+                    CinemaShapes.Small,
+                )
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = label, style = MaterialTheme.typography.bodyLarge)
+            Text(text = label, style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextPrimary))
             Text(
                 text = if (isOn) stringResource(R.string.toggle_on) else stringResource(R.string.toggle_off),
                 style = MaterialTheme.typography.labelLarge.copy(
@@ -165,9 +174,9 @@ fun AccountSummaryCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(CinemaShapes.Large)
-            .background(CinemaColors.SurfaceGlass)
-            .padding(CinemaSpacing.SectionGap),
+            .clip(CinemaShapes.Medium)
+            .background(CinemaColors.SurfaceSoft)
+            .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(
@@ -176,20 +185,29 @@ fun AccountSummaryCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(64.dp)
-                    .clip(CinemaShapes.Large)
-                    .background(CinemaColors.GoldDeep),
+                    .size(56.dp)
+                    .clip(CinemaShapes.Medium)
+                    .background(CinemaColors.Accent),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = account.name.take(1),
-                    style = MaterialTheme.typography.headlineMedium.copy(color = CinemaColors.TextPrimary),
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        color = CinemaColors.White,
+                        fontWeight = FontWeight.Bold,
+                    ),
                 )
             }
             Column {
-                Text(text = account.name, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                Text(
+                    text = account.name,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = CinemaColors.White,
+                    ),
+                )
                 Text(text = account.email, style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary))
-                Text(text = account.plan, style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.Gold))
+                Text(text = account.plan, style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.Accent))
                 Text(
                     text = stringResource(R.string.settings_renews, account.renewalDate),
                     style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
@@ -228,11 +246,14 @@ fun BlockedCategoryList(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
             text = stringResource(R.string.settings_blocked_categories),
-            style = MaterialTheme.typography.titleMedium.copy(color = CinemaColors.Gold),
+            style = MaterialTheme.typography.titleMedium.copy(
+                color = CinemaColors.White,
+                fontWeight = FontWeight.Bold,
+            ),
         )
         categories.forEach { category ->
             Text(
@@ -269,19 +290,22 @@ fun EmptyState(
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         CinemaLogo()
         Text(
             text = title,
-            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.Bold,
+                color = CinemaColors.White,
+            ),
         )
         Text(
             text = description,
             style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
-            CinemaButton(text = primaryAction, variant = CinemaButtonVariant.PrimaryGold, onClick = onPrimary)
+            CinemaButton(text = primaryAction, variant = CinemaButtonVariant.PrimaryAccent, onClick = onPrimary)
             if (secondaryAction != null && onSecondary != null) {
                 CinemaButton(text = secondaryAction, variant = CinemaButtonVariant.SecondaryDark, onClick = onSecondary)
             }
@@ -316,12 +340,11 @@ fun ErrorState(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "⚠",
-            style = MaterialTheme.typography.displayLarge.copy(color = CinemaColors.Gold),
-        )
-        Text(
             text = title,
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.Bold,
+                color = CinemaColors.White,
+            ),
             modifier = Modifier.padding(top = 16.dp),
         )
         Text(
@@ -330,7 +353,7 @@ fun ErrorState(
             modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
-            CinemaButton(text = stringResource(R.string.btn_try_again), variant = CinemaButtonVariant.PrimaryGold, onClick = onRetry)
+            CinemaButton(text = stringResource(R.string.btn_try_again), variant = CinemaButtonVariant.PrimaryAccent, onClick = onRetry)
             if (showSwitchStream) {
                 CinemaButton(text = resolvedSwitchLabel, variant = CinemaButtonVariant.SecondaryDark, onClick = onSwitchStream)
             }

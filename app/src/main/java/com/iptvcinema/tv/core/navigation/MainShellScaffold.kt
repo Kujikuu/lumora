@@ -7,7 +7,6 @@ import com.iptvcinema.tv.core.design.components.RemoteHint
 import com.iptvcinema.tv.core.design.components.defaultRemoteHints
 import com.iptvcinema.tv.core.design.components.myListRemoteHints
 import com.iptvcinema.tv.core.design.components.searchRemoteHints
-import com.iptvcinema.tv.core.navigation.NavItem.LiveTv
 import com.iptvcinema.tv.core.navigation.NavItem.MyList
 import com.iptvcinema.tv.core.navigation.NavItem.Search
 
@@ -25,7 +24,10 @@ fun MainShellScaffold(
     remoteHints: List<RemoteHint>? = null,
     content: @Composable () -> Unit,
 ) {
-    val showBrowseFooter = selectedNavItem != LiveTv
+    // The left navigation rail now covers Favorites/Search/etc., so the legacy
+    // bottom browse footer is redundant chrome. Keep it off for a cleaner,
+    // more cinematic layout that gives content rails more vertical room.
+    val showBrowseFooter = false
     val showRemoteHints = true
 
     CinemaScreen(

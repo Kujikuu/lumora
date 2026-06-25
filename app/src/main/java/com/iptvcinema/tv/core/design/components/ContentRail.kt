@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -29,35 +30,29 @@ fun <T> ContentRail(
 ) {
     Column(
         modifier = modifier.padding(bottom = CinemaSpacing.CardGap),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = CinemaSpacing.NavRailWidth + 16.dp,
+                    end = CinemaSpacing.ScreenPadding,
+                ),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = androidx.compose.ui.Alignment.Bottom,
+            verticalAlignment = Alignment.Bottom,
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = CinemaColors.TextPrimary,
+                ),
+            )
+            if (!subtitle.isNullOrBlank()) {
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        color = CinemaColors.TextPrimary,
-                    ),
-                )
-                if (!subtitle.isNullOrBlank()) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
-                    )
-                }
-            }
-            if (!countLabel.isNullOrBlank()) {
-                Text(
-                    text = countLabel,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        color = CinemaColors.GoldSoft,
-                    ),
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
                 )
             }
         }
@@ -65,7 +60,11 @@ fun <T> ContentRail(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+                .horizontalScroll(rememberScrollState())
+                .padding(
+                    start = CinemaSpacing.NavRailWidth + 16.dp,
+                    end = CinemaSpacing.ScreenPadding,
+                ),
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
         ) {
             items.forEach { item ->

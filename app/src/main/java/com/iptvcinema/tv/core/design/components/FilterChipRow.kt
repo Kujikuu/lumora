@@ -1,6 +1,7 @@
 package com.iptvcinema.tv.core.design.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -32,7 +33,7 @@ fun FilterChipRow(
 ) {
     LazyRow(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(vertical = 4.dp),
     ) {
         itemsIndexed(items) { index, label ->
@@ -61,21 +62,33 @@ fun CategoryChip(
     FocusableCinemaCard(
         modifier = modifier,
         onClick = onClick,
-        shape = CinemaShapes.Large,
-    ) { _ ->
+        shape = CinemaShapes.Small,
+        defaultBorderWidth = 0.dp,
+    ) { focused ->
         Box(
             modifier = Modifier
                 .background(
-                    color = if (isSelected) CinemaColors.Gold else CinemaColors.SurfaceSoft,
-                    shape = CinemaShapes.Large,
+                    color = when {
+                        isSelected -> CinemaColors.White
+                        focused -> CinemaColors.Surface
+                        else -> CinemaColors.SurfaceSoft
+                    },
+                    shape = CinemaShapes.Small,
                 )
-                .padding(horizontal = 20.dp, vertical = 10.dp),
+                .then(
+                    if (!isSelected && focused) {
+                        Modifier.border(1.dp, CinemaColors.FocusBorder, CinemaShapes.Small)
+                    } else {
+                        Modifier
+                    },
+                )
+                .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (isSelected) CinemaColors.Background else CinemaColors.TextSecondary,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isSelected) CinemaColors.Background else CinemaColors.TextPrimary,
                 ),
             )
         }

@@ -11,7 +11,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.focus.FocusRequester
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -124,6 +126,7 @@ fun MoviesScreen(
                                 },
                                 chipFocusRequester = chipFocus,
                                 focusedChipIndex = selectedFilter,
+                                modifier = Modifier.padding(start = CinemaSpacing.NavRailWidth + 16.dp),
                             )
                         }
                         PosterGrid(

@@ -67,10 +67,9 @@ fun ChannelListPanel(
 ) {
     Column(
         modifier = modifier
-            .width(340.dp)
-            .clip(CinemaShapes.Large)
-            .background(CinemaColors.SurfaceGlass)
-            .border(1.dp, CinemaColors.Border, CinemaShapes.Large)
+            .width(320.dp)
+            .clip(CinemaShapes.Medium)
+            .background(CinemaColors.SurfaceSoft)
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -114,7 +113,7 @@ private fun ChannelListRow(
             .height(64.dp)
             .then(
                 if (isNowPlaying) {
-                    Modifier.border(1.dp, CinemaColors.Gold.copy(alpha = 0.6f), CinemaShapes.Medium)
+                    Modifier.border(1.dp, CinemaColors.Accent.copy(alpha = 0.6f), CinemaShapes.Small)
                 } else {
                     Modifier
                 },
@@ -128,18 +127,18 @@ private fun ChannelListRow(
                 }
             },
         onClick = onClick,
-        shape = CinemaShapes.Medium,
+        shape = CinemaShapes.Small,
     ) { isFocused ->
         Row(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     when {
-                        isFocused -> CinemaColors.GoldDeep.copy(alpha = 0.22f)
+                        isFocused -> CinemaColors.Surface
                         isSelected -> CinemaColors.SurfaceSoft
-                        else -> CinemaColors.Surface
+                        else -> CinemaColors.Background
                     },
-                    CinemaShapes.Medium,
+                    CinemaShapes.Small,
                 )
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -171,7 +170,7 @@ private fun ChannelListRow(
                 Text(
                     text = channel.name,
                     style = MaterialTheme.typography.labelLarge.copy(
-                        color = if (isNowPlaying || isFocused) CinemaColors.Gold else CinemaColors.TextPrimary,
+                        color = if (isNowPlaying || isFocused) CinemaColors.White else CinemaColors.TextPrimary,
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                     ),
                     maxLines = 1,
@@ -198,22 +197,17 @@ fun LivePreviewCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(CinemaShapes.Large)
-            .background(CinemaColors.SurfaceGlass)
-            .border(1.dp, CinemaColors.Border, CinemaShapes.Large)
+            .clip(CinemaShapes.Medium)
+            .background(CinemaColors.SurfaceSoft)
             .padding(CinemaSpacing.ButtonGap),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(150.dp)
-                .clip(CinemaShapes.Medium)
-                .background(
-                    androidx.compose.ui.graphics.Brush.horizontalGradient(
-                        listOf(CinemaColors.GoldDeep.copy(alpha = 0.32f), CinemaColors.Surface),
-                    ),
-                ),
+                .clip(CinemaShapes.Small)
+                .background(CinemaColors.Surface),
             contentAlignment = Alignment.Center,
         ) {
             CinemaAsyncImage(
@@ -233,9 +227,8 @@ fun LivePreviewCard(
         Text(
             text = channel.name,
             style = MaterialTheme.typography.titleLarge.copy(
-                fontFamily = FontFamily.Serif,
-                fontWeight = FontWeight.Normal,
-                color = CinemaColors.GoldSoft,
+                fontWeight = FontWeight.Bold,
+                color = CinemaColors.White,
             ),
         )
         Text(
@@ -279,7 +272,7 @@ fun LivePreviewCard(
         }
         CinemaButton(
             text = stringResource(R.string.btn_watch_fullscreen),
-            variant = CinemaButtonVariant.PrimaryGold,
+            variant = CinemaButtonVariant.PrimaryAccent,
             onClick = onWatchFullscreen,
         )
     }
@@ -313,7 +306,7 @@ fun MiniChannelEpg(
         ) {
             Text(
                 text = stringResource(R.string.livetv_tv_guide),
-                style = MaterialTheme.typography.titleMedium.copy(color = CinemaColors.GoldSoft),
+                style = MaterialTheme.typography.titleMedium.copy(color = CinemaColors.White),
             )
             CategoryChip(label = dateLabel, isSelected = true, onClick = {})
         }
@@ -475,8 +468,7 @@ fun OnNowPanel(
         modifier = modifier
             .fillMaxWidth()
             .clip(CinemaShapes.Large)
-            .background(CinemaColors.SurfaceGlass)
-            .border(1.dp, CinemaColors.Border, CinemaShapes.Large)
+            .background(CinemaColors.SurfaceSoft)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -581,7 +573,7 @@ fun ProgramGuideGrid(
         ) {
             Text(
                 text = stringResource(R.string.livetv_tv_guide),
-                style = MaterialTheme.typography.titleMedium.copy(color = CinemaColors.GoldSoft),
+                style = MaterialTheme.typography.titleMedium.copy(color = CinemaColors.White),
             )
             CategoryChip(label = dateLabel, isSelected = true, onClick = {})
         }

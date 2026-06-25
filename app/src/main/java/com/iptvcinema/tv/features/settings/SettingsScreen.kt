@@ -3,7 +3,9 @@ package com.iptvcinema.tv.features.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -122,15 +124,21 @@ fun SettingsScreen(
         selectedNavItem = NavItem.Settings,
     ) {
         Column(
-            modifier = Modifier.verticalScroll(rememberScrollState()),
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(top = CinemaSpacing.ScreenPaddingVertical),
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
         ) {
             CinemaSerifTitle(text = stringResource(R.string.settings_title))
             Text(
                 text = stringResource(R.string.settings_subtitle),
                 style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
+                modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap)) {
+            Row(
+                modifier = Modifier.padding(start = CinemaSpacing.ContentStart, end = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+            ) {
                 SettingsMenu(
                     items = sectionLabels,
                     selectedIndex = selectedSection,
@@ -178,7 +186,7 @@ fun SettingsScreen(
                         SettingsSection.Playback -> {
                             Text(
                                 text = stringResource(R.string.settings_playback),
-                                style = MaterialTheme.typography.titleLarge.copy(color = CinemaColors.Gold),
+                                style = MaterialTheme.typography.titleLarge.copy(color = CinemaColors.White, fontWeight = FontWeight.Bold),
                             )
                             SettingsRow(
                                 label = stringResource(R.string.settings_streaming_quality),
@@ -285,7 +293,7 @@ private fun SettingsPlaceholder(
 ) {
     Text(
         text = title,
-        style = MaterialTheme.typography.titleLarge.copy(color = CinemaColors.Gold),
+        style = MaterialTheme.typography.titleLarge.copy(color = CinemaColors.White, fontWeight = FontWeight.Bold),
     )
     Text(
         text = description,

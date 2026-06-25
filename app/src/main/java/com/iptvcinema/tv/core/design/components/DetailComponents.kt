@@ -1,7 +1,6 @@
 package com.iptvcinema.tv.core.design.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
@@ -18,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -69,8 +71,7 @@ fun DetailHero(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = CinemaSpacing.HeroMinHeight, max = CinemaSpacing.HeroMaxHeight)
-            .clip(CinemaShapes.Large),
+            .heightIn(min = CinemaSpacing.HeroMinHeight, max = CinemaSpacing.HeroMaxHeight),
     ) {
         CinemaAsyncImage(
             imageUrl = backdropUrl,
@@ -79,62 +80,84 @@ fun DetailHero(
             contentScale = ContentScale.Crop,
             fallbackLabel = title,
         )
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                    Brush.verticalGradient(
                         listOf(
-                            CinemaColors.Background.copy(alpha = 0.94f),
-                            CinemaColors.Background.copy(alpha = 0.68f),
-                            CinemaColors.Background.copy(alpha = 0.18f),
-                            androidx.compose.ui.graphics.Color.Transparent,
+                            Color.Transparent,
+                            CinemaColors.Background.copy(alpha = 0.6f),
+                            CinemaColors.Background,
                         ),
                     ),
                 ),
         )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            CinemaColors.Background.copy(alpha = 0.8f),
+                            CinemaColors.Background.copy(alpha = 0.3f),
+                            Color.Transparent,
+                        ),
+                    ),
+                ),
+        )
+
         Column(
             modifier = Modifier
-                .align(Alignment.TopStart)
-                .fillMaxSize()
-                .padding(CinemaSpacing.SectionGap),
+                .align(Alignment.BottomStart)
+                .fillMaxWidth(0.6f)
+                .padding(
+                    start = CinemaSpacing.NavRailWidth + 16.dp,
+                    bottom = 20.dp,
+                ),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontWeight = FontWeight.Black,
+                    color = CinemaColors.White,
+                ),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (metadata.isNotEmpty()) {
                 Text(
                     text = metadata.joinToString("  ·  "),
                     style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextSecondary),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
                 )
+            }
+            if (synopsis.isNotBlank()) {
                 Text(
                     text = synopsis,
-                    style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
-                    maxLines = 4,
+                    style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextPrimary),
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth(0.65f),
                 )
             }
             Row(
-                modifier = Modifier.padding(top = 12.dp),
+                modifier = Modifier.padding(top = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
             ) {
                 CinemaButton(
                     text = resolvedPrimaryActionLabel,
-                    variant = CinemaButtonVariant.PrimaryGold,
+                    variant = CinemaButtonVariant.PrimaryAccent,
                     icon = Icons.Default.PlayArrow,
                     onClick = onWatchNow,
                     modifier = watchNowFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
                 )
-                CinemaButton(text = stringResource(R.string.btn_trailer), variant = CinemaButtonVariant.SecondaryDark, onClick = onTrailer)
+                CinemaButton(
+                    text = stringResource(R.string.btn_trailer),
+                    variant = CinemaButtonVariant.SecondaryDark,
+                    icon = Icons.Default.Info,
+                    onClick = onTrailer,
+                )
                 CinemaButton(
                     text = if (isFavorite) resolvedFavoritedLabel else resolvedFavoriteLabel,
                     variant = CinemaButtonVariant.Ghost,
@@ -153,30 +176,34 @@ fun CastCard(
     modifier: Modifier = Modifier,
 ) {
     FocusableCinemaCard(
-        modifier = modifier.width(120.dp),
+        modifier = modifier.width(100.dp),
         onClick = {},
         shape = CinemaShapes.Medium,
+        defaultBorderWidth = 0.dp,
     ) { _ ->
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(6.dp),
         ) {
             Box(
                 modifier = Modifier
-                    .size(72.dp)
-                    .clip(CinemaShapes.Large)
-                    .background(CinemaColors.SurfaceSoft),
+                    .size(56.dp)
+                    .clip(CinemaShapes.XLarge)
+                    .background(CinemaColors.Surface),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = member.name.take(1),
-                    style = MaterialTheme.typography.titleLarge.copy(color = CinemaColors.Gold),
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        color = CinemaColors.White,
+                        fontWeight = FontWeight.Bold,
+                    ),
                 )
             }
             Text(
                 text = member.name,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.TextPrimary),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -225,40 +252,45 @@ fun EpisodeCard(
 ) {
     FocusableCinemaCard(
         modifier = modifier
-            .width(280.dp)
-            .height(100.dp)
-            .then(
-                if (isPlaying) {
-                    Modifier.border(2.dp, CinemaColors.Gold, CinemaShapes.Medium)
-                } else {
-                    Modifier
-                },
-            ),
+            .width(260.dp)
+            .height(90.dp),
         onClick = onClick,
         shape = CinemaShapes.Medium,
-    ) { _ ->
+        defaultBorderWidth = 0.dp,
+    ) { focused ->
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CinemaColors.SurfaceSoft, CinemaShapes.Medium)
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .background(
+                    if (focused) CinemaColors.Surface else CinemaColors.SurfaceSoft,
+                    CinemaShapes.Medium,
+                )
+                .padding(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(72.dp)
+                    .size(width = 64.dp, height = 64.dp)
                     .clip(CinemaShapes.Small)
-                    .background(CinemaColors.Surface),
+                    .background(CinemaColors.Background),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = stringResource(R.string.details_episode_number, episodeNumber),
-                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.Gold),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        color = CinemaColors.White,
+                        fontWeight = FontWeight.Bold,
+                    ),
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.White),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(
                     text = stringResource(R.string.details_episode_duration, durationMinutes),
                     style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.TextMuted),
@@ -269,13 +301,13 @@ fun EpisodeCard(
                             .fillMaxWidth()
                             .padding(top = 4.dp)
                             .height(3.dp)
-                            .background(CinemaColors.Surface),
+                            .background(CinemaColors.Background),
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth(progress.coerceIn(0f, 1f))
                                 .height(3.dp)
-                                .background(CinemaColors.Gold),
+                                .background(CinemaColors.Accent),
                         )
                     }
                 }

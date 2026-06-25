@@ -1,14 +1,14 @@
 package com.iptvcinema.tv.core.design.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,7 +40,6 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -73,9 +73,7 @@ fun HeroBanner(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = height, max = CinemaSpacing.HeroMaxHeight)
-            .clip(CinemaShapes.Large)
-            .border(1.dp, CinemaColors.Border, CinemaShapes.Large),
+            .heightIn(min = height, max = CinemaSpacing.HeroMaxHeight),
     ) {
         if (backdropUrl != null) {
             CinemaAsyncImage(
@@ -93,37 +91,40 @@ fun HeroBanner(
                         Brush.horizontalGradient(
                             colors = listOf(
                                 CinemaColors.Surface,
-                                CinemaColors.BackgroundSoft,
-                                CinemaColors.GoldDeep.copy(alpha = 0.45f),
-                            ),
-                        ),
-                    ),
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .fillMaxHeight()
-                    .width(420.dp)
-                    .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                CinemaColors.GoldDeep.copy(alpha = 0.22f),
-                                CinemaColors.GoldDeep.copy(alpha = 0.38f),
+                                CinemaColors.Background,
                             ),
                         ),
                     ),
             )
         }
+
+        // Bottom gradient fade
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(240.dp)
+                .align(Alignment.BottomCenter)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            CinemaColors.Background.copy(alpha = 0.6f),
+                            CinemaColors.Background,
+                        ),
+                    ),
+                ),
+        )
+
+        // Left side gradient for text readability
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.horizontalGradient(
                         colors = listOf(
-                            CinemaColors.Background.copy(alpha = if (backdropUrl != null) 0.88f else 0.92f),
-                            CinemaColors.Background.copy(alpha = if (backdropUrl != null) 0.68f else 0.58f),
-                            CinemaColors.Background.copy(alpha = if (backdropUrl != null) 0.18f else 0.12f),
+                            CinemaColors.Background.copy(alpha = 0.8f),
+                            CinemaColors.Background.copy(alpha = 0.4f),
+                            Color.Transparent,
                             Color.Transparent,
                         ),
                     ),
@@ -132,53 +133,43 @@ fun HeroBanner(
 
         Column(
             modifier = Modifier
-                .align(Alignment.TopStart)
-                .fillMaxSize()
-                .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 24.dp)
-                .fillMaxWidth(0.62f),
-            verticalArrangement = Arrangement.SpaceBetween,
+                .align(Alignment.BottomStart)
+                .fillMaxWidth(0.55f)
+                .padding(
+                    start = CinemaSpacing.NavRailWidth + 16.dp,
+                    bottom = 28.dp,
+                ),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontWeight = FontWeight.Black,
+                    color = CinemaColors.White,
+                ),
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (description.isNotBlank()) {
                 Text(
-                    text = stringResource(R.string.hero_featured),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = CinemaColors.Gold,
-                        fontWeight = FontWeight.SemiBold,
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = CinemaColors.TextPrimary,
                     ),
-                )
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontFamily = FontFamily.Serif,
-                        fontWeight = FontWeight.Normal,
-                        color = CinemaColors.GoldSoft,
-                    ),
-                    maxLines = 2,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (subtitle != null) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.titleMedium.copy(color = CinemaColors.GoldSoft),
-                    )
-                }
+            }
+            if (metadata.isNotEmpty()) {
                 MetadataRow(items = metadata)
-                if (description.isNotBlank()) {
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
             }
             Row(
-                modifier = Modifier.padding(top = 12.dp),
+                modifier = Modifier.padding(top = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
             ) {
                 CinemaButton(
                     text = stringResource(R.string.btn_watch_now),
-                    variant = CinemaButtonVariant.PrimaryGold,
+                    variant = CinemaButtonVariant.PrimaryAccent,
                     icon = Icons.Default.PlayArrow,
                     onClick = onWatchNow,
                     modifier = watchNowFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
@@ -186,24 +177,29 @@ fun HeroBanner(
                 CinemaButton(
                     text = stringResource(R.string.btn_details),
                     variant = CinemaButtonVariant.SecondaryDark,
+                    icon = Icons.Default.Info,
                     onClick = onDetails,
                 )
             }
         }
+
         if (carouselDotCount > 1) {
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(20.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(end = CinemaSpacing.ScreenPadding, bottom = 36.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 repeat(carouselDotCount) { index ->
                     Box(
                         modifier = Modifier
-                            .size(if (index == selectedCarouselDot) 10.dp else 8.dp)
-                            .clip(CinemaShapes.Large)
+                            .size(
+                                width = if (index == selectedCarouselDot) 16.dp else 6.dp,
+                                height = 3.dp,
+                            )
+                            .clip(CinemaShapes.Small)
                             .background(
-                                if (index == selectedCarouselDot) CinemaColors.Gold else CinemaColors.TextMuted.copy(alpha = 0.5f),
+                                if (index == selectedCarouselDot) CinemaColors.White else CinemaColors.TextMuted.copy(alpha = 0.5f),
                             ),
                     )
                 }
@@ -290,6 +286,7 @@ fun HeroCarousel(
                 description = movie.plot,
                 onWatchNow = { onWatchNow(movie) },
                 onDetails = { onDetails(movie) },
+                modifier = Modifier.fillMaxWidth(),
                 carouselDotCount = movies.size,
                 selectedCarouselDot = pagerState.currentPage,
                 watchNowFocusRequester = if (page == pagerState.currentPage) watchNowFocusRequester else null,
@@ -337,16 +334,30 @@ fun PosterGrid(
     columns: Int = 5,
 ) {
     Column(
-        modifier = modifier.padding(bottom = CinemaSpacing.SectionGap),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(
+                start = CinemaSpacing.NavRailWidth + 16.dp,
+                end = 24.dp,
+                bottom = CinemaSpacing.SectionGap,
+            ),
         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
     ) {
         items.chunked(columns).forEach { rowItems ->
-            Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
+            ) {
                 rowItems.forEach { item ->
                     PosterCard(
                         data = item,
                         onClick = { onItemClick(item) },
+                        modifier = Modifier.weight(1f),
                     )
+                }
+                // Fill remaining columns with empty spacers so cards stay uniform
+                repeat(columns - rowItems.size) {
+                    Spacer(Modifier.weight(1f))
                 }
             }
         }
@@ -363,41 +374,39 @@ fun ProfileCard(
     modifier: Modifier = Modifier,
 ) {
     FocusableCinemaCard(
-        modifier = modifier.size(width = 160.dp, height = 200.dp),
+        modifier = modifier.size(width = 140.dp, height = 180.dp),
         onClick = onClick,
-        shape = CinemaShapes.Large,
+        shape = CinemaShapes.Medium,
     ) { focused ->
         FocusableCardSurface(
-            backgroundColor = CinemaColors.SurfaceSoft,
-            shape = CinemaShapes.Large,
+            backgroundColor = if (focused || isSelected) CinemaColors.Surface else CinemaColors.SurfaceSoft,
+            shape = CinemaShapes.Medium,
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Box(
                     modifier = Modifier
-                        .size(80.dp)
-                        .clip(CinemaShapes.Large)
-                        .background(
-                            if (isSelected || focused) CinemaColors.GoldDeep else CinemaColors.Surface,
-                        ),
+                        .size(72.dp)
+                        .clip(CinemaShapes.Medium)
+                        .background(CinemaColors.SurfaceSoft),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = initial,
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = CinemaColors.TextPrimary,
+                            color = CinemaColors.White,
                         ),
                     )
                 }
                 Text(
                     text = name,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (isSelected) CinemaColors.Gold else CinemaColors.TextPrimary,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.Medium,
+                        color = if (isSelected) CinemaColors.White else CinemaColors.TextSecondary,
                     ),
                 )
             }

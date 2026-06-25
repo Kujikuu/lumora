@@ -19,7 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.iptvcinema.tv.core.design.theme.CinemaColors
@@ -34,46 +33,37 @@ fun SkeletonBox(
 ) {
     val transition = rememberInfiniteTransition(label = "skeleton")
     val alpha by transition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 0.65f,
+        initialValue = 0.08f,
+        targetValue = 0.18f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900, easing = LinearEasing),
+            animation = tween(durationMillis = 1000, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "skeletonAlpha",
-    )
-    val brush = Brush.verticalGradient(
-        listOf(
-            CinemaColors.SurfaceSoft.copy(alpha = alpha),
-            CinemaColors.GoldDeep.copy(alpha = alpha * 0.25f),
-        ),
     )
     Box(
         modifier = modifier
             .then(if (width != Dp.Unspecified) Modifier.width(width) else Modifier)
             .height(height)
-            .clip(CinemaShapes.Medium)
-            .background(brush),
+            .clip(CinemaShapes.Small)
+            .background(CinemaColors.TextPrimary.copy(alpha = alpha)),
     )
 }
 
 @Composable
-fun SkeletonPosterRail(count: Int = 6, modifier: Modifier = Modifier) {
+fun SkeletonPosterRail(count: Int = 7, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
     ) {
         repeat(count) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SkeletonBox(width = 160.dp, height = 240.dp)
-                SkeletonBox(width = 120.dp, height = 14.dp)
-            }
+            SkeletonBox(width = 148.dp, height = 222.dp)
         }
     }
 }
 
 @Composable
-fun SkeletonPosterGrid(columns: Int = 5, rows: Int = 2, modifier: Modifier = Modifier) {
+fun SkeletonPosterGrid(columns: Int = 6, rows: Int = 2, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
@@ -81,10 +71,7 @@ fun SkeletonPosterGrid(columns: Int = 5, rows: Int = 2, modifier: Modifier = Mod
         repeat(rows) {
             Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap)) {
                 repeat(columns) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SkeletonBox(width = 160.dp, height = 240.dp)
-                        SkeletonBox(width = 100.dp, height = 12.dp)
-                    }
+                    SkeletonBox(width = 148.dp, height = 222.dp)
                 }
             }
         }
@@ -95,29 +82,26 @@ fun SkeletonPosterGrid(columns: Int = 5, rows: Int = 2, modifier: Modifier = Mod
 fun SkeletonHeroBanner(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        SkeletonBox(modifier = Modifier.fillMaxWidth(), height = 280.dp)
-        SkeletonBox(width = 320.dp, height = 28.dp)
-        SkeletonBox(width = 480.dp, height = 16.dp)
+        SkeletonBox(modifier = Modifier.fillMaxWidth(), height = 400.dp)
+        SkeletonBox(width = 280.dp, height = 32.dp)
+        SkeletonBox(width = 400.dp, height = 16.dp)
         Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
-            SkeletonBox(width = 140.dp, height = 44.dp)
-            SkeletonBox(width = 120.dp, height = 44.dp)
+            SkeletonBox(width = 120.dp, height = 40.dp)
+            SkeletonBox(width = 100.dp, height = 40.dp)
         }
     }
 }
 
 @Composable
-fun SkeletonChannelRow(count: Int = 6, modifier: Modifier = Modifier) {
+fun SkeletonChannelRow(count: Int = 7, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
     ) {
         repeat(count) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SkeletonBox(width = 140.dp, height = 100.dp)
-                SkeletonBox(width = 90.dp, height = 12.dp)
-            }
+            SkeletonBox(width = 148.dp, height = 100.dp)
         }
     }
 }
@@ -126,18 +110,18 @@ fun SkeletonChannelRow(count: Int = 6, modifier: Modifier = Modifier) {
 fun SkeletonEpgGrid(rows: Int = 6, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        SkeletonBox(modifier = Modifier.fillMaxWidth(), height = 32.dp)
+        SkeletonBox(modifier = Modifier.fillMaxWidth(), height = 28.dp)
         repeat(rows) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                SkeletonBox(width = 120.dp, height = 56.dp)
-                SkeletonBox(modifier = Modifier.weight(1f), height = 56.dp)
-                SkeletonBox(modifier = Modifier.weight(1.5f), height = 56.dp)
-                SkeletonBox(modifier = Modifier.weight(1f), height = 56.dp)
+                SkeletonBox(width = 120.dp, height = 48.dp)
+                SkeletonBox(modifier = Modifier.weight(1f), height = 48.dp)
+                SkeletonBox(modifier = Modifier.weight(1.5f), height = 48.dp)
+                SkeletonBox(modifier = Modifier.weight(1f), height = 48.dp)
             }
         }
     }
@@ -151,9 +135,9 @@ fun SkeletonHomeContent(modifier: Modifier = Modifier) {
     ) {
         SkeletonHeroBanner()
         repeat(3) {
-            Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
-                SkeletonBox(width = 180.dp, height = 20.dp)
-                SkeletonPosterRail(count = 5)
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SkeletonBox(width = 160.dp, height = 18.dp)
+                SkeletonPosterRail(count = 7)
             }
         }
     }
@@ -175,10 +159,10 @@ fun SkeletonProfileRow(count: Int = 3, modifier: Modifier = Modifier) {
 fun SkeletonSourceCards(count: Int = 2, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         repeat(count) {
-            SkeletonBox(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), height = 88.dp)
+            SkeletonBox(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), height = 80.dp)
         }
     }
 }
@@ -187,15 +171,15 @@ fun SkeletonSourceCards(count: Int = 2, modifier: Modifier = Modifier) {
 fun SkeletonDetailHero(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        SkeletonBox(modifier = Modifier.fillMaxWidth(), height = 320.dp)
-        SkeletonBox(width = 360.dp, height = 32.dp)
-        SkeletonBox(width = 480.dp, height = 16.dp)
-        SkeletonBox(width = 520.dp, height = 16.dp)
+        SkeletonBox(modifier = Modifier.fillMaxWidth(), height = 400.dp)
+        SkeletonBox(width = 300.dp, height = 32.dp)
+        SkeletonBox(width = 400.dp, height = 14.dp)
+        SkeletonBox(width = 500.dp, height = 14.dp)
         Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
-            SkeletonBox(width = 140.dp, height = 44.dp)
-            SkeletonBox(width = 120.dp, height = 44.dp)
+            SkeletonBox(width = 120.dp, height = 40.dp)
+            SkeletonBox(width = 100.dp, height = 40.dp)
         }
     }
 }
@@ -204,10 +188,10 @@ fun SkeletonDetailHero(modifier: Modifier = Modifier) {
 fun SkeletonEpisodeList(count: Int = 4, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         repeat(count) {
-            SkeletonBox(modifier = Modifier.fillMaxWidth(), height = 72.dp)
+            SkeletonBox(modifier = Modifier.fillMaxWidth(), height = 64.dp)
         }
     }
 }

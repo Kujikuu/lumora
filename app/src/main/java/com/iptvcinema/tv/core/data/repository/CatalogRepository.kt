@@ -101,8 +101,13 @@ class CatalogRepository @Inject constructor(
                     session.isDemoMode -> emit(null to SourceType.DEMO)
                     session.currentSourceId == null -> emit(null to null)
                     else -> {
-                        val source = playlistSourcesRepository.getSources()
-                            .find { it.id == session.currentSourceId }
+                        // Network call: must not crash the UI flow if auth/JWT is
+                        // expired or the device is offline. Browsing uses the Room
+                        // cache, so fall back to unknown source metadata instead.
+                        val source = runCatching {
+                            playlistSourcesRepository.getSources()
+                                .find { it.id == session.currentSourceId }
+                        }.getOrNull()
                         emit(source?.status to source?.type)
                     }
                 }

@@ -37,12 +37,13 @@ class SupabaseWatchHistoryRepository @Inject constructor(
 
     override fun observeHistory(profileId: String, limit: Int): Flow<List<WatchHistoryItem>> =
         refreshTrigger.mapLatest {
-            getHistory(profileId, limit)
+            // Network read: degrade to empty instead of crashing on expired JWT / offline.
+            runCatching { getHistory(profileId, limit) }.getOrDefault(emptyList())
         }
 
     override fun observeContinueWatching(profileId: String, limit: Int): Flow<List<WatchHistoryItem>> =
         refreshTrigger.mapLatest {
-            loadContinueWatching(profileId, limit)
+            runCatching { loadContinueWatching(profileId, limit) }.getOrDefault(emptyList())
         }
 
     override fun invalidate() {

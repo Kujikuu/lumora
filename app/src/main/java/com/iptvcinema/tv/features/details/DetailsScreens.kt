@@ -4,7 +4,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -106,10 +108,7 @@ fun MovieDetailsScreen(
                 navController = navController,
                 selectedNavItem = NavItem.Movies,
             ) {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
-                ) {
+                Column(modifier = Modifier.fillMaxSize()) {
                     DetailHero(
                         title = movie.title,
                         metadata = listOfNotNull(
@@ -144,6 +143,13 @@ fun MovieDetailsScreen(
                         backdropUrl = movie.backdropUrl ?: movie.imageUrl,
                         watchNowFocusRequester = watchNowFocus,
                     )
+                    Spacer(Modifier.height(CinemaSpacing.SectionGap))
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                    ) {
                     if (uiState.isDemoMode) {
                         DemoCastSection()
                         DemoLanguagesSection(selectedLang) { selectedLang = it }
@@ -177,6 +183,7 @@ fun MovieDetailsScreen(
                                 )
                             }
                         }
+                    }
                     }
                 }
             }
@@ -254,10 +261,7 @@ fun SeriesDetailsScreen(
                 navController = navController,
                 selectedNavItem = NavItem.Series,
             ) {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
-                ) {
+                Column(modifier = Modifier.fillMaxSize()) {
                     DetailHero(
                         title = series.title,
                         metadata = listOfNotNull(
@@ -301,6 +305,13 @@ fun SeriesDetailsScreen(
                         backdropUrl = series.backdropUrl ?: series.imageUrl,
                         watchNowFocusRequester = watchNowFocus,
                     )
+                    Spacer(Modifier.height(CinemaSpacing.SectionGap))
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                    ) {
                     when {
                         uiState.episodesLoading -> {
                             SkeletonEpisodeList()
@@ -349,6 +360,7 @@ fun SeriesDetailsScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap)) {
                             uiState.cast.forEach { CastCard(member = it) }
                         }
+                    }
                     }
                 }
             }

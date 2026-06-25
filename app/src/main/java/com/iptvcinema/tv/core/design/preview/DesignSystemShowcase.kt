@@ -62,7 +62,7 @@ fun DesignSystemShowcase() {
             ) {
                 CinemaButton(
                     text = stringResource(R.string.btn_watch_now),
-                    variant = CinemaButtonVariant.PrimaryGold,
+                    variant = CinemaButtonVariant.PrimaryAccent,
                     icon = Icons.Default.PlayArrow,
                     onClick = {},
                 )

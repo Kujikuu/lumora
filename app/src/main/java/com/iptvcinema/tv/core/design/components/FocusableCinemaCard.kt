@@ -20,7 +20,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -38,8 +37,8 @@ import androidx.compose.ui.zIndex
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 
-private const val FOCUSED_SCALE = 1.04f
-private const val PRESSED_SCALE = 0.98f
+private const val FOCUSED_SCALE = 1.05f
+private const val PRESSED_SCALE = 0.97f
 private const val DISABLED_ALPHA = 0.4f
 
 @Composable
@@ -48,7 +47,7 @@ fun FocusableCinemaCard(
     onClick: () -> Unit,
     enabled: Boolean = true,
     shape: RoundedCornerShape = CinemaShapes.Medium,
-    defaultBorderWidth: Dp = 1.dp,
+    defaultBorderWidth: Dp = 0.dp,
     focusedBorderWidth: Dp = 2.dp,
     focusScale: Float = FOCUSED_SCALE,
     contentDescription: String? = null,
@@ -66,14 +65,14 @@ fun FocusableCinemaCard(
     }
     val scale by animateFloatAsState(
         targetValue = targetScale,
-        animationSpec = tween(durationMillis = 150),
+        animationSpec = tween(durationMillis = 120),
         label = "focusScale",
     )
 
     val borderColor = when {
-        !enabled -> CinemaColors.Border.copy(alpha = DISABLED_ALPHA)
+        !enabled -> Color.Transparent
         isFocused -> CinemaColors.FocusBorder
-        else -> CinemaColors.Border
+        else -> if (defaultBorderWidth > 0.dp) CinemaColors.Border else Color.Transparent
     }
     val borderWidth = if (isFocused && enabled) focusedBorderWidth else defaultBorderWidth
 
@@ -81,20 +80,14 @@ fun FocusableCinemaCard(
         modifier = modifier
             .zIndex(if (isFocused && enabled) 1f else 0f)
             .scale(scale)
+            .clip(shape)
             .then(
-                if (isFocused && enabled) {
-                    Modifier.shadow(
-                        elevation = 18.dp,
-                        shape = shape,
-                        ambientColor = CinemaColors.Gold.copy(alpha = 0.44f),
-                        spotColor = CinemaColors.Gold.copy(alpha = 0.36f),
-                    )
+                if (borderWidth > 0.dp) {
+                    Modifier.border(width = borderWidth, color = borderColor, shape = shape)
                 } else {
                     Modifier
                 },
             )
-            .clip(shape)
-            .border(width = borderWidth, color = borderColor, shape = shape)
             .semantics {
                 role = Role.Button
                 contentDescription?.let { this.contentDescription = it }

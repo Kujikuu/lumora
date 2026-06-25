@@ -30,23 +30,23 @@ fun CinemaLogo(
     navBar: Boolean = false,
 ) {
     val iconSize = when {
-        navBar -> 36.dp
-        compact -> 32.dp
-        else -> 56.dp
+        navBar -> 28.dp
+        compact -> 24.dp
+        else -> 48.dp
     }
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CinemaBrandMark(size = iconSize)
-        if (navBar || !compact) {
+        if (!compact && !navBar) {
             Text(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = CinemaColors.Gold,
+                    fontWeight = FontWeight.Black,
+                    color = CinemaColors.Accent,
                 ),
-                modifier = Modifier.padding(start = if (navBar) 10.dp else 12.dp),
+                modifier = Modifier.padding(start = 10.dp),
             )
         }
     }
@@ -55,29 +55,22 @@ fun CinemaLogo(
 @Composable
 fun CinemaBrandMark(
     modifier: Modifier = Modifier,
-    size: Dp = 56.dp,
+    size: Dp = 48.dp,
 ) {
     Canvas(modifier = modifier.size(size)) {
-        val radius = this.size.minDimension / 2f
-        val center = Offset(this.size.width / 2f, this.size.height / 2f)
+        val w = this.size.width
+        val h = this.size.height
+        val center = Offset(w / 2f, h / 2f)
 
-        drawCircle(color = CinemaColors.Surface, radius = radius, center = center)
-        drawCircle(color = CinemaColors.Background, radius = radius * 0.84f, center = center)
-        drawCircle(color = CinemaColors.GoldDeep, radius = radius * 0.69f, center = center)
-        drawCircle(color = CinemaColors.Background, radius = radius * 0.56f, center = center)
-        drawCircle(
-            color = CinemaColors.GoldSoft.copy(alpha = 0.22f),
-            radius = radius * 0.79f,
-            center = center.copy(y = center.y - radius * 0.08f),
-        )
+        drawCircle(color = CinemaColors.Accent, radius = w / 2f, center = center)
 
         val playPath = Path().apply {
-            moveTo(center.x - radius * 0.25f, center.y - radius * 0.43f)
-            lineTo(center.x + radius * 0.48f, center.y)
-            lineTo(center.x - radius * 0.25f, center.y + radius * 0.43f)
+            moveTo(w * 0.36f, h * 0.22f)
+            lineTo(w * 0.76f, h * 0.50f)
+            lineTo(w * 0.36f, h * 0.78f)
             close()
         }
-        drawPath(path = playPath, color = CinemaColors.Gold)
+        drawPath(path = playPath, color = CinemaColors.White)
     }
 }
 

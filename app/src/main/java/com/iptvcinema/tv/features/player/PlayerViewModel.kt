@@ -100,8 +100,9 @@ class PlayerViewModel @Inject constructor(
     init {
         startPositionTicker()
         viewModelScope.launch {
-            continueWatchingEnabled = userSettingsRepository.getSettings()?.continueWatchingEnabled ?: true
-            autoplayNextEpisode = userSettingsRepository.getSettings()?.autoplayNextEpisode ?: false
+            val settings = runCatching { userSettingsRepository.getSettings() }.getOrNull()
+            continueWatchingEnabled = settings?.continueWatchingEnabled ?: true
+            autoplayNextEpisode = settings?.autoplayNextEpisode ?: false
             loadPlayback()
         }
         viewModelScope.launch {

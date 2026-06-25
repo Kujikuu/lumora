@@ -94,7 +94,9 @@ class HomeViewModel @Inject constructor(
                 catalogState to session
             }.flatMapLatest { (catalogState, session) ->
                 val profileId = session.currentProfileId
-                val continueWatchingEnabled = userSettingsRepository.getSettings()?.continueWatchingEnabled ?: true
+                val continueWatchingEnabled = runCatching {
+                    userSettingsRepository.getSettings()?.continueWatchingEnabled
+                }.getOrNull() ?: true
                 val controlsFlow = profileId?.let { parentalControlsRepository.observeControls(it) } ?: flowOf(null)
                 val continueWatchingFlow = if (profileId != null && continueWatchingEnabled) {
                     watchHistoryRepository.observeContinueWatching(profileId, limit = 10)

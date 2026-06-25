@@ -23,7 +23,7 @@ import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 
 enum class CinemaButtonVariant {
-    PrimaryGold,
+    PrimaryAccent,
     SecondaryDark,
     Danger,
     Ghost,
@@ -42,32 +42,31 @@ fun CinemaButton(
     fullWidth: Boolean = false,
 ) {
     val (backgroundColor, contentColor) = when (variant) {
-        CinemaButtonVariant.PrimaryGold -> Pair(
-            CinemaColors.Gold,
+        CinemaButtonVariant.PrimaryAccent -> Pair(
+            CinemaColors.White,
             CinemaColors.Background,
         )
         CinemaButtonVariant.SecondaryDark -> Pair(
-            CinemaColors.Surface,
-            CinemaColors.TextPrimary,
+            CinemaColors.SurfaceSoft.copy(alpha = 0.7f),
+            CinemaColors.White,
         )
         CinemaButtonVariant.Danger -> Pair(
             CinemaColors.Danger,
-            CinemaColors.TextPrimary,
+            CinemaColors.White,
         )
         CinemaButtonVariant.Ghost -> Pair(
-            Color.Transparent,
-            CinemaColors.TextPrimary,
+            CinemaColors.SurfaceSoft.copy(alpha = 0.5f),
+            CinemaColors.White,
         )
         CinemaButtonVariant.Icon -> Pair(
-            CinemaColors.SurfaceSoft,
-            CinemaColors.Gold,
+            CinemaColors.SurfaceSoft.copy(alpha = 0.5f),
+            CinemaColors.White,
         )
     }
 
-    val shape = if (variant == CinemaButtonVariant.Icon) CinemaShapes.Small else CinemaShapes.Medium
-    val horizontalPadding = if (variant == CinemaButtonVariant.Icon) 0.dp else 24.dp
-    val minSize = if (variant == CinemaButtonVariant.Icon) 48.dp else 48.dp
-    val showDefaultBorder = variant == CinemaButtonVariant.Ghost
+    val shape = CinemaShapes.Small
+    val horizontalPadding = if (variant == CinemaButtonVariant.Icon) 0.dp else 20.dp
+    val minSize = 40.dp
 
     FocusableCinemaCard(
         modifier = modifier.defaultMinSize(
@@ -77,13 +76,13 @@ fun CinemaButton(
         onClick = onClick,
         enabled = enabled,
         shape = shape,
-        defaultBorderWidth = if (showDefaultBorder) 1.dp else 0.dp,
+        defaultBorderWidth = 0.dp,
     ) { _ ->
         Row(
             modifier = (if (fullWidth) Modifier.fillMaxWidth() else Modifier)
                 .background(backgroundColor, shape)
                 .defaultMinSize(minWidth = if (variant == CinemaButtonVariant.Icon) minSize else 0.dp)
-                .padding(horizontal = horizontalPadding, vertical = 12.dp),
+                .padding(horizontal = horizontalPadding, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(
                 CinemaSpacing.ButtonGap / 2,
                 Alignment.CenterHorizontally,
@@ -94,7 +93,7 @@ fun CinemaButton(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(20.dp),
                     tint = contentColor,
                 )
             }
@@ -102,7 +101,7 @@ fun CinemaButton(
                 Text(
                     text = text,
                     style = MaterialTheme.typography.labelLarge.copy(
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         color = contentColor,
                     ),
                 )

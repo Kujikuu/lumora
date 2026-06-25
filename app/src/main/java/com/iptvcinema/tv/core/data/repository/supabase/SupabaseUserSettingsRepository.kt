@@ -19,7 +19,8 @@ class SupabaseUserSettingsRepository @Inject constructor(
     private val supabaseClient: SupabaseClient,
 ) : UserSettingsRepository {
     override fun observeSettings(): Flow<UserSettings?> = flow {
-        emit(getSettings())
+        // Network read: never let an expired JWT / offline state crash collectors.
+        emit(runCatching { getSettings() }.getOrNull())
     }
 
     override suspend fun getSettings(): UserSettings? {

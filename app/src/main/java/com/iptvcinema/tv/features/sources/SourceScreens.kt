@@ -205,7 +205,7 @@ fun XtreamFormScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
                     CinemaButton(
                         text = if (connectState.isConnecting) "Connecting…" else stringResource(R.string.btn_connect),
-                        variant = CinemaButtonVariant.PrimaryGold,
+                        variant = CinemaButtonVariant.PrimaryAccent,
                         enabled = !connectState.isConnecting,
                         onClick = {
                             onConnect(
@@ -326,7 +326,7 @@ fun M3uFormScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
                     CinemaButton(
                         text = if (connectState.isConnecting) "Importing…" else "Import Playlist",
-                        variant = CinemaButtonVariant.PrimaryGold,
+                        variant = CinemaButtonVariant.PrimaryAccent,
                         enabled = !connectState.isConnecting,
                         onClick = {
                             onImport(
@@ -442,7 +442,7 @@ fun PlaylistManagementScreen(
                         style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
                     )
                 }
-                CinemaButton(text = stringResource(R.string.btn_add_source), variant = CinemaButtonVariant.PrimaryGold, onClick = onAddSource)
+                CinemaButton(text = stringResource(R.string.btn_add_source), variant = CinemaButtonVariant.PrimaryAccent, onClick = onAddSource)
             }
             when {
                 sourcesUiState is SourcesUiState.Loading -> {
@@ -532,7 +532,7 @@ fun PlaylistManagementScreen(
                                     } else {
                                         stringResource(R.string.btn_edit_playlist)
                                     },
-                                    variant = CinemaButtonVariant.PrimaryGold,
+                                    variant = CinemaButtonVariant.PrimaryAccent,
                                     onClick = {
                                         when {
                                             source.status == SourceStatus.EXPIRED -> onExpiredAccount()

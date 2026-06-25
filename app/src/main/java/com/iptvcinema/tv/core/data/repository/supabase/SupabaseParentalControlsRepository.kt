@@ -21,7 +21,8 @@ class SupabaseParentalControlsRepository @Inject constructor(
     private val supabaseClient: SupabaseClient,
 ) : ParentalControlsRepository {
     override fun observeControls(profileId: String): Flow<ParentalControls?> = flow {
-        emit(getControls(profileId))
+        // Network read: degrade to null instead of crashing on expired JWT / offline.
+        emit(runCatching { getControls(profileId) }.getOrNull())
     }
 
     override suspend fun getControls(profileId: String): ParentalControls? {
