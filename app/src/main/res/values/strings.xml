@@ -51,6 +51,7 @@
     <string name="btn_add_to_favorites">Add to Favorites</string>
     <string name="btn_favorited">Favorited</string>
     <string name="btn_play_first">Play First</string>
+    <string name="btn_refresh_catalog">Refresh Catalog</string>
 
     <!-- Toggle -->
     <string name="toggle_on">On</string>
@@ -119,6 +120,13 @@
     <string name="sync_epg_available">EPG: Available</string>
     <string name="sync_epg_missing">EPG: Missing</string>
     <string name="sync_last_update">Last update: %1$s</string>
+    <string name="refresh_in_progress">Refreshing catalog…</string>
+    <string name="refresh_success">Catalog refreshed</string>
+    <string name="refresh_failed">Refresh failed</string>
+    <string name="refresh_demo_unavailable">Demo mode — refresh not available</string>
+    <string name="refresh_credentials_missing">Credentials not found for this source</string>
+    <string name="refresh_success_xtream">Synced %1$d channels, %2$d movies, %3$d series</string>
+    <string name="refresh_success_m3u">Synced %1$d channels</string>
 
     <!-- Profile -->
     <string name="profile_title">Choose Profile</string>
@@ -252,6 +260,13 @@
     <string name="player_no_channels">No channels available</string>
     <string name="player_up_next_in">Up Next in %1$d s</string>
     <string name="player_seek_hint">Use ◀ ▶ to seek</string>
+    <string name="player_btn_rewind">Rewind</string>
+    <string name="player_btn_rewind_10">Back 10</string>
+    <string name="player_btn_forward_10">Forward 10</string>
+    <string name="player_btn_skip_next">Next</string>
+    <string name="player_btn_skip_previous">Previous</string>
+    <string name="player_btn_play">Play</string>
+    <string name="player_btn_pause">Pause</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>

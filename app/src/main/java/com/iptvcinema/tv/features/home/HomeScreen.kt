@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -21,6 +22,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.catalog.CatalogRefreshState
 import com.iptvcinema.tv.core.data.repository.CatalogLoadState
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
@@ -47,6 +49,7 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val watchNowFocus = remember { FocusRequester() }
+    val fallbackContentFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("home")
     val catalogCallbacks = rememberCatalogStateCallbacks(navController)
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -65,11 +68,19 @@ fun HomeScreen(
 
     MainShellBackHandler(navController = navController, isHomeTab = true)
 
-    LaunchedEffect(focusState.hasSavedFocus) {
+    val hasHeroFocusTarget = uiState.heroMovies.isNotEmpty()
+    val hasFallbackFocusTarget = uiState.continueWatching.isNotEmpty() ||
+        uiState.trending.isNotEmpty() ||
+        uiState.featuredSeries.isNotEmpty() ||
+        uiState.liveChannels.isNotEmpty() ||
+        uiState.newReleases.isNotEmpty()
+
+    LaunchedEffect(focusState.hasSavedFocus, hasHeroFocusTarget, hasFallbackFocusTarget) {
+        val target = if (hasHeroFocusTarget) watchNowFocus else fallbackContentFocus
         if (focusState.hasSavedFocus) {
-            focusState.restoreFocus(watchNowFocus)
+            focusState.restoreFocus(target)
         } else {
-            focusState.requestInitialFocus(watchNowFocus)
+            focusState.requestInitialFocus(target)
             focusState.saveFocusIndex(0)
         }
     }
@@ -99,10 +110,17 @@ fun HomeScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
             ) {
-                uiState.syncBannerText?.let { bannerText ->
+                val refreshBannerText = when (val refreshState = uiState.refreshState) {
+                    CatalogRefreshState.Idle -> uiState.syncBannerText
+                    CatalogRefreshState.Refreshing -> stringResource(R.string.refresh_in_progress)
+                    is CatalogRefreshState.Success -> refreshState.message
+                    is CatalogRefreshState.Failed -> refreshState.message
+                }
+                refreshBannerText?.let { bannerText ->
                     SyncStatusBanner(
                         text = bannerText,
-                        onClick = catalogCallbacks.onManageSources,
+                        isRefreshing = uiState.refreshState == CatalogRefreshState.Refreshing,
+                        onClick = viewModel::refreshCurrentSource,
                     )
                 }
                 if (heroMovies.isNotEmpty()) {
@@ -128,6 +146,11 @@ fun HomeScreen(
                         PosterCard(
                             data = poster,
                             variant = PosterCardVariant.LandscapePoster,
+                            modifier = if (!hasHeroFocusTarget && poster == uiState.continueWatching.firstOrNull()?.poster) {
+                                Modifier.focusRequester(fallbackContentFocus)
+                            } else {
+                                Modifier
+                            },
                             onClick = {
                                 item?.let {
                                     navController.navigate(
@@ -147,6 +170,14 @@ fun HomeScreen(
                     ) { poster ->
                         PosterCard(
                             data = poster,
+                            modifier = if (!hasHeroFocusTarget &&
+                                uiState.continueWatching.isEmpty() &&
+                                poster == uiState.trending.firstOrNull()
+                            ) {
+                                Modifier.focusRequester(fallbackContentFocus)
+                            } else {
+                                Modifier
+                            },
                             onClick = { poster.contentId?.let { navController.navigate(AppRoute.movieDetails(it)) } },
                         )
                     }
@@ -160,6 +191,15 @@ fun HomeScreen(
                     ) { poster ->
                         PosterCard(
                             data = poster,
+                            modifier = if (!hasHeroFocusTarget &&
+                                uiState.continueWatching.isEmpty() &&
+                                uiState.trending.isEmpty() &&
+                                poster == uiState.featuredSeries.firstOrNull()
+                            ) {
+                                Modifier.focusRequester(fallbackContentFocus)
+                            } else {
+                                Modifier
+                            },
                             onClick = {
                                 poster.contentId?.let { navController.navigate(AppRoute.seriesDetails(it)) }
                             },
@@ -175,6 +215,16 @@ fun HomeScreen(
                     ) { channel ->
                         ChannelTile(
                             data = channel,
+                            modifier = if (!hasHeroFocusTarget &&
+                                uiState.continueWatching.isEmpty() &&
+                                uiState.trending.isEmpty() &&
+                                uiState.featuredSeries.isEmpty() &&
+                                channel == uiState.liveChannels.firstOrNull()
+                            ) {
+                                Modifier.focusRequester(fallbackContentFocus)
+                            } else {
+                                Modifier
+                            },
                             onClick = {
                                 channel.id?.let { channelId ->
                                     navController.navigate(AppRoute.player(channelId, "live"))
@@ -192,6 +242,17 @@ fun HomeScreen(
                     ) { poster ->
                         PosterCard(
                             data = poster,
+                            modifier = if (!hasHeroFocusTarget &&
+                                uiState.continueWatching.isEmpty() &&
+                                uiState.trending.isEmpty() &&
+                                uiState.featuredSeries.isEmpty() &&
+                                uiState.liveChannels.isEmpty() &&
+                                poster == uiState.newReleases.firstOrNull()
+                            ) {
+                                Modifier.focusRequester(fallbackContentFocus)
+                            } else {
+                                Modifier
+                            },
                             onClick = { poster.contentId?.let { navController.navigate(AppRoute.movieDetails(it)) } },
                         )
                     }

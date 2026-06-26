@@ -1,14 +1,20 @@
 package com.iptvcinema.tv.core.design.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptvcinema.tv.core.design.theme.CinemaColors
@@ -20,17 +26,37 @@ fun SyncStatusBanner(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    isRefreshing: Boolean = false,
 ) {
-    Text(
-        text = text,
+    FocusableCinemaCard(
         modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .background(CinemaColors.SurfaceGlass, CinemaShapes.Medium)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        style = MaterialTheme.typography.bodyMedium.copy(
-            color = CinemaColors.GoldSoft,
-            fontWeight = FontWeight.Medium,
-        ),
-    )
+            .fillMaxWidth(),
+        enabled = !isRefreshing,
+        onClick = onClick,
+        shape = CinemaShapes.Medium,
+        contentDescription = text,
+    ) { _ ->
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(CinemaColors.SurfaceGlass, CinemaShapes.Medium)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = null,
+                tint = CinemaColors.GoldSoft,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = CinemaColors.GoldSoft,
+                    fontWeight = FontWeight.Medium,
+                ),
+            )
+        }
+    }
 }

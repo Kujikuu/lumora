@@ -12,6 +12,8 @@ sealed interface PlayerCommand {
     data object Retry : PlayerCommand
     data object ChannelPrevious : PlayerCommand
     data object ChannelNext : PlayerCommand
+    data object EpisodePrevious : PlayerCommand
+    data object EpisodeNext : PlayerCommand
 }
 
 enum class ChannelDirection {

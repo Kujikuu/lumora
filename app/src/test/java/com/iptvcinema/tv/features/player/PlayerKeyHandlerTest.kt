@@ -91,4 +91,10 @@ class PlayerKeyHandlerTest {
     fun toCommand_mapsPlayPause() {
         assertEquals(PlayerCommand.PlayPause, PlayerKeyHandler.toCommand(PlayerKeyAction.PlayPause))
     }
+
+    @Test
+    fun toCommand_mapsEpisodeControls() {
+        assertEquals(PlayerCommand.EpisodePrevious, PlayerKeyHandler.toCommand(PlayerKeyAction.EpisodePrevious))
+        assertEquals(PlayerCommand.EpisodeNext, PlayerKeyHandler.toCommand(PlayerKeyAction.EpisodeNext))
+    }
 }

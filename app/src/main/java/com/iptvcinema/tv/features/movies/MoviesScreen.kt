@@ -22,7 +22,6 @@ import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
-import com.iptvcinema.tv.core.design.components.FeaturedStrip
 import com.iptvcinema.tv.core.design.components.FilterChipRow
 import com.iptvcinema.tv.core.design.components.PosterGrid
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
@@ -42,6 +41,7 @@ fun MoviesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val chipFocus = remember { FocusRequester() }
+    val gridFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("movies")
     val categories = uiState.categories
 
@@ -65,16 +65,16 @@ fun MoviesScreen(
         viewModel.selectCategory(categories.getOrNull(selectedFilter))
     }
 
-    LaunchedEffect(focusState.hasSavedFocus, selectedFilter) {
+    LaunchedEffect(focusState.hasSavedFocus, selectedFilter, categories.isNotEmpty(), uiState.posters.isNotEmpty()) {
+        val target = if (categories.isNotEmpty()) chipFocus else gridFocus
         if (focusState.hasSavedFocus) {
-            focusState.restoreFocus(chipFocus)
+            focusState.restoreFocus(target)
         } else {
-            focusState.requestInitialFocus(chipFocus)
+            focusState.requestInitialFocus(target)
             focusState.saveFocusIndex(selectedFilter)
         }
     }
 
-    val featured = uiState.featured
     val catalogCallbacks = rememberCatalogStateCallbacks(navController)
 
     MainShellScaffold(
@@ -103,19 +103,6 @@ fun MoviesScreen(
                     onEditSource = catalogCallbacks.onEditSource,
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap)) {
-                        if (featured != null) {
-                            FeaturedStrip(
-                                title = featured.title,
-                                metadata = listOfNotNull(
-                                    featured.year.takeIf { it > 0 }?.toString(),
-                                    featured.genres.joinToString(" ").takeIf { it.isNotBlank() },
-                                    featured.runtimeMinutes.takeIf { it > 0 }?.let { "${it}m" },
-                                ),
-                                onWatchNow = { navController.navigate(AppRoute.player(featured.id, "movie")) },
-                                onDetails = { navController.navigate(AppRoute.movieDetails(featured.id)) },
-                                backdropUrl = featured.backdropUrl ?: featured.imageUrl,
-                            )
-                        }
                         if (categories.isNotEmpty()) {
                             FilterChipRow(
                                 items = categories,
@@ -131,6 +118,7 @@ fun MoviesScreen(
                         }
                         PosterGrid(
                             items = uiState.posters,
+                            firstItemFocusRequester = if (categories.isEmpty()) gridFocus else null,
                             onItemClick = { poster ->
                                 poster.contentId?.let { movieId ->
                                     navController.navigate(AppRoute.movieDetails(movieId))

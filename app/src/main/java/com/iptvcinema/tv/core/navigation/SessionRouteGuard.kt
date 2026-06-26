@@ -1,11 +1,11 @@
 package com.iptvcinema.tv.core.navigation
 
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.iptvcinema.tv.core.datastore.SessionRequirement
@@ -14,7 +14,7 @@ import com.iptvcinema.tv.core.datastore.SessionRequirement
 fun SessionRouteGuard(
     navController: NavController,
     requirement: SessionRequirement,
-    sessionViewModel: SessionViewModel = hiltViewModel(LocalContext.current as ComponentActivity),
+    sessionViewModel: SessionViewModel = hiltViewModel(LocalActivity.current as ComponentActivity),
     content: @Composable () -> Unit,
 ) {
     val session by sessionViewModel.sessionState.collectAsState()

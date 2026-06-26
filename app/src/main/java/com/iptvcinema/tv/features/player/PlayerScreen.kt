@@ -31,6 +31,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import com.iptvcinema.tv.R
@@ -55,6 +56,7 @@ import kotlinx.coroutines.delay
 private const val OVERLAY_HIDE_DELAY_MS = 5_000L
 
 @Composable
+@androidx.annotation.OptIn(UnstableApi::class)
 fun PlayerScreen(
     contentId: String,
     contentType: String,
@@ -94,16 +96,10 @@ fun PlayerScreen(
             is PlayerKeyAction.SeekRelative,
             PlayerKeyAction.ChannelPrevious,
             PlayerKeyAction.ChannelNext,
+            PlayerKeyAction.EpisodePrevious,
+            PlayerKeyAction.EpisodeNext,
             -> {
                 PlayerKeyHandler.toCommand(action)?.let { viewModel.onCommand(it) }
-                revealOverlay()
-            }
-            PlayerKeyAction.EpisodePrevious -> {
-                viewModel.skipToPreviousEpisode()
-                revealOverlay()
-            }
-            PlayerKeyAction.EpisodeNext -> {
-                viewModel.skipToNextEpisode()
                 revealOverlay()
             }
             PlayerKeyAction.RevealOverlay -> revealOverlay()

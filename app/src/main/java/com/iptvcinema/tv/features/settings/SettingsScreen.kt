@@ -28,6 +28,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.catalog.CatalogRefreshState
 import com.iptvcinema.tv.core.data.fake.FakeDataProvider
 import com.iptvcinema.tv.core.design.components.AccountSummaryCard
 import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
@@ -60,6 +61,7 @@ fun SettingsScreen(
     val session by viewModel.sessionState.collectAsState()
     val account by viewModel.accountSummary.collectAsState()
     val userSettings by viewModel.userSettings.collectAsState()
+    val refreshState by viewModel.refreshState.collectAsState()
     val connectedSource = session.connectedSourceLabel()
     val autoplayNext = userSettings?.autoplayNextEpisode ?: true
     val continueWatching = userSettings?.continueWatchingEnabled ?: true
@@ -75,6 +77,12 @@ fun SettingsScreen(
     val feedbackSubtitleSoon = stringResource(R.string.feedback_subtitle_soon)
     val feedbackThemeLocked = stringResource(R.string.feedback_theme_locked)
     val incorrectPinMessage = stringResource(R.string.error_incorrect_pin)
+    val refreshTrailing = when (val state = refreshState) {
+        CatalogRefreshState.Idle -> null
+        CatalogRefreshState.Refreshing -> stringResource(R.string.refresh_in_progress)
+        is CatalogRefreshState.Success -> state.message
+        is CatalogRefreshState.Failed -> state.message
+    }
 
     fun runProtected(action: () -> Unit) {
         if (viewModel.requiresPlaylistPin()) {
@@ -167,6 +175,16 @@ fun SettingsScreen(
                                     isSelected = false,
                                     onClick = { runProtected { navController.navigate(AppRoute.PLAYLIST_MANAGEMENT) } },
                                     trailing = connectedSource,
+                                )
+                                SettingsRow(
+                                    label = stringResource(R.string.btn_refresh_catalog),
+                                    isSelected = false,
+                                    onClick = {
+                                        if (refreshState != CatalogRefreshState.Refreshing) {
+                                            runProtected { viewModel.refreshCurrentSource() }
+                                        }
+                                    },
+                                    trailing = refreshTrailing,
                                 )
                             }
                             SettingsRow(

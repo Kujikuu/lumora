@@ -13,17 +13,23 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import com.iptvcinema.tv.core.di.ApplicationScope
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 @Singleton
 class PlayerManager @Inject constructor(
     @ApplicationContext private val context: Context,
+    @ApplicationScope private val applicationScope: CoroutineScope,
 ) {
     private val _state = MutableStateFlow(PlayerUiState())
     val state: StateFlow<PlayerUiState> = _state.asStateFlow()
@@ -34,10 +40,19 @@ class PlayerManager @Inject constructor(
     private var isXtreamSource: Boolean = false
     private var trackedAudioGroupIndex: Int = -1
     private var trackedSubtitleGroupIndex: Int = -1
+    private var retryAttempt: Int = 0
+    private var retryJob: Job? = null
 
     fun getExoPlayer(): ExoPlayer = ensurePlayer()
 
     fun play(request: PlaybackRequest, startPositionMs: Long = 0L, isXtreamSource: Boolean = false) {
+        retryJob?.cancel()
+        retryAttempt = 0
+        playInternal(request, startPositionMs, isXtreamSource)
+    }
+
+    @OptIn(UnstableApi::class)
+    private fun playInternal(request: PlaybackRequest, startPositionMs: Long = 0L, isXtreamSource: Boolean = false) {
         lastRequest = request
         lastStartPositionMs = startPositionMs
         this.isXtreamSource = isXtreamSource
@@ -90,16 +105,24 @@ class PlayerManager @Inject constructor(
             is PlayerCommand.SelectSubtitleTrack -> selectSubtitleTrack(command.index)
             PlayerCommand.DisableSubtitles -> disableSubtitles()
             PlayerCommand.Retry -> retry()
-            PlayerCommand.ChannelPrevious, PlayerCommand.ChannelNext -> Unit
+            PlayerCommand.ChannelPrevious,
+            PlayerCommand.ChannelNext,
+            PlayerCommand.EpisodePrevious,
+            PlayerCommand.EpisodeNext,
+                -> Unit
         }
     }
 
     fun retry() {
         val request = lastRequest ?: return
-        play(request, lastStartPositionMs)
+        retryJob?.cancel()
+        retryAttempt = 0
+        playInternal(request, lastStartPositionMs, isXtreamSource)
     }
 
     fun release() {
+        retryJob?.cancel()
+        retryJob = null
         player?.removeListener(playerListener)
         player?.release()
         player = null
@@ -114,7 +137,7 @@ class PlayerManager @Inject constructor(
         headers.referer?.let { requestProperties["Referer"] = it }
         val httpFactory = DefaultHttpDataSource.Factory()
             .setConnectTimeoutMs(15_000)
-            .setReadTimeoutMs(30_000)
+            .setReadTimeoutMs(60_000)
             .setAllowCrossProtocolRedirects(true)
         headers.userAgent?.let { httpFactory.setUserAgent(it) }
         if (requestProperties.isNotEmpty()) {
@@ -128,10 +151,10 @@ class PlayerManager @Inject constructor(
         player?.let { return it }
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                /* minBufferMs = */ 15_000,
-                /* maxBufferMs = */ 50_000,
-                /* bufferForPlaybackMs = */ 2_500,
-                /* bufferForPlaybackAfterRebufferMs = */ 5_000,
+                /* minBufferMs = */ 30_000,
+                /* maxBufferMs = */ 90_000,
+                /* bufferForPlaybackMs = */ 1_500,
+                /* bufferForPlaybackAfterRebufferMs = */ 8_000,
             )
             .build()
         return ExoPlayer.Builder(context)
@@ -287,6 +310,7 @@ class PlayerManager @Inject constructor(
                     isPlaying = false,
                 )
             }
+            scheduleRetryIfTransient(error)
         }
 
         override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
@@ -317,5 +341,32 @@ class PlayerManager @Inject constructor(
                 durationMs = if (it.isLive) null else exoPlayer.duration.takeIf { d -> d > 0 && d != C.TIME_UNSET },
             )
         }
+    }
+
+    private fun scheduleRetryIfTransient(error: PlaybackException) {
+        val request = lastRequest ?: return
+        if (!error.isTransientNetworkError()) return
+        if (retryAttempt >= MAX_RETRY_ATTEMPTS) return
+        retryJob?.cancel()
+        retryAttempt += 1
+        val delayMs = RETRY_BASE_DELAY_MS * (1L shl (retryAttempt - 1))
+        val retryStartPositionMs = player?.currentPosition
+            ?.takeIf { it > 0L && !request.isLive }
+            ?: lastStartPositionMs
+        retryJob = applicationScope.launch {
+            delay(delayMs)
+            playInternal(request, retryStartPositionMs, isXtreamSource)
+        }
+    }
+
+    private fun PlaybackException.isTransientNetworkError(): Boolean =
+        errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
+            errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
+            errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ||
+            errorCode == PlaybackException.ERROR_CODE_IO_UNSPECIFIED
+
+    companion object {
+        private const val MAX_RETRY_ATTEMPTS = 3
+        private const val RETRY_BASE_DELAY_MS = 1_000L
     }
 }

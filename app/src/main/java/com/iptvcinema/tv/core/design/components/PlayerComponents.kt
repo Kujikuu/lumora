@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -50,8 +51,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
@@ -162,9 +166,11 @@ fun PlayerOverlay(
     qualityLabel: String? = null,
     resumeHint: String? = null,
     showSkipNext: Boolean = false,
+    showControlLabels: Boolean = true,
     modifier: Modifier = Modifier,
     playPauseFocusRequester: FocusRequester? = null,
 ) {
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -204,22 +210,51 @@ fun PlayerOverlay(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (!isLive) {
-                    PlaybackControlButton(icon = Icons.Default.FastRewind, onClick = onRewind)
-                    PlaybackControlButton(icon = Icons.Default.Replay10, onClick = onRewind10)
+                    PlaybackControlButton(
+                        icon = Icons.Default.FastRewind,
+                        label = stringResource(R.string.player_btn_rewind),
+                        showLabel = showControlLabels,
+                        onClick = onRewind,
+                    )
+                    PlaybackControlButton(
+                        icon = Icons.Default.Replay10,
+                        label = stringResource(R.string.player_btn_rewind_10),
+                        showLabel = showControlLabels,
+                        onClick = onRewind10,
+                    )
                 }
                 if (showSkipNext) {
-                    PlaybackControlButton(icon = Icons.Default.SkipPrevious, onClick = onSkipPrevious)
+                    PlaybackControlButton(
+                        icon = Icons.Default.SkipPrevious,
+                        label = stringResource(R.string.player_btn_skip_previous),
+                        showLabel = showControlLabels,
+                        mirrorIcon = isRtl,
+                        onClick = onSkipPrevious,
+                    )
                 }
                 PlaybackControlButton(
                     icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    label = stringResource(if (isPlaying) R.string.player_btn_pause else R.string.player_btn_play),
+                    showLabel = showControlLabels,
                     onClick = onPlayPause,
                     large = true,
                     modifier = playPauseFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
                 )
                 if (!isLive) {
-                    PlaybackControlButton(icon = Icons.Default.Forward10, onClick = onForward10)
+                    PlaybackControlButton(
+                        icon = Icons.Default.Forward10,
+                        label = stringResource(R.string.player_btn_forward_10),
+                        showLabel = showControlLabels,
+                        onClick = onForward10,
+                    )
                     if (showSkipNext) {
-                        PlaybackControlButton(icon = Icons.Default.SkipNext, onClick = onSkipNext)
+                        PlaybackControlButton(
+                            icon = Icons.Default.SkipNext,
+                            label = stringResource(R.string.player_btn_skip_next),
+                            showLabel = showControlLabels,
+                            mirrorIcon = isRtl,
+                            onClick = onSkipNext,
+                        )
                     }
                 }
             }
@@ -264,28 +299,58 @@ fun PlayerOverlay(
 @Composable
 fun PlaybackControlButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
     onClick: () -> Unit,
     large: Boolean = false,
+    contentDescription: String = label,
+    showLabel: Boolean = true,
+    mirrorIcon: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val size = if (large) 72.dp else 48.dp
+    val controlWidth = if (large) 92.dp else 80.dp
+    val controlHeight = if (showLabel) 96.dp else size
     FocusableCinemaCard(
         modifier = modifier
             .padding(horizontal = 8.dp)
-            .size(size),
+            .width(controlWidth)
+            .height(controlHeight),
         onClick = onClick,
         shape = CinemaShapes.Large,
+        contentDescription = contentDescription,
     ) { _ ->
-        FocusableCardSurface(
-            backgroundColor = if (large) CinemaColors.White else CinemaColors.SurfaceSoft.copy(alpha = 0.6f),
-            shape = CircleShape,
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (large) CinemaColors.Background else CinemaColors.White,
-                modifier = Modifier.size(if (large) 36.dp else 24.dp),
-            )
+            Box(
+                modifier = Modifier
+                    .size(size)
+                    .background(
+                        color = if (large) CinemaColors.White else CinemaColors.SurfaceSoft.copy(alpha = 0.6f),
+                        shape = CircleShape,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (large) CinemaColors.Background else CinemaColors.White,
+                    modifier = Modifier
+                        .size(if (large) 36.dp else 24.dp)
+                        .graphicsLayer(scaleX = if (mirrorIcon) -1f else 1f),
+                )
+            }
+            if (showLabel) {
+                Text(
+                    text = label,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = CinemaColors.TextSecondary,
+                        fontWeight = FontWeight.Medium,
+                    ),
+                )
+            }
         }
     }
 }
@@ -311,6 +376,7 @@ fun SeekableProgressBar(
     }
 
     val displayProgress = if (isFocused) previewProgress else progress.coerceIn(0f, 1f)
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val barHeight = if (isFocused) 8.dp else 6.dp
     val thumbSize = if (isFocused) 18.dp else 12.dp
     val seekStepMs = maxOf(durationMs / 120L, 5_000L)
@@ -333,7 +399,11 @@ fun SeekableProgressBar(
                         Key.DirectionLeft -> {
                             onInteraction()
                             val currentMs = (previewProgress * durationMs).toLong()
-                            val newMs = (currentMs - seekStepMs).coerceAtLeast(0L)
+                            val newMs = if (isRtl) {
+                                (currentMs + seekStepMs).coerceAtMost(durationMs)
+                            } else {
+                                (currentMs - seekStepMs).coerceAtLeast(0L)
+                            }
                             previewProgress = newMs.toFloat() / durationMs.toFloat()
                             onSeekTo(newMs)
                             true
@@ -341,7 +411,11 @@ fun SeekableProgressBar(
                         Key.DirectionRight -> {
                             onInteraction()
                             val currentMs = (previewProgress * durationMs).toLong()
-                            val newMs = (currentMs + seekStepMs).coerceAtMost(durationMs)
+                            val newMs = if (isRtl) {
+                                (currentMs - seekStepMs).coerceAtLeast(0L)
+                            } else {
+                                (currentMs + seekStepMs).coerceAtMost(durationMs)
+                            }
                             previewProgress = newMs.toFloat() / durationMs.toFloat()
                             onSeekTo(newMs)
                             true
@@ -360,7 +434,8 @@ fun SeekableProgressBar(
             contentAlignment = Alignment.CenterStart,
         ) {
             val trackWidth = maxWidth
-            val thumbOffset = trackWidth * displayProgress - thumbSize / 2
+            val thumbProgress = if (isRtl) 1f - displayProgress else displayProgress
+            val thumbOffset = trackWidth * thumbProgress - thumbSize / 2
 
             Box(
                 modifier = Modifier

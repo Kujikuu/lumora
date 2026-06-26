@@ -304,34 +304,12 @@ private fun heroMovieMetadata(movie: MovieItem): List<String> = listOfNotNull(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun FeaturedStrip(
-    title: String,
-    metadata: List<String>,
-    onWatchNow: () -> Unit,
-    onDetails: () -> Unit,
-    modifier: Modifier = Modifier,
-    backdropUrl: String? = null,
-) {
-    HeroBanner(
-        title = title,
-        metadata = metadata,
-        description = "",
-        onWatchNow = onWatchNow,
-        onDetails = onDetails,
-        modifier = modifier,
-        height = CinemaSpacing.HeroFeaturedMinHeight,
-        carouselDotCount = 0,
-        backdropUrl = backdropUrl,
-    )
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
 fun PosterGrid(
     items: List<PosterCardData>,
     onItemClick: (PosterCardData) -> Unit,
     modifier: Modifier = Modifier,
     columns: Int = 5,
+    firstItemFocusRequester: FocusRequester? = null,
 ) {
     Column(
         modifier = modifier
@@ -352,7 +330,15 @@ fun PosterGrid(
                     PosterCard(
                         data = item,
                         onClick = { onItemClick(item) },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .then(
+                                if (item == items.firstOrNull() && firstItemFocusRequester != null) {
+                                    Modifier.focusRequester(firstItemFocusRequester)
+                                } else {
+                                    Modifier
+                                },
+                            ),
                     )
                 }
                 // Fill remaining columns with empty spacers so cards stay uniform

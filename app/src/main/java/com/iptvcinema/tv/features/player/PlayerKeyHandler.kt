@@ -83,6 +83,8 @@ object PlayerKeyHandler {
         PlayerKeyAction.Play -> PlayerCommand.Play
         PlayerKeyAction.Pause -> PlayerCommand.Pause
         is PlayerKeyAction.SeekRelative -> PlayerCommand.SeekRelative(action.deltaMs)
+        PlayerKeyAction.EpisodePrevious -> PlayerCommand.EpisodePrevious
+        PlayerKeyAction.EpisodeNext -> PlayerCommand.EpisodeNext
         PlayerKeyAction.ChannelPrevious -> PlayerCommand.ChannelPrevious
         PlayerKeyAction.ChannelNext -> PlayerCommand.ChannelNext
         else -> null

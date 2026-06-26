@@ -12,6 +12,7 @@ import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toChannelItem
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toChannelTileData
 import com.iptvcinema.tv.core.design.components.ChannelTileData
 import com.iptvcinema.tv.core.design.components.PosterCardData
+import com.iptvcinema.tv.core.di.ApplicationScope
 import com.iptvcinema.tv.core.model.SeasonItem
 import com.iptvcinema.tv.core.model.SourceType
 import com.iptvcinema.tv.core.model.WatchHistoryContentType
@@ -31,6 +32,7 @@ import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.util.AppStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,7 +41,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 data class PlayerScreenState(
     val isLoading: Boolean = true,
@@ -75,6 +76,7 @@ class PlayerViewModel @Inject constructor(
     private val episodeCatalogRepository: EpisodeCatalogRepository,
     private val playbackSessionTracker: PlaybackSessionTracker,
     private val appStrings: AppStrings,
+    @ApplicationScope private val applicationScope: CoroutineScope,
 ) : ViewModel() {
     private val contentId: String = savedStateHandle.get<String>("contentId").orEmpty()
     private val contentType: String = savedStateHandle.get<String>("contentType").orEmpty()
@@ -132,6 +134,8 @@ class PlayerViewModel @Inject constructor(
             }
             PlayerCommand.ChannelPrevious -> changeChannel(ChannelDirection.PREVIOUS)
             PlayerCommand.ChannelNext -> changeChannel(ChannelDirection.NEXT)
+            PlayerCommand.EpisodePrevious -> skipToPreviousEpisode()
+            PlayerCommand.EpisodeNext -> skipToNextEpisode()
             else -> playerManager.handleCommand(command)
         }
     }
@@ -275,14 +279,16 @@ class PlayerViewModel @Inject constructor(
     private suspend fun resolveCurrentEpisode(
         sourceId: String,
         request: PlaybackRequest,
-    ): CatalogEpisode? = currentEpisode
-        ?: catalogRepository.getEpisode(sourceId, request.contentId)
-        ?: episodeCatalogRepository.getEpisode(
-            sourceId,
-            request.contentId,
-            request.seriesId ?: seriesIdArg,
-        )
-        ?.also { currentEpisode = it }
+    ): CatalogEpisode? = runCatching {
+        currentEpisode
+            ?: catalogRepository.getEpisode(sourceId, request.contentId)
+            ?: episodeCatalogRepository.getEpisode(
+                sourceId,
+                request.contentId,
+                request.seriesId ?: seriesIdArg,
+            )
+            ?.also { currentEpisode = it }
+    }.getOrNull()
 
     fun cancelAutoplayCountdown() {
         val contentId = _screenState.value.playbackRequest?.contentId ?: return
@@ -306,13 +312,20 @@ class PlayerViewModel @Inject constructor(
     }
 
     private suspend fun loadPlayback() {
-        when (val result = playbackRepository.resolve(contentId, contentType, seriesIdArg)) {
+        val result = runCatching {
+            playbackRepository.resolve(contentId, contentType, seriesIdArg)
+        }.getOrElse {
+            _screenState.value = PlayerScreenState(
+                isLoading = false,
+                loadError = appStrings.get(R.string.error_unable_load_content),
+                loadErrorCode = appStrings.get(R.string.error_catalog_code),
+                seriesId = seriesIdArg,
+            )
+            return
+        }
+        when (result) {
             is PlaybackResolveResult.Success -> {
-                val resumeMs = if (continueWatchingEnabled) {
-                    loadResumePosition(result.request)
-                } else {
-                    0L
-                }
+                val resumeMs = if (continueWatchingEnabled) loadResumePosition(result.request) else 0L
                 _screenState.value = PlayerScreenState(
                     isLoading = false,
                     playbackRequest = result.request,
@@ -339,19 +352,21 @@ class PlayerViewModel @Inject constructor(
     private suspend fun loadUpNext(request: PlaybackRequest) {
         if (request.contentType != WatchHistoryContentType.EPISODE) return
         val sourceId = request.sourceId ?: return
-        val episode = catalogRepository.getEpisode(sourceId, request.contentId)
-            ?: episodeCatalogRepository.getEpisode(
-                sourceId,
-                request.contentId,
-                request.seriesId ?: seriesIdArg,
+        runCatching {
+            val episode = catalogRepository.getEpisode(sourceId, request.contentId)
+                ?: episodeCatalogRepository.getEpisode(
+                    sourceId,
+                    request.contentId,
+                    request.seriesId ?: seriesIdArg,
+                )
+                ?: return
+            currentEpisode = episode
+            if (autoplayNextEpisode) return
+            val upNext = nextEpisodeResolver.upNextEpisodes(sourceId, episode, limit = 3)
+            _screenState.value = _screenState.value.copy(
+                upNextItems = upNext.map { it.toPosterCardData() },
             )
-            ?: return
-        currentEpisode = episode
-        if (autoplayNextEpisode) return
-        val upNext = nextEpisodeResolver.upNextEpisodes(sourceId, episode, limit = 3)
-        _screenState.value = _screenState.value.copy(
-            upNextItems = upNext.map { it.toPosterCardData() },
-        )
+        }
     }
 
     private suspend fun playEpisode(episode: CatalogEpisode, sourceId: String) {
@@ -361,7 +376,18 @@ class PlayerViewModel @Inject constructor(
         autoplayState = AutoplayState.TRANSITIONING
         lastSavedPositionMs = 0L
         try {
-            when (val result = playbackRepository.resolve(episode.id, "episode", episode.seriesId)) {
+            val result = runCatching {
+                playbackRepository.resolve(episode.id, "episode", episode.seriesId)
+            }.getOrElse {
+                autoplaySuppressedContentId = _screenState.value.playbackRequest?.contentId
+                autoplayState = AutoplayState.SUPPRESSED
+                _screenState.value = _screenState.value.copy(
+                    loadError = appStrings.get(R.string.error_unable_load_content),
+                    loadErrorCode = appStrings.get(R.string.error_catalog_code),
+                )
+                return
+            }
+            when (result) {
                 is PlaybackResolveResult.Success -> {
                     currentEpisode = catalogRepository.getEpisode(sourceId, episode.id) ?: episode
                     autoplaySuppressedContentId = null
@@ -401,20 +427,31 @@ class PlayerViewModel @Inject constructor(
 
     private fun changeChannel(direction: ChannelDirection) {
         viewModelScope.launch {
-            val request = _screenState.value.playbackRequest ?: return@launch
-            if (!request.isLive) return@launch
-            val sourceId = request.sourceId ?: return@launch
-            val adjacent = catalogRepository.getAdjacentChannel(sourceId, request.contentId, direction)
-                ?: return@launch
-            switchToResolvedChannel(sourceId, adjacent.id)
+            runCatching {
+                val request = _screenState.value.playbackRequest ?: return@runCatching
+                if (!request.isLive) return@runCatching
+                val sourceId = request.sourceId ?: return@runCatching
+                val adjacent = catalogRepository.getAdjacentChannel(sourceId, request.contentId, direction)
+                    ?: return@runCatching
+                switchToResolvedChannel(sourceId, adjacent.id)
+            }
         }
     }
 
     private suspend fun switchToResolvedChannel(sourceId: String, channelId: String) {
-        when (val result = playbackRepository.resolveChannel(sourceId, channelId)) {
+        val result = runCatching {
+            playbackRepository.resolveChannel(sourceId, channelId)
+        }.getOrElse {
+            _screenState.value = _screenState.value.copy(
+                loadError = appStrings.get(R.string.error_unable_load_content),
+                loadErrorCode = appStrings.get(R.string.error_catalog_code),
+            )
+            return
+        }
+        when (result) {
             is PlaybackResolveResult.Success -> {
-                val channel = catalogRepository.getChannel(sourceId, channelId)
-                val programTitle = catalogRepository.getCurrentProgram(sourceId, channelId)?.title
+                val channel = runCatching { catalogRepository.getChannel(sourceId, channelId) }.getOrNull()
+                val programTitle = runCatching { catalogRepository.getCurrentProgram(sourceId, channelId)?.title }.getOrNull()
                 val metadata = buildList {
                     add("LIVE")
                     channel?.categoryName?.takeIf { it.isNotBlank() }?.let { add(it) }
@@ -538,17 +575,19 @@ class PlayerViewModel @Inject constructor(
 
     private suspend fun markEpisodeCompleted(request: PlaybackRequest) {
         if (!continueWatchingEnabled) return
-        val session = appSessionRepository.sessionState.first()
-        val profileId = session.currentProfileId ?: return
-        val durationMs = resolveDurationMs(playerManager.state.value, request) ?: return
-        if (durationMs <= 0L) return
-        persistWatchProgress(
-            profileId = profileId,
-            request = request,
-            positionMs = durationMs,
-            durationMs = durationMs,
-        )
-        lastSavedPositionMs = durationMs
+        runCatching {
+            val session = appSessionRepository.sessionState.first()
+            val profileId = session.currentProfileId ?: return
+            val durationMs = resolveDurationMs(playerManager.state.value, request) ?: return
+            if (durationMs <= 0L) return
+            persistWatchProgress(
+                profileId = profileId,
+                request = request,
+                positionMs = durationMs,
+                durationMs = durationMs,
+            )
+            lastSavedPositionMs = durationMs
+        }
     }
 
     private fun startPositionTicker() {
@@ -572,42 +611,46 @@ class PlayerViewModel @Inject constructor(
 
     private suspend fun loadResumePosition(request: PlaybackRequest): Long {
         if (request.isLive) return 0L
-        val session = appSessionRepository.sessionState.first()
-        val profileId = session.currentProfileId ?: return 0L
-        val history = watchHistoryRepository.getProgress(
-            profileId = profileId,
-            contentId = request.contentId,
-            contentType = request.contentType,
-        ) ?: return 0L
-        val durationMs = history.durationMs ?: request.durationMs ?: return 0L
-        return WatchHistoryResumePolicy.resumePositionMs(history.positionMs, durationMs)
+        return runCatching {
+            val session = appSessionRepository.sessionState.first()
+            val profileId = session.currentProfileId ?: return 0L
+            val history = watchHistoryRepository.getProgress(
+                profileId = profileId,
+                contentId = request.contentId,
+                contentType = request.contentType,
+            ) ?: return 0L
+            val durationMs = history.durationMs ?: request.durationMs ?: return 0L
+            WatchHistoryResumePolicy.resumePositionMs(history.positionMs, durationMs)
+        }.getOrDefault(0L)
     }
 
     private fun saveProgressNow() {
         if (!continueWatchingEnabled) return
         viewModelScope.launch {
-            val request = _screenState.value.playbackRequest ?: return@launch
-            if (request.isLive) {
-                saveLiveWatchEntry(request)
-                return@launch
-            }
-            val state = playerManager.state.value
-            val positionMs = state.positionMs
-            if (positionMs <= 0L) return@launch
-            if (positionMs == lastSavedPositionMs) return@launch
-            lastSavedPositionMs = positionMs
-            val session = appSessionRepository.sessionState.first()
-            val profileId = session.currentProfileId ?: return@launch
-            val durationMs = resolveDurationMs(state, request)
-            persistWatchProgress(
-                profileId = profileId,
-                request = request,
-                positionMs = positionMs,
-                durationMs = durationMs,
-            )
-            val seriesId = resolveSeriesIdForHistory(request)
-            if (request.contentType == WatchHistoryContentType.EPISODE && seriesId != null && request.sourceId != null) {
-                prefetchEpisodesForSeries(request.sourceId, seriesId)
+            runCatching {
+                val request = _screenState.value.playbackRequest ?: return@runCatching
+                if (request.isLive) {
+                    saveLiveWatchEntry(request)
+                    return@runCatching
+                }
+                val state = playerManager.state.value
+                val positionMs = state.positionMs
+                if (positionMs <= 0L) return@runCatching
+                if (positionMs == lastSavedPositionMs) return@runCatching
+                lastSavedPositionMs = positionMs
+                val session = appSessionRepository.sessionState.first()
+                val profileId = session.currentProfileId ?: return@runCatching
+                val durationMs = resolveDurationMs(state, request)
+                persistWatchProgress(
+                    profileId = profileId,
+                    request = request,
+                    positionMs = positionMs,
+                    durationMs = durationMs,
+                )
+                val seriesId = resolveSeriesIdForHistory(request)
+                if (request.contentType == WatchHistoryContentType.EPISODE && seriesId != null && request.sourceId != null) {
+                    prefetchEpisodesForSeries(request.sourceId, seriesId)
+                }
             }
         }
     }
@@ -660,50 +703,58 @@ class PlayerViewModel @Inject constructor(
 
     private suspend fun saveLiveWatchEntry(request: PlaybackRequest) {
         if (!continueWatchingEnabled) return
-        val session = appSessionRepository.sessionState.first()
-        val profileId = session.currentProfileId ?: return
-        watchHistoryRepository.upsertProgress(
-            profileId = profileId,
-            contentId = request.contentId,
-            contentType = WatchHistoryContentType.CHANNEL,
-            title = request.title,
-            posterUrl = request.posterUrl,
-            positionMs = 0L,
-            durationMs = null,
-            sourceId = request.sourceId,
-        )
+        runCatching {
+            val session = appSessionRepository.sessionState.first()
+            val profileId = session.currentProfileId ?: return
+            watchHistoryRepository.upsertProgress(
+                profileId = profileId,
+                contentId = request.contentId,
+                contentType = WatchHistoryContentType.CHANNEL,
+                title = request.title,
+                posterUrl = request.posterUrl,
+                positionMs = 0L,
+                durationMs = null,
+                sourceId = request.sourceId,
+            )
+        }
     }
 
     override fun onCleared() {
+        val finalRequest = _screenState.value.playbackRequest
+        val finalPlayerState = playerManager.state.value
         progressSaveJob?.cancel()
         positionTickerJob?.cancel()
         autoplayJob?.cancel()
         channelBannerJob?.cancel()
         playbackSessionTracker.setCurrentLiveChannel(null)
-        runBlocking { saveProgressBlocking() }
+        if (finalRequest != null) {
+            applicationScope.launch {
+                saveProgressSnapshot(finalRequest, finalPlayerState)
+            }
+        }
         playerManager.release()
         super.onCleared()
     }
 
-    private suspend fun saveProgressBlocking() {
+    private suspend fun saveProgressSnapshot(request: PlaybackRequest, state: PlayerUiState) {
         if (!continueWatchingEnabled) return
-        val request = _screenState.value.playbackRequest ?: return
-        if (request.isLive) {
-            saveLiveWatchEntry(request)
-            return
+        runCatching {
+            if (request.isLive) {
+                saveLiveWatchEntry(request)
+                return@runCatching
+            }
+            val positionMs = state.positionMs
+            if (positionMs <= 0L) return@runCatching
+            val session = appSessionRepository.sessionState.first()
+            val profileId = session.currentProfileId ?: return@runCatching
+            val durationMs = resolveDurationMs(state, request)
+            persistWatchProgress(
+                profileId = profileId,
+                request = request,
+                positionMs = positionMs,
+                durationMs = durationMs,
+            )
         }
-        val state = playerManager.state.value
-        val positionMs = state.positionMs
-        if (positionMs <= 0L) return
-        val session = appSessionRepository.sessionState.first()
-        val profileId = session.currentProfileId ?: return
-        val durationMs = resolveDurationMs(state, request)
-        persistWatchProgress(
-            profileId = profileId,
-            request = request,
-            positionMs = positionMs,
-            durationMs = durationMs,
-        )
     }
 
     private fun resolveDurationMs(state: PlayerUiState, request: PlaybackRequest): Long? =

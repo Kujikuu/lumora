@@ -49,6 +49,7 @@
     <string name="btn_add_to_favorites">إضافة إلى المفضلة</string>
     <string name="btn_favorited">في المفضلة</string>
     <string name="btn_play_first">تشغيل الأولى</string>
+    <string name="btn_refresh_catalog">تحديث الفهرس</string>
 
     <string name="toggle_on">تشغيل</string>
     <string name="toggle_off">إيقاف</string>
@@ -113,6 +114,13 @@
     <string name="sync_epg_available">EPG: متاح</string>
     <string name="sync_epg_missing">EPG: غير متاح</string>
     <string name="sync_last_update">آخر تحديث: %1$s</string>
+    <string name="refresh_in_progress">جارٍ تحديث الفهرس…</string>
+    <string name="refresh_success">تم تحديث الفهرس</string>
+    <string name="refresh_failed">فشل التحديث</string>
+    <string name="refresh_demo_unavailable">الوضع التجريبي — التحديث غير متاح</string>
+    <string name="refresh_credentials_missing">لم يتم العثور على بيانات هذا المصدر</string>
+    <string name="refresh_success_xtream">تمت مزامنة %1$d قناة و%2$d فيلم و%3$d مسلسل</string>
+    <string name="refresh_success_m3u">تمت مزامنة %1$d قناة</string>
 
     <string name="profile_title">اختر ملفًا شخصيًا</string>
     <string name="profile_subtitle">من يشاهد؟</string>
@@ -237,6 +245,13 @@
     <string name="player_no_channels">لا تتوفر قنوات</string>
     <string name="player_up_next_in">التالي خلال %1$d ث</string>
     <string name="player_seek_hint">استخدم ◀ ▶ للتقديم</string>
+    <string name="player_btn_rewind">رجوع</string>
+    <string name="player_btn_rewind_10">رجوع 10</string>
+    <string name="player_btn_forward_10">تقديم 10</string>
+    <string name="player_btn_skip_next">التالي</string>
+    <string name="player_btn_skip_previous">السابق</string>
+    <string name="player_btn_play">تشغيل</string>
+    <string name="player_btn_pause">إيقاف مؤقت</string>
 
     <string name="settings_title">الإعدادات</string>
     <string name="settings_subtitle">إدارة حسابك وتفضيلاتك وإعدادات الجهاز.</string>

@@ -1,6 +1,7 @@
 package com.iptvcinema.tv.core.navigation
 
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -8,7 +9,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -52,7 +52,8 @@ import com.iptvcinema.tv.features.states.InvalidPlaylistScreen
 fun AppNavGraph(
     navController: NavHostController = rememberNavController(),
 ) {
-    val sessionViewModel: SessionViewModel = hiltViewModel(LocalContext.current as ComponentActivity)
+    val activity = LocalActivity.current as ComponentActivity
+    val sessionViewModel: SessionViewModel = hiltViewModel(activity)
 
     NavHost(
         navController = navController,
@@ -348,7 +349,7 @@ fun AppNavGraph(
         composable(AppRoute.PLAYLIST_MANAGEMENT) {
             val session by sessionViewModel.sessionState.collectAsState()
             val viewModel: SourceViewModel = hiltViewModel()
-            val settingsViewModel: SettingsViewModel = hiltViewModel(LocalContext.current as ComponentActivity)
+            val settingsViewModel: SettingsViewModel = hiltViewModel(activity)
             val sourcesUiState by viewModel.uiState.collectAsState()
             val syncMessage by viewModel.syncMessage.collectAsState()
             var showAddSourcePin by remember { mutableStateOf(false) }

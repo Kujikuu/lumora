@@ -2,6 +2,9 @@ package com.iptvcinema.tv.features.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.iptvcinema.tv.core.catalog.CatalogRefreshController
+import com.iptvcinema.tv.core.catalog.CatalogRefreshResult
+import com.iptvcinema.tv.core.catalog.CatalogRefreshState
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toChannelItem
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toChannelTileData
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toMovieItem
@@ -26,6 +29,7 @@ import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.model.catalog.FeaturedCatalogContent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,6 +60,7 @@ data class HomeUiState(
     val sourceStatus: SourceStatus? = null,
     val sourceType: SourceType? = null,
     val syncBannerText: String? = null,
+    val refreshState: CatalogRefreshState = CatalogRefreshState.Idle,
 )
 
 @HiltViewModel
@@ -67,6 +72,7 @@ class HomeViewModel @Inject constructor(
     private val parentalControlsRepository: ParentalControlsRepository,
     private val parentalGate: ParentalGate,
     private val playbackSessionTracker: PlaybackSessionTracker,
+    private val catalogRefreshController: CatalogRefreshController,
     private val appStrings: AppStrings,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -142,7 +148,8 @@ class HomeViewModel @Inject constructor(
                     emptyList()
                 }
 
-                _uiState.value = when {
+                val current = _uiState.value
+                val nextState = when {
                     state.sourceStatus == com.iptvcinema.tv.core.model.SourceStatus.EXPIRED ||
                         (state.sourceStatus == com.iptvcinema.tv.core.model.SourceStatus.FAILED &&
                             state.sourceType == com.iptvcinema.tv.core.model.SourceType.M3U) -> {
@@ -235,11 +242,37 @@ class HomeViewModel @Inject constructor(
                         )
                     }
                 }
+                _uiState.value = nextState.copy(
+                    syncBannerText = current.syncBannerText,
+                    refreshState = current.refreshState,
+                )
             }
         }
     }
 
     fun refreshContinueWatching() {
         watchHistoryRepository.invalidate()
+    }
+
+    fun refreshCurrentSource() {
+        if (_uiState.value.refreshState == CatalogRefreshState.Refreshing) return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(refreshState = CatalogRefreshState.Refreshing)
+            val result = catalogRefreshController.refreshCurrentSource()
+            _uiState.value = _uiState.value.copy(
+                refreshState = when (result) {
+                    is CatalogRefreshResult.Success -> CatalogRefreshState.Success(result.message)
+                    is CatalogRefreshResult.Failed -> CatalogRefreshState.Failed(result.message)
+                },
+            )
+            delay(REFRESH_MESSAGE_VISIBLE_MS)
+            if (_uiState.value.refreshState !is CatalogRefreshState.Refreshing) {
+                _uiState.value = _uiState.value.copy(refreshState = CatalogRefreshState.Idle)
+            }
+        }
+    }
+
+    companion object {
+        private const val REFRESH_MESSAGE_VISIBLE_MS = 5_000L
     }
 }

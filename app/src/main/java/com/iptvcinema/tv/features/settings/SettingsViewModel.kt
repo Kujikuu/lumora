@@ -2,6 +2,9 @@ package com.iptvcinema.tv.features.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.iptvcinema.tv.core.catalog.CatalogRefreshController
+import com.iptvcinema.tv.core.catalog.CatalogRefreshResult
+import com.iptvcinema.tv.core.catalog.CatalogRefreshState
 import com.iptvcinema.tv.core.data.local.LocalCredentialsStore
 import com.iptvcinema.tv.core.data.repository.AuthRepository
 import com.iptvcinema.tv.core.data.repository.ParentalControlsRepository
@@ -14,6 +17,7 @@ import com.iptvcinema.tv.core.model.AccountSummary
 import com.iptvcinema.tv.core.model.UserSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +34,7 @@ class SettingsViewModel @Inject constructor(
     private val parentalControlsRepository: ParentalControlsRepository,
     private val parentalGate: ParentalGate,
     private val localCredentialsStore: LocalCredentialsStore,
+    private val catalogRefreshController: CatalogRefreshController,
 ) : ViewModel() {
     val sessionState: StateFlow<AppSessionState> = appSessionRepository.sessionState
         .stateIn(
@@ -46,6 +51,9 @@ class SettingsViewModel @Inject constructor(
 
     private val _parentalControls = MutableStateFlow<ParentalControls?>(null)
     val parentalControls: StateFlow<ParentalControls?> = _parentalControls.asStateFlow()
+
+    private val _refreshState = MutableStateFlow<CatalogRefreshState>(CatalogRefreshState.Idle)
+    val refreshState: StateFlow<CatalogRefreshState> = _refreshState.asStateFlow()
 
     val parentalGateInstance: ParentalGate get() = parentalGate
 
@@ -124,5 +132,24 @@ class SettingsViewModel @Inject constructor(
             }
             onComplete()
         }
+    }
+
+    fun refreshCurrentSource() {
+        if (_refreshState.value == CatalogRefreshState.Refreshing) return
+        viewModelScope.launch {
+            _refreshState.value = CatalogRefreshState.Refreshing
+            _refreshState.value = when (val result = catalogRefreshController.refreshCurrentSource()) {
+                is CatalogRefreshResult.Success -> CatalogRefreshState.Success(result.message)
+                is CatalogRefreshResult.Failed -> CatalogRefreshState.Failed(result.message)
+            }
+            delay(REFRESH_MESSAGE_VISIBLE_MS)
+            if (_refreshState.value !is CatalogRefreshState.Refreshing) {
+                _refreshState.value = CatalogRefreshState.Idle
+            }
+        }
+    }
+
+    companion object {
+        private const val REFRESH_MESSAGE_VISIBLE_MS = 5_000L
     }
 }
