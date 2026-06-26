@@ -28,7 +28,7 @@ fun MainShellScaffold(
     // bottom browse footer is redundant chrome. Keep it off for a cleaner,
     // more cinematic layout that gives content rails more vertical room.
     val showBrowseFooter = false
-    val showRemoteHints = true
+    val showRemoteHints = false
 
     CinemaScreen(
         selectedNavItem = selectedNavItem,

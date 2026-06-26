@@ -5,10 +5,13 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
+    <!-- Circle outline -->
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M54,18 C73.9,18 90,34.1 90,54 C90,73.9 73.9,90 54,90 C34.1,90 18,73.9 18,54 C18,34.1 34.1,18 54,18 Z M54,28 C39.6,28 28,39.6 28,54 C28,68.4 39.6,80 54,80 C68.4,80 80,68.4 80,54 C80,39.6 68.4,28 54,28 Z" />
+        android:pathData="M54,20 C72.8,20 88,35.2 88,54 C88,72.8 72.8,88 54,88 C35.2,88 20,72.8 20,54 C20,35.2 35.2,20 54,20 Z M54,26 C38.5,26 26,38.5 26,54 C26,69.5 38.5,82 54,82 C69.5,82 82,69.5 82,54 C82,38.5 69.5,26 54,26 Z" />
+
+    <!-- Play triangle -->
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M43,35 L75,54 L43,73 Z" />
+        android:pathData="M44,36 L76,54 L44,72 Z" />
 </vector>

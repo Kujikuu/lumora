@@ -176,8 +176,9 @@
     <attr format="color" name="windowSplashScreenIconBackgroundColor"/>
     <color name="androidx_core_ripple_material_light">#1f000000</color>
     <color name="androidx_core_secondary_text_default_material_light">#8a000000</color>
-    <color name="brand_background">#05080B</color>
-    <color name="brand_gold">#FFC95C</color>
+    <color name="brand_accent">#E50914</color>
+    <color name="brand_background">#141414</color>
+    <color name="brand_gold">#E50914</color>
     <color name="browser_actions_bg_grey">#F5F5F5</color>
     <color name="browser_actions_divider_color">#1E000000</color>
     <color name="browser_actions_text_color">#DE000000</color>
@@ -1062,7 +1063,7 @@
     <style name="TextAppearance.Compat.Notification.Title.Media"/>
     <style name="Theme.IptvCinema" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/brand_background</item>
-        <item name="android:colorAccent">@color/brand_gold</item>
+        <item name="android:colorAccent">@color/brand_accent</item>
         <item name="android:navigationBarColor">@color/brand_background</item>
         <item name="android:statusBarColor">@color/brand_background</item>
     </style>

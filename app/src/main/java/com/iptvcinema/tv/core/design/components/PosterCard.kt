@@ -103,6 +103,18 @@ fun PosterCard(
                     }
                 }
             }
+            Text(
+                text = data.title,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    color = if (focused) CinemaColors.White else CinemaColors.TextSecondary,
+                    fontWeight = FontWeight.Medium,
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+            )
         }
     }
 }

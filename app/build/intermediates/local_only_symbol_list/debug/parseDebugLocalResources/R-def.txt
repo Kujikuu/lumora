@@ -1,5 +1,6 @@
 R_DEF: Internal format may change without notice
 local
+color brand_accent
 color brand_background
 color brand_gold
 drawable ic_brand_mark
