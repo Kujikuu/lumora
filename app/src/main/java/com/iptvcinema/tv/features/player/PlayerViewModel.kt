@@ -61,6 +61,8 @@ data class PlayerScreenState(
     val channelPickerOpen: Boolean = false,
     val channelPickerChannels: List<ChannelTileData> = emptyList(),
     val channelPickerLoading: Boolean = false,
+    val seriesTitle: String? = null,
+    val seriesPosterUrl: String? = null,
 )
 
 @HiltViewModel
@@ -102,17 +104,33 @@ class PlayerViewModel @Inject constructor(
     init {
         startPositionTicker()
         viewModelScope.launch {
-            val settings = runCatching { userSettingsRepository.getSettings() }.getOrNull()
-            continueWatchingEnabled = settings?.continueWatchingEnabled ?: true
-            autoplayNextEpisode = settings?.autoplayNextEpisode ?: false
+            userSettingsRepository.observeSettings().collect { settings ->
+                continueWatchingEnabled = settings?.continueWatchingEnabled ?: true
+                autoplayNextEpisode = settings?.autoplayNextEpisode ?: true
+            }
+        }
+        viewModelScope.launch {
             loadPlayback()
         }
         viewModelScope.launch {
             playerManager.state.collect { state ->
-                if (!state.isPlaying && state.hasFirstFrame && state.errorMessage == null) {
-                    saveProgressNow()
+                val playbackEnded = state.playbackEnded
+                if (playbackEnded) {
+                    handlePlaybackEnded()
+                    playerManager.clearPlaybackEnded()
                 }
-                checkAutoplayThreshold(state)
+                if (!state.isPlaying &&
+                    state.hasFirstFrame &&
+                    state.errorMessage == null &&
+                    !state.isBuffering &&
+                    !state.isReconnecting &&
+                    !playbackEnded
+                ) {
+                    scheduleProgressSave()
+                }
+                if (!playbackEnded) {
+                    checkAutoplayThreshold(state)
+                }
             }
         }
     }
@@ -164,7 +182,10 @@ class PlayerViewModel @Inject constructor(
             val request = _screenState.value.playbackRequest ?: return@launch
             val sourceId = request.sourceId ?: return@launch
             val episode = resolveCurrentEpisode(sourceId, request) ?: return@launch
-            val next = nextEpisodeResolver.nextEpisode(sourceId, episode) ?: return@launch
+            val next = nextEpisodeResolver.nextEpisode(sourceId, episode) ?: run {
+                showInfoBanner(appStrings.get(R.string.player_no_next_episode))
+                return@launch
+            }
             dismissAutoplayUi()
             markEpisodeCompleted(request)
             playEpisode(next, sourceId)
@@ -337,6 +358,8 @@ class PlayerViewModel @Inject constructor(
                 updateLivePlaybackSession(result.request)
                 scheduleProgressSave()
                 loadUpNext(result.request)
+                loadSeriesMetadata(result.request)
+                prefetchEpisodeCatalog(result.request)
             }
             is PlaybackResolveResult.Error -> {
                 _screenState.value = PlayerScreenState(
@@ -349,22 +372,61 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    private suspend fun loadSeriesMetadata(request: PlaybackRequest) {
+        if (request.contentType != WatchHistoryContentType.EPISODE) return
+        val sourceId = request.sourceId ?: return
+        val seriesId = request.seriesId ?: seriesIdArg ?: return
+        runCatching {
+            val series = catalogRepository.getSeries(sourceId, seriesId)
+            _screenState.value = _screenState.value.copy(
+                seriesTitle = series?.title,
+                seriesPosterUrl = series?.posterUrl,
+            )
+        }
+    }
+
     private suspend fun loadUpNext(request: PlaybackRequest) {
         if (request.contentType != WatchHistoryContentType.EPISODE) return
         val sourceId = request.sourceId ?: return
+        val seriesId = request.seriesId ?: seriesIdArg ?: return
         runCatching {
-            val episode = catalogRepository.getEpisode(sourceId, request.contentId)
+            val cached = catalogRepository.getEpisodesForSeries(sourceId, seriesId)
+            val episodes = episodeCatalogRepository.getEpisodesForSeries(
+                sourceId = sourceId,
+                seriesId = seriesId,
+                forceRefresh = cached.isEmpty(),
+            )
+            val episode = episodes.find { it.id == request.contentId }
+                ?: catalogRepository.getEpisode(sourceId, request.contentId)
                 ?: episodeCatalogRepository.getEpisode(
                     sourceId,
                     request.contentId,
-                    request.seriesId ?: seriesIdArg,
+                    seriesId,
                 )
                 ?: return
             currentEpisode = episode
+            val next = nextEpisodeResolver.nextEpisode(sourceId, episode)
+            _screenState.value = _screenState.value.copy(
+                nextEpisodeTitle = next?.title,
+            )
             if (autoplayNextEpisode) return
             val upNext = nextEpisodeResolver.upNextEpisodes(sourceId, episode, limit = 3)
             _screenState.value = _screenState.value.copy(
                 upNextItems = upNext.map { it.toPosterCardData() },
+            )
+        }
+    }
+
+    private suspend fun prefetchEpisodeCatalog(request: PlaybackRequest) {
+        if (request.contentType != WatchHistoryContentType.EPISODE) return
+        val sourceId = request.sourceId ?: return
+        val seriesId = request.seriesId ?: seriesIdArg ?: return
+        runCatching {
+            val cached = catalogRepository.getEpisodesForSeries(sourceId, seriesId)
+            episodeCatalogRepository.getEpisodesForSeries(
+                sourceId = sourceId,
+                seriesId = seriesId,
+                forceRefresh = cached.isEmpty(),
             )
         }
     }
@@ -407,6 +469,8 @@ class PlayerViewModel @Inject constructor(
                     playerManager.play(result.request, 0L, isXtreamSource())
                     scheduleProgressSave()
                     loadUpNext(result.request)
+                    loadSeriesMetadata(result.request)
+                    prefetchEpisodeCatalog(result.request)
                 }
                 is PlaybackResolveResult.Error -> {
                     autoplaySuppressedContentId = _screenState.value.playbackRequest?.contentId
@@ -471,6 +535,34 @@ class PlayerViewModel @Inject constructor(
                 showChannelBannerBriefly()
             }
             is PlaybackResolveResult.Error -> Unit
+        }
+    }
+
+    private fun handlePlaybackEnded() {
+        val request = _screenState.value.playbackRequest ?: return
+        if (request.isLive || request.contentType != WatchHistoryContentType.EPISODE) return
+        if (!autoplayNextEpisode || isEpisodeTransitionInProgress) return
+        if (request.contentId == autoplaySuppressedContentId) return
+        if (_screenState.value.showAutoplayCountdown) return
+        if (autoplayState != AutoplayState.IDLE) return
+        viewModelScope.launch {
+            markEpisodeCompleted(request)
+            val sourceId = request.sourceId ?: return@launch
+            val episode = resolveCurrentEpisode(sourceId, request) ?: return@launch
+            val next = nextEpisodeResolver.nextEpisode(sourceId, episode) ?: run {
+                showInfoBanner(appStrings.get(R.string.player_no_next_episode))
+                return@launch
+            }
+            playEpisode(next, sourceId)
+        }
+    }
+
+    private fun showInfoBanner(message: String) {
+        channelBannerJob?.cancel()
+        _screenState.value = _screenState.value.copy(channelChangeBanner = message)
+        channelBannerJob = viewModelScope.launch {
+            delay(3_000)
+            _screenState.value = _screenState.value.copy(channelChangeBanner = null)
         }
     }
 

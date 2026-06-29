@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.iptvcinema.tv.core.supabase.mapper.SupabaseMappersTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-06-27T00:50:39" hostname="Apples-MacBook-Pro.local" time="0.007">
+  <properties/>
+  <testcase name="deviceActivationSessionDto_parsesPostgresOffsetTimestamp" classname="com.iptvcinema.tv.core.supabase.mapper.SupabaseMappersTest" time="0.004"/>
+  <testcase name="userSettings_roundTripPreservesValues" classname="com.iptvcinema.tv.core.supabase.mapper.SupabaseMappersTest" time="0.001"/>
+  <testcase name="profileDto_mapsToUserProfile" classname="com.iptvcinema.tv.core.supabase.mapper.SupabaseMappersTest" time="0.0"/>
+  <testcase name="playlistSourceDto_mapsSourceTypeAndStatus" classname="com.iptvcinema.tv.core.supabase.mapper.SupabaseMappersTest" time="0.001"/>
+  <testcase name="favoriteDto_mapsContentType" classname="com.iptvcinema.tv.core.supabase.mapper.SupabaseMappersTest" time="0.001"/>
+  <testcase name="deviceActivationSessionDto_mapsStatusAndInstant" classname="com.iptvcinema.tv.core.supabase.mapper.SupabaseMappersTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

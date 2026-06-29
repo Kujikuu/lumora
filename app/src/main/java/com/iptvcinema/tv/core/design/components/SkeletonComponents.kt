@@ -134,10 +134,35 @@ fun SkeletonHomeContent(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
     ) {
         SkeletonHeroBanner()
-        repeat(3) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            SkeletonBox(width = 160.dp, height = 18.dp)
+            SkeletonBox(
+                modifier = Modifier
+                    .padding(start = CinemaSpacing.ContentStart)
+                    .fillMaxWidth(),
+                height = CinemaSpacing.ExpandedPosterCardHeight,
+            )
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            SkeletonBox(width = 160.dp, height = 18.dp)
+            Row(
+                modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
+            ) {
+                repeat(5) {
+                    SkeletonBox(width = CinemaSpacing.MoodTileSize, height = CinemaSpacing.MoodTileSize)
+                }
+            }
+        }
+        repeat(2) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 SkeletonBox(width = 160.dp, height = 18.dp)
-                SkeletonPosterRail(count = 7)
+                SkeletonBox(
+                    modifier = Modifier
+                        .padding(start = CinemaSpacing.ContentStart)
+                        .fillMaxWidth(),
+                    height = CinemaSpacing.ExpandedPosterCardHeight,
+                )
             }
         }
     }

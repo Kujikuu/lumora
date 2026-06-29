@@ -2,6 +2,9 @@ package com.iptvcinema.tv.features.livetv
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.iptvcinema.tv.core.catalog.CatalogRefreshController
+import com.iptvcinema.tv.core.catalog.CatalogRefreshState
+import com.iptvcinema.tv.core.catalog.CatalogRefreshSupport
 import com.iptvcinema.tv.core.data.fake.FakeDataProvider
 import com.iptvcinema.tv.core.data.repository.CatalogLoadState
 import com.iptvcinema.tv.core.data.repository.CatalogRepository
@@ -42,6 +45,8 @@ data class LiveTvUiState(
     val sourceStatus: SourceStatus? = null,
     val sourceType: SourceType? = null,
     val nowPlayingChannelId: String? = null,
+    val syncBannerText: String? = null,
+    val refreshState: CatalogRefreshState = CatalogRefreshState.Idle,
 ) {
     val previewChannel: ChannelItem?
         get() {
@@ -65,6 +70,7 @@ class LiveTvViewModel @Inject constructor(
     private val parentalControlsRepository: ParentalControlsRepository,
     private val parentalGate: ParentalGate,
     private val playbackSessionTracker: PlaybackSessionTracker,
+    private val catalogRefreshController: CatalogRefreshController,
 ) : ViewModel() {
     private val selectedCategory = MutableStateFlow<String?>(null)
     private val guideWindowStartMs = MutableStateFlow(GuideLayoutHelper.defaultWindowStart(System.currentTimeMillis()))
@@ -89,6 +95,9 @@ class LiveTvViewModel @Inject constructor(
     private var clockJob: Job? = null
 
     init {
+        CatalogRefreshSupport.observeSyncBanner(viewModelScope, catalogRepository) { banner ->
+            _uiState.value = _uiState.value.copy(syncBannerText = banner)
+        }
         viewModelScope.launch {
             combine(
                 appSessionRepository.sessionState,
@@ -176,6 +185,8 @@ class LiveTvViewModel @Inject constructor(
                     sourceStatus = left.browse.sourceStatus,
                     sourceType = left.browse.sourceType,
                     nowPlayingChannelId = nowPlayingId,
+                    syncBannerText = _uiState.value.syncBannerText,
+                    refreshState = _uiState.value.refreshState,
                 )
             }.collect { state ->
                 _uiState.value = state
@@ -230,6 +241,17 @@ class LiveTvViewModel @Inject constructor(
         if (program.channelId == selectedChannel.value?.id) {
             focusedProgram.value = program
         }
+    }
+
+    fun refreshCurrentSource() {
+        CatalogRefreshSupport.runCatalogRefresh(
+            scope = viewModelScope,
+            getRefreshState = { _uiState.value.refreshState },
+            setRefreshState = { refreshState ->
+                _uiState.value = _uiState.value.copy(refreshState = refreshState)
+            },
+            catalogRefreshController = catalogRefreshController,
+        )
     }
 
     private fun refreshEpg() {

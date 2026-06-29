@@ -174,6 +174,19 @@
     <string name="home_live_channels">Live Channels</string>
     <string name="home_new_releases">New Releases</string>
     <string name="home_popular_series">Popular Series</string>
+    <string name="home_mood_row_title">Browse by Mood</string>
+    <string name="btn_continue_watching">Continue Watching</string>
+    <string name="home_continue_progress">%1$d%% watched</string>
+    <string name="badge_top_label">TOP</string>
+    <string name="badge_top_number">10</string>
+    <string name="mood_action">Action</string>
+    <string name="mood_drama">Drama</string>
+    <string name="mood_comedy">Comedy</string>
+    <string name="mood_kids">Kids</string>
+    <string name="mood_arabic">Arabic</string>
+    <string name="mood_new">New</string>
+    <string name="content_desc_add_to_list">Add to My List</string>
+    <string name="content_desc_favorite">Favorite</string>
     <string name="hero_featured">★ FEATURED</string>
     <string name="rail_up_next">Up Next</string>
     <string name="rail_more_like_this">More Like This</string>
@@ -267,6 +280,17 @@
     <string name="player_btn_skip_previous">Previous</string>
     <string name="player_btn_play">Play</string>
     <string name="player_btn_pause">Pause</string>
+    <string name="player_close">Close</string>
+    <string name="player_settings">Settings</string>
+    <string name="player_next_episode">Next episode</string>
+    <string name="player_next_channel">Next channel</string>
+    <string name="player_quality">Quality</string>
+    <string name="player_season_episode">Season %1$d · Episode %2$d</string>
+    <string name="player_time_format">%1$s / %2$s</string>
+    <string name="player_track_settings">Audio &amp; Subtitles</string>
+    <string name="player_audio_tracks">Audio</string>
+    <string name="player_resume_from">Resuming from %1$s</string>
+    <string name="player_no_next_episode">No next episode available</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>

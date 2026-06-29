@@ -34,6 +34,7 @@ data class EpisodeItem(
     val title: String,
     val durationMinutes: Int,
     val progress: Float? = null,
+    val thumbnailUrl: String? = null,
 )
 
 data class SeasonItem(

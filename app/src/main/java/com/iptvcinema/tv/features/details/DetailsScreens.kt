@@ -1,12 +1,9 @@
 package com.iptvcinema.tv.features.details
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -62,7 +59,6 @@ fun MovieDetailsScreen(
     val isFavorite by viewModel.isFavorite.collectAsState()
     val showFeedback = rememberPrototypeFeedback()
     val feedbackRatingBlocked = stringResource(R.string.feedback_rating_blocked)
-    val feedbackTrailerSoon = stringResource(R.string.feedback_trailer_soon)
     val feedbackAddedToMyList = stringResource(R.string.feedback_added_to_mylist)
     val feedbackRemovedFromMyList = stringResource(R.string.feedback_removed_from_mylist)
     val watchNowFocus = remember { FocusRequester() }
@@ -108,7 +104,12 @@ fun MovieDetailsScreen(
                 navController = navController,
                 selectedNavItem = NavItem.Movies,
             ) {
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                ) {
                     DetailHero(
                         title = movie.title,
                         metadata = listOfNotNull(
@@ -128,7 +129,6 @@ fun MovieDetailsScreen(
                                 navController.navigate(AppRoute.player(movie.id, "movie"))
                             }
                         },
-                        onTrailer = { showFeedback(feedbackTrailerSoon) },
                         onFavorite = {
                             viewModel.toggleFavorite(
                                 contentId = movie.id,
@@ -143,13 +143,6 @@ fun MovieDetailsScreen(
                         backdropUrl = movie.backdropUrl ?: movie.imageUrl,
                         watchNowFocusRequester = watchNowFocus,
                     )
-                    Spacer(Modifier.height(CinemaSpacing.SectionGap))
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
-                    ) {
                     if (uiState.isDemoMode) {
                         DemoCastSection()
                         DemoLanguagesSection(selectedLang) { selectedLang = it }
@@ -184,7 +177,6 @@ fun MovieDetailsScreen(
                             }
                         }
                     }
-                    }
                 }
             }
         }
@@ -206,7 +198,6 @@ fun SeriesDetailsScreen(
     val isFavorite by viewModel.isFavorite.collectAsState()
     val showFeedback = rememberPrototypeFeedback()
     val feedbackRatingBlocked = stringResource(R.string.feedback_rating_blocked)
-    val feedbackTrailerSoon = stringResource(R.string.feedback_trailer_soon)
     val feedbackAddedToMyList = stringResource(R.string.feedback_added_to_mylist)
     val feedbackRemovedFromMyList = stringResource(R.string.feedback_removed_from_mylist)
     val watchNowFocus = remember { FocusRequester() }
@@ -261,7 +252,12 @@ fun SeriesDetailsScreen(
                 navController = navController,
                 selectedNavItem = NavItem.Series,
             ) {
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                ) {
                     DetailHero(
                         title = series.title,
                         metadata = listOfNotNull(
@@ -290,7 +286,6 @@ fun SeriesDetailsScreen(
                                 }
                             }
                         },
-                        onTrailer = { showFeedback(feedbackTrailerSoon) },
                         onFavorite = {
                             viewModel.toggleFavorite(
                                 contentId = series.id,
@@ -305,13 +300,6 @@ fun SeriesDetailsScreen(
                         backdropUrl = series.backdropUrl ?: series.imageUrl,
                         watchNowFocusRequester = watchNowFocus,
                     )
-                    Spacer(Modifier.height(CinemaSpacing.SectionGap))
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
-                    ) {
                     when {
                         uiState.episodesLoading -> {
                             SkeletonEpisodeList()
@@ -360,7 +348,6 @@ fun SeriesDetailsScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap)) {
                             uiState.cast.forEach { CastCard(member = it) }
                         }
-                    }
                     }
                 }
             }

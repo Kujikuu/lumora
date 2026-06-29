@@ -2,6 +2,9 @@ package com.iptvcinema.tv.features.series
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.iptvcinema.tv.core.catalog.CatalogRefreshController
+import com.iptvcinema.tv.core.catalog.CatalogRefreshState
+import com.iptvcinema.tv.core.catalog.CatalogRefreshSupport
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toPosterCardData
 import com.iptvcinema.tv.core.data.repository.CatalogLoadState
 import com.iptvcinema.tv.core.data.repository.CatalogRepository
@@ -32,6 +35,8 @@ data class SeriesUiState(
     val message: String? = null,
     val sourceStatus: SourceStatus? = null,
     val sourceType: SourceType? = null,
+    val syncBannerText: String? = null,
+    val refreshState: CatalogRefreshState = CatalogRefreshState.Idle,
 )
 
 @HiltViewModel
@@ -40,12 +45,16 @@ class SeriesViewModel @Inject constructor(
     private val appSessionRepository: AppSessionRepository,
     private val parentalControlsRepository: ParentalControlsRepository,
     private val parentalGate: ParentalGate,
+    private val catalogRefreshController: CatalogRefreshController,
 ) : ViewModel() {
     private val selectedCategory = MutableStateFlow<String?>(null)
     private val _uiState = MutableStateFlow(SeriesUiState())
     val uiState: StateFlow<SeriesUiState> = _uiState.asStateFlow()
 
     init {
+        CatalogRefreshSupport.observeSyncBanner(viewModelScope, catalogRepository) { banner ->
+            _uiState.value = _uiState.value.copy(syncBannerText = banner)
+        }
         viewModelScope.launch {
             combine(
                 appSessionRepository.sessionState,
@@ -79,6 +88,7 @@ class SeriesViewModel @Inject constructor(
                 } else {
                     state.items
                 }
+                val current = _uiState.value
                 _uiState.value = SeriesUiState(
                     loadState = state.loadState,
                     categories = filteredCategories,
@@ -101,6 +111,8 @@ class SeriesViewModel @Inject constructor(
                     message = state.message,
                     sourceStatus = state.sourceStatus,
                     sourceType = state.sourceType,
+                    syncBannerText = current.syncBannerText,
+                    refreshState = current.refreshState,
                 )
             }
         }
@@ -108,5 +120,16 @@ class SeriesViewModel @Inject constructor(
 
     fun selectCategory(categoryName: String?) {
         selectedCategory.value = categoryName
+    }
+
+    fun refreshCurrentSource() {
+        CatalogRefreshSupport.runCatalogRefresh(
+            scope = viewModelScope,
+            getRefreshState = { _uiState.value.refreshState },
+            setRefreshState = { refreshState ->
+                _uiState.value = _uiState.value.copy(refreshState = refreshState)
+            },
+            catalogRefreshController = catalogRefreshController,
+        )
     }
 }

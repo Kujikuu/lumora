@@ -4,13 +4,12 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -28,7 +27,8 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
@@ -37,17 +37,14 @@ import androidx.navigation.NavController
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.components.AutoplayCountdownOverlay
 import com.iptvcinema.tv.core.design.components.ChannelChangeBanner
-import com.iptvcinema.tv.core.design.components.ChannelPickerOverlay
 import com.iptvcinema.tv.core.design.components.ErrorState
-import com.iptvcinema.tv.core.design.components.EpisodePickerOverlay
 import com.iptvcinema.tv.core.design.components.PlayerBufferingOverlay
+import com.iptvcinema.tv.core.design.components.PlayerChannelSidebar
+import com.iptvcinema.tv.core.design.components.PlayerEpisodeSidebar
 import com.iptvcinema.tv.core.design.components.PlayerOverlay
 import com.iptvcinema.tv.core.design.components.PlayerRebufferOverlay
-import com.iptvcinema.tv.core.design.components.RemoteHintBar
-import com.iptvcinema.tv.core.design.components.TrackPickerOverlay
-import com.iptvcinema.tv.core.design.components.playerRemoteHints
+import com.iptvcinema.tv.core.design.components.PlayerTrackSidebar
 import com.iptvcinema.tv.core.design.theme.CinemaColors
-import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
 import com.iptvcinema.tv.core.player.PlayerCommand
@@ -69,7 +66,7 @@ fun PlayerScreen(
     val focusState = rememberScreenFocusState("player")
     val playPauseFocus = remember { FocusRequester() }
     val videoSurfaceFocus = remember { FocusRequester() }
-    var trackPickerMode by remember { mutableStateOf<TrackPickerMode?>(null) }
+    var trackPickerOpen by remember { mutableStateOf(false) }
     var isOverlayVisible by remember { mutableStateOf(true) }
     var overlayActivityToken by remember { mutableIntStateOf(0) }
 
@@ -111,7 +108,7 @@ fun PlayerScreen(
             screenState.showAutoplayCountdown -> viewModel.cancelAutoplayCountdown()
             screenState.episodePickerOpen -> viewModel.dismissEpisodePicker()
             screenState.channelPickerOpen -> viewModel.dismissChannelPicker()
-            trackPickerMode != null -> trackPickerMode = null
+            trackPickerOpen -> trackPickerOpen = false
             isOverlayVisible -> navController.popBackStack()
             else -> revealOverlay()
         }
@@ -120,13 +117,13 @@ fun PlayerScreen(
     LaunchedEffect(
         isOverlayVisible,
         overlayActivityToken,
-        trackPickerMode,
+        trackPickerOpen,
         pickerOpen,
         screenState.isLoading,
     ) {
         if (
             !screenState.isLoading &&
-            trackPickerMode == null &&
+            !trackPickerOpen &&
             !pickerOpen &&
             isOverlayVisible &&
             !screenState.showAutoplayCountdown
@@ -136,8 +133,8 @@ fun PlayerScreen(
         }
     }
 
-    LaunchedEffect(isOverlayVisible, trackPickerMode, pickerOpen) {
-        if (trackPickerMode != null || pickerOpen || !isOverlayVisible) {
+    LaunchedEffect(isOverlayVisible, trackPickerOpen, pickerOpen) {
+        if (trackPickerOpen || pickerOpen || !isOverlayVisible) {
             videoSurfaceFocus.requestFocus()
         } else {
             playPauseFocus.requestFocus()
@@ -186,8 +183,8 @@ fun PlayerScreen(
                 },
                 onBack = { navController.popBackStack() },
                 showSwitchStream = contentType.lowercase() == "live",
-                switchStreamLabel = "Back to Guide",
-                backLabel = "Back",
+                switchStreamLabel = stringResource(R.string.btn_back_to_guide),
+                backLabel = stringResource(R.string.btn_back),
             )
         }
         return
@@ -213,22 +210,50 @@ fun PlayerScreen(
     }
 
     val controlsVisible = isOverlayVisible &&
-        trackPickerMode == null &&
+        !trackPickerOpen &&
         !pickerOpen &&
         !screenState.showAutoplayCountdown
     val resumeHint = screenState.resumeFromMs.takeIf { it > 0L }?.let {
-        "Resuming from ${formatTimeMs(it)}"
+        stringResource(R.string.player_resume_from, formatTimeMs(it))
     }
     val nextEpisodeTitle = screenState.nextEpisodeTitle
         ?: screenState.upNextItems.firstOrNull()?.title
-        ?: "Next episode"
+        ?: stringResource(R.string.player_next_episode)
     val currentEpisodeId = screenState.playbackRequest?.contentId
+    val currentChannelId = screenState.playbackRequest?.contentId
+    val playbackRequest = screenState.playbackRequest
+    val overlayTitle = when {
+        screenState.isEpisode && !screenState.seriesTitle.isNullOrBlank() -> screenState.seriesTitle.orEmpty()
+        else -> playerState.title
+    }
+    val overlaySubtitle = when {
+        screenState.isEpisode && playbackRequest?.seasonNumber != null && playbackRequest.episodeNumber != null -> {
+            stringResource(
+                R.string.player_season_episode,
+                playbackRequest.seasonNumber,
+                playbackRequest.episodeNumber,
+            )
+        }
+        playerState.metadata.isNotEmpty() -> playerState.metadata.joinToString(" · ")
+        else -> ""
+    }
+    val totalTime = if (playerState.isLive || durationMs == null || durationMs <= 0L) {
+        ""
+    } else {
+        formatTimeMs(durationMs)
+    }
+    val layoutDirection = LocalLayoutDirection.current
+    val sidebarSlideOffset = if (layoutDirection == LayoutDirection.Rtl) {
+        { fullWidth: Int -> -fullWidth }
+    } else {
+        { fullWidth: Int -> fullWidth }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .onPreviewKeyEvent { event ->
-                if (trackPickerMode != null || pickerOpen) return@onPreviewKeyEvent false
+                if (trackPickerOpen || pickerOpen) return@onPreviewKeyEvent false
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
 
                 if (controlsVisible) {
@@ -260,7 +285,7 @@ fun PlayerScreen(
             },
         )
 
-        if (!controlsVisible && trackPickerMode == null && !pickerOpen) {
+        if (!controlsVisible && !trackPickerOpen && !pickerOpen) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -271,7 +296,7 @@ fun PlayerScreen(
 
         if (playerState.isBuffering && !playerState.hasFirstFrame) {
             PlayerBufferingOverlay()
-        } else if (playerState.isBuffering && playerState.hasFirstFrame) {
+        } else if (playerState.isBuffering && playerState.hasFirstFrame || playerState.isReconnecting) {
             PlayerRebufferOverlay()
         }
 
@@ -284,95 +309,74 @@ fun PlayerScreen(
             enter = fadeIn(),
             exit = fadeOut(),
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                PlayerOverlay(
-                    title = playerState.title,
-                    metadata = playerState.metadata,
-                    progress = progress,
-                    elapsed = formatTimeMs(playerState.positionMs),
-                    remaining = formatRemainingMs(playerState.positionMs, durationMs),
-                    isPlaying = playerState.isPlaying,
-                    isLive = playerState.isLive,
-                    durationMs = durationMs ?: 0L,
-                    qualityLabel = playerState.qualityLabel,
-                    resumeHint = resumeHint,
-                    showSkipNext = screenState.isEpisode,
-                    onSeekTo = { positionMs ->
-                        revealOverlay()
-                        registerOverlayActivity()
-                        viewModel.onCommand(PlayerCommand.SeekTo(positionMs))
-                    },
-                    onSeekInteraction = {
-                        revealOverlay()
-                        registerOverlayActivity()
-                    },
-                    onPlayPause = {
-                        revealOverlay()
-                        viewModel.onCommand(PlayerCommand.PlayPause)
-                    },
-                    onRewind = {
-                        revealOverlay()
-                        if (!playerState.isLive) {
-                            viewModel.onCommand(PlayerCommand.SeekRelative(-30_000L))
-                        }
-                    },
-                    onRewind10 = {
-                        revealOverlay()
-                        if (!playerState.isLive) {
-                            viewModel.onCommand(PlayerCommand.SeekRelative(-10_000L))
-                        }
-                    },
-                    onForward10 = {
-                        revealOverlay()
-                        if (!playerState.isLive) {
-                            viewModel.onCommand(PlayerCommand.SeekRelative(10_000L))
-                        }
-                    },
-                    onSkipPrevious = {
-                        revealOverlay()
-                        viewModel.skipToPreviousEpisode()
-                    },
-                    onSkipNext = {
-                        revealOverlay()
+            PlayerOverlay(
+                title = overlayTitle,
+                subtitle = overlaySubtitle,
+                progress = progress,
+                elapsed = formatTimeMs(playerState.positionMs),
+                total = totalTime,
+                isPlaying = playerState.isPlaying,
+                isLive = playerState.isLive,
+                durationMs = durationMs ?: 0L,
+                qualityLabel = playerState.qualityLabel,
+                resumeHint = resumeHint,
+                showEpisodesAction = screenState.isEpisode,
+                showChannelsAction = playerState.isLive,
+                showNextAction = screenState.isEpisode || playerState.isLive,
+                nextActionAccent = screenState.isEpisode,
+                onSeekTo = { positionMs ->
+                    revealOverlay()
+                    registerOverlayActivity()
+                    viewModel.onCommand(PlayerCommand.SeekTo(positionMs))
+                },
+                onSeekInteraction = {
+                    revealOverlay()
+                    registerOverlayActivity()
+                },
+                onPlayPause = {
+                    revealOverlay()
+                    viewModel.onCommand(PlayerCommand.PlayPause)
+                },
+                onRewind10 = {
+                    revealOverlay()
+                    if (!playerState.isLive) {
+                        viewModel.onCommand(PlayerCommand.SeekRelative(-10_000L))
+                    }
+                },
+                onForward10 = {
+                    revealOverlay()
+                    if (!playerState.isLive) {
+                        viewModel.onCommand(PlayerCommand.SeekRelative(10_000L))
+                    }
+                },
+                onNext = {
+                    revealOverlay()
+                    if (playerState.isLive) {
+                        viewModel.onCommand(PlayerCommand.ChannelNext)
+                    } else {
                         viewModel.skipToNextEpisode()
-                    },
-                    onEpisodes = {
-                        revealOverlay()
-                        viewModel.openEpisodePicker()
-                    },
-                    onChannels = {
-                        revealOverlay()
-                        viewModel.openChannelPicker()
-                    },
-                    onSubtitles = {
-                        revealOverlay()
-                        trackPickerMode = TrackPickerMode.Subtitles
-                    },
-                    onAudio = {
-                        revealOverlay()
-                        trackPickerMode = TrackPickerMode.Audio
-                    },
-                    onBack = { navController.popBackStack() },
-                    upNextItems = screenState.upNextItems,
-                    onUpNextClick = { item ->
-                        item.contentId?.let { episodeId ->
-                            viewModel.playUpNextEpisode(episodeId)
-                            revealOverlay()
-                        }
-                    },
-                    playPauseFocusRequester = playPauseFocus,
-                    modifier = Modifier.weight(1f),
-                )
-                RemoteHintBar(
-                    hints = playerRemoteHints(
-                        isLive = playerState.isLive,
-                        isEpisode = screenState.isEpisode,
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = CinemaSpacing.ScreenPadding, vertical = 8.dp),
-                )
-            }
+                    }
+                },
+                onEpisodes = {
+                    revealOverlay()
+                    viewModel.openEpisodePicker()
+                },
+                onChannels = {
+                    revealOverlay()
+                    viewModel.openChannelPicker()
+                },
+                onSubtitles = {
+                    revealOverlay()
+                    trackPickerOpen = true
+                },
+                onSettings = {
+                    revealOverlay()
+                    trackPickerOpen = true
+                },
+                onBack = { navController.popBackStack() },
+                playPauseFocusRequester = playPauseFocus,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
 
         if (screenState.showAutoplayCountdown) {
@@ -383,8 +387,15 @@ fun PlayerScreen(
             )
         }
 
-        if (screenState.episodePickerOpen) {
-            EpisodePickerOverlay(
+        AnimatedVisibility(
+            visible = screenState.episodePickerOpen,
+            enter = slideInHorizontally(initialOffsetX = sidebarSlideOffset),
+            exit = slideOutHorizontally(targetOffsetX = sidebarSlideOffset),
+        ) {
+            PlayerEpisodeSidebar(
+                seriesTitle = screenState.seriesTitle ?: playerState.title,
+                seriesPosterUrl = screenState.seriesPosterUrl ?: playbackRequest?.posterUrl,
+                currentEpisodeSubtitle = overlaySubtitle.takeIf { it.isNotBlank() },
                 seasons = screenState.episodePickerSeasons,
                 currentEpisodeId = currentEpisodeId,
                 isLoading = screenState.episodePickerLoading,
@@ -396,12 +407,18 @@ fun PlayerScreen(
                     viewModel.dismissEpisodePicker()
                     revealOverlay()
                 },
+                modifier = Modifier.fillMaxSize(),
             )
         }
 
-        if (screenState.channelPickerOpen) {
-            ChannelPickerOverlay(
+        AnimatedVisibility(
+            visible = screenState.channelPickerOpen,
+            enter = slideInHorizontally(initialOffsetX = sidebarSlideOffset),
+            exit = slideOutHorizontally(targetOffsetX = sidebarSlideOffset),
+        ) {
+            PlayerChannelSidebar(
                 channels = screenState.channelPickerChannels,
+                currentChannelId = currentChannelId,
                 isLoading = screenState.channelPickerLoading,
                 onChannelClick = { channelId ->
                     viewModel.switchToChannel(channelId)
@@ -411,47 +428,37 @@ fun PlayerScreen(
                     viewModel.dismissChannelPicker()
                     revealOverlay()
                 },
+                modifier = Modifier.fillMaxSize(),
             )
         }
 
-        trackPickerMode?.let { mode ->
-            val tracks = when (mode) {
-                TrackPickerMode.Audio -> playerState.audioTracks
-                TrackPickerMode.Subtitles -> playerState.subtitleTracks
-            }
-            TrackPickerOverlay(
-                title = if (mode == TrackPickerMode.Audio) "Audio Tracks" else "Subtitles",
-                tracks = tracks,
-                selectedIndex = when (mode) {
-                    TrackPickerMode.Audio -> playerState.selectedAudioIndex
-                    TrackPickerMode.Subtitles -> playerState.selectedSubtitleIndex
+        AnimatedVisibility(
+            visible = trackPickerOpen,
+            enter = slideInHorizontally(initialOffsetX = sidebarSlideOffset),
+            exit = slideOutHorizontally(targetOffsetX = sidebarSlideOffset),
+        ) {
+            PlayerTrackSidebar(
+                audioTracks = playerState.audioTracks,
+                subtitleTracks = playerState.subtitleTracks,
+                selectedAudioIndex = playerState.selectedAudioIndex,
+                selectedSubtitleIndex = playerState.selectedSubtitleIndex,
+                onSelectAudio = { index ->
+                    viewModel.onCommand(PlayerCommand.SelectAudioTrack(index))
                 },
-                showOffOption = mode == TrackPickerMode.Subtitles,
-                onSelect = { index ->
-                    when (mode) {
-                        TrackPickerMode.Audio -> viewModel.onCommand(PlayerCommand.SelectAudioTrack(index))
-                        TrackPickerMode.Subtitles -> viewModel.onCommand(PlayerCommand.SelectSubtitleTrack(index))
-                    }
-                    trackPickerMode = null
-                    revealOverlay()
-                },
-                onDisable = {
+                onDisableSubtitles = {
                     viewModel.onCommand(PlayerCommand.DisableSubtitles)
-                    trackPickerMode = null
-                    revealOverlay()
+                },
+                onSelectSubtitle = { index ->
+                    viewModel.onCommand(PlayerCommand.SelectSubtitleTrack(index))
                 },
                 onDismiss = {
-                    trackPickerMode = null
+                    trackPickerOpen = false
                     revealOverlay()
                 },
+                modifier = Modifier.fillMaxSize(),
             )
         }
     }
-}
-
-private enum class TrackPickerMode {
-    Audio,
-    Subtitles,
 }
 
 private fun formatTimeMs(ms: Long): String {
@@ -459,10 +466,4 @@ private fun formatTimeMs(ms: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return "$minutes:${seconds.toString().padStart(2, '0')}"
-}
-
-private fun formatRemainingMs(positionMs: Long, durationMs: Long?): String {
-    if (durationMs == null || durationMs <= 0L) return ""
-    val remainingMs = (durationMs - positionMs).coerceAtLeast(0L)
-    return "-${formatTimeMs(remainingMs)}"
 }

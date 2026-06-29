@@ -2,9 +2,12 @@ package com.iptvcinema.tv.features.series
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -12,17 +15,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
+import com.iptvcinema.tv.core.design.components.CategoryListPanel
 import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
-import com.iptvcinema.tv.core.design.components.FilterChipRow
 import com.iptvcinema.tv.core.design.components.PosterGrid
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.navigation.AppRoute
@@ -40,11 +46,15 @@ fun SeriesScreen(
     viewModel: SeriesViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val chipFocus = remember { FocusRequester() }
+    val categoryFocus = remember { FocusRequester() }
     val gridFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("series")
     val categories = uiState.categories
-    val catalogCallbacks = rememberCatalogStateCallbacks(navController)
+    val catalogCallbacks = rememberCatalogStateCallbacks(
+        navController = navController,
+        onRetry = viewModel::refreshCurrentSource,
+    )
+
     var selectedFilter by remember(initialFilter, focusState.focusIndex, categories) {
         mutableIntStateOf(
             when {
@@ -66,7 +76,7 @@ fun SeriesScreen(
     MainShellBackHandler(navController = navController, isHomeTab = false)
 
     LaunchedEffect(focusState.hasSavedFocus, selectedFilter, categories.isNotEmpty(), uiState.posters.isNotEmpty()) {
-        val target = if (categories.isNotEmpty()) chipFocus else gridFocus
+        val target = if (categories.isNotEmpty()) categoryFocus else gridFocus
         if (focusState.hasSavedFocus) {
             focusState.restoreFocus(target)
         } else {
@@ -80,16 +90,29 @@ fun SeriesScreen(
         selectedNavItem = NavItem.Series,
     ) {
         Column(
-            modifier = Modifier.verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            CinemaSerifTitle(text = stringResource(R.string.nav_series))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = CinemaSpacing.ContentStart, end = 24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CinemaSerifTitle(text = stringResource(R.string.nav_series))
+                CatalogRefreshBanner(
+                    syncBannerText = uiState.syncBannerText,
+                    refreshState = uiState.refreshState,
+                    onRefresh = viewModel::refreshCurrentSource,
+                )
+            }
             CatalogStateContent(
                 loadState = uiState.loadState,
                 message = uiState.message,
                 sourceStatus = uiState.sourceStatus,
                 sourceType = uiState.sourceType,
-                skeletonStyle = CatalogSkeletonStyle.PosterGridWithFeatured,
+                skeletonStyle = CatalogSkeletonStyle.PosterGrid,
                 emptyTitle = stringResource(R.string.series_empty_title),
                 emptyDescription = stringResource(R.string.catalog_empty_sync_desc),
                 onAddSource = catalogCallbacks.onAddSource,
@@ -97,24 +120,33 @@ fun SeriesScreen(
                 onRetry = catalogCallbacks.onRetry,
                 onManageSources = catalogCallbacks.onManageSources,
                 onEditSource = catalogCallbacks.onEditSource,
+                onRefreshCatalog = viewModel::refreshCurrentSource,
+                modifier = Modifier.weight(1f),
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(start = CinemaSpacing.ContentStart, end = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                ) {
                     if (categories.isNotEmpty()) {
-                        FilterChipRow(
+                        CategoryListPanel(
+                            modifier = Modifier.fillMaxHeight(),
                             items = categories,
                             selectedIndex = selectedFilter.coerceIn(0, categories.lastIndex),
                             onSelected = {
                                 selectedFilter = it
                                 focusState.saveFocusIndex(it)
                             },
-                            chipFocusRequester = chipFocus,
-                            focusedChipIndex = selectedFilter,
-                            modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
+                            listFocusRequester = categoryFocus,
+                            initialFocusedIndex = selectedFilter,
                         )
                     }
                     PosterGrid(
+                        modifier = Modifier.weight(1f),
                         items = uiState.posters,
-                        firstItemFocusRequester = if (categories.isEmpty()) gridFocus else null,
+                        firstItemFocusRequester = gridFocus,
+                        contentPadding = PaddingValues(bottom = CinemaSpacing.SectionGap),
                         onItemClick = { poster ->
                             poster.contentId?.let { seriesId ->
                                 navController.navigate(AppRoute.seriesDetails(seriesId))

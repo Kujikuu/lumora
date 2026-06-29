@@ -33,7 +33,7 @@ object WatchHistoryResumePolicy {
         if (durationMs < 60_000L) {
             return positionMs.toDouble() / durationMs.toDouble() >= AUTOPLAY_THRESHOLD_RATIO
         }
-        return remainingMs in 1..remainingThresholdMs
+        return remainingMs in 0..remainingThresholdMs
     }
 
     fun isBeforeAutoplayWindow(

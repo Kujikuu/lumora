@@ -71,19 +71,28 @@ fun ImageFallback(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(CinemaColors.GoldDeep.copy(alpha = 0.28f), CinemaColors.Surface),
-                ),
-                CinemaShapes.Medium,
-            ),
+            .background(CinemaColors.Surface, CinemaShapes.Medium),
         contentAlignment = Alignment.Center,
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            CinemaColors.AccentDeep.copy(alpha = 0.35f),
+                            CinemaColors.Surface,
+                            CinemaColors.BackgroundSoft,
+                        ),
+                    ),
+                    CinemaShapes.Medium,
+                ),
+        )
         Text(
             text = label.firstOrNull()?.uppercaseChar()?.toString().orEmpty(),
             style = MaterialTheme.typography.displaySmall.copy(
                 fontWeight = FontWeight.Bold,
-                color = CinemaColors.GoldSoft,
+                color = CinemaColors.AccentSoft,
                 fontSize = 48.sp,
             ),
         )

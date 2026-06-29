@@ -1,7 +1,5 @@
 package com.iptvcinema.tv.features.search;
 
-import androidx.datastore.core.DataStore;
-import androidx.datastore.preferences.core.Preferences;
 import com.iptvcinema.tv.core.data.repository.CatalogRepository;
 import com.iptvcinema.tv.core.data.repository.ParentalControlsRepository;
 import com.iptvcinema.tv.core.datastore.AppSessionRepository;
@@ -43,28 +41,24 @@ public final class SearchViewModel_Factory implements Factory<SearchViewModel> {
 
   private final Provider<ParentalGate> parentalGateProvider;
 
-  private final Provider<DataStore<Preferences>> dataStoreProvider;
-
   private final Provider<AppStrings> appStringsProvider;
 
   public SearchViewModel_Factory(Provider<CatalogRepository> catalogRepositoryProvider,
       Provider<RecentSearchRepository> recentSearchRepositoryProvider,
       Provider<AppSessionRepository> appSessionRepositoryProvider,
       Provider<ParentalControlsRepository> parentalControlsRepositoryProvider,
-      Provider<ParentalGate> parentalGateProvider,
-      Provider<DataStore<Preferences>> dataStoreProvider, Provider<AppStrings> appStringsProvider) {
+      Provider<ParentalGate> parentalGateProvider, Provider<AppStrings> appStringsProvider) {
     this.catalogRepositoryProvider = catalogRepositoryProvider;
     this.recentSearchRepositoryProvider = recentSearchRepositoryProvider;
     this.appSessionRepositoryProvider = appSessionRepositoryProvider;
     this.parentalControlsRepositoryProvider = parentalControlsRepositoryProvider;
     this.parentalGateProvider = parentalGateProvider;
-    this.dataStoreProvider = dataStoreProvider;
     this.appStringsProvider = appStringsProvider;
   }
 
   @Override
   public SearchViewModel get() {
-    return newInstance(catalogRepositoryProvider.get(), recentSearchRepositoryProvider.get(), appSessionRepositoryProvider.get(), parentalControlsRepositoryProvider.get(), parentalGateProvider.get(), dataStoreProvider.get(), appStringsProvider.get());
+    return newInstance(catalogRepositoryProvider.get(), recentSearchRepositoryProvider.get(), appSessionRepositoryProvider.get(), parentalControlsRepositoryProvider.get(), parentalGateProvider.get(), appStringsProvider.get());
   }
 
   public static SearchViewModel_Factory create(
@@ -73,9 +67,8 @@ public final class SearchViewModel_Factory implements Factory<SearchViewModel> {
       javax.inject.Provider<AppSessionRepository> appSessionRepositoryProvider,
       javax.inject.Provider<ParentalControlsRepository> parentalControlsRepositoryProvider,
       javax.inject.Provider<ParentalGate> parentalGateProvider,
-      javax.inject.Provider<DataStore<Preferences>> dataStoreProvider,
       javax.inject.Provider<AppStrings> appStringsProvider) {
-    return new SearchViewModel_Factory(Providers.asDaggerProvider(catalogRepositoryProvider), Providers.asDaggerProvider(recentSearchRepositoryProvider), Providers.asDaggerProvider(appSessionRepositoryProvider), Providers.asDaggerProvider(parentalControlsRepositoryProvider), Providers.asDaggerProvider(parentalGateProvider), Providers.asDaggerProvider(dataStoreProvider), Providers.asDaggerProvider(appStringsProvider));
+    return new SearchViewModel_Factory(Providers.asDaggerProvider(catalogRepositoryProvider), Providers.asDaggerProvider(recentSearchRepositoryProvider), Providers.asDaggerProvider(appSessionRepositoryProvider), Providers.asDaggerProvider(parentalControlsRepositoryProvider), Providers.asDaggerProvider(parentalGateProvider), Providers.asDaggerProvider(appStringsProvider));
   }
 
   public static SearchViewModel_Factory create(
@@ -83,15 +76,14 @@ public final class SearchViewModel_Factory implements Factory<SearchViewModel> {
       Provider<RecentSearchRepository> recentSearchRepositoryProvider,
       Provider<AppSessionRepository> appSessionRepositoryProvider,
       Provider<ParentalControlsRepository> parentalControlsRepositoryProvider,
-      Provider<ParentalGate> parentalGateProvider,
-      Provider<DataStore<Preferences>> dataStoreProvider, Provider<AppStrings> appStringsProvider) {
-    return new SearchViewModel_Factory(catalogRepositoryProvider, recentSearchRepositoryProvider, appSessionRepositoryProvider, parentalControlsRepositoryProvider, parentalGateProvider, dataStoreProvider, appStringsProvider);
+      Provider<ParentalGate> parentalGateProvider, Provider<AppStrings> appStringsProvider) {
+    return new SearchViewModel_Factory(catalogRepositoryProvider, recentSearchRepositoryProvider, appSessionRepositoryProvider, parentalControlsRepositoryProvider, parentalGateProvider, appStringsProvider);
   }
 
   public static SearchViewModel newInstance(CatalogRepository catalogRepository,
       RecentSearchRepository recentSearchRepository, AppSessionRepository appSessionRepository,
       ParentalControlsRepository parentalControlsRepository, ParentalGate parentalGate,
-      DataStore<Preferences> dataStore, AppStrings appStrings) {
-    return new SearchViewModel(catalogRepository, recentSearchRepository, appSessionRepository, parentalControlsRepository, parentalGate, dataStore, appStrings);
+      AppStrings appStrings) {
+    return new SearchViewModel(catalogRepository, recentSearchRepository, appSessionRepository, parentalControlsRepository, parentalGate, appStrings);
   }
 }

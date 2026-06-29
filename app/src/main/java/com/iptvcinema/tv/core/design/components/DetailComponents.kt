@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -48,7 +47,6 @@ fun DetailHero(
     metadata: List<String>,
     synopsis: String,
     onWatchNow: () -> Unit,
-    onTrailer: () -> Unit,
     onFavorite: () -> Unit,
     isFavorite: Boolean = false,
     modifier: Modifier = Modifier,
@@ -151,12 +149,6 @@ fun DetailHero(
                     icon = Icons.Default.PlayArrow,
                     onClick = onWatchNow,
                     modifier = watchNowFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
-                )
-                CinemaButton(
-                    text = stringResource(R.string.btn_trailer),
-                    variant = CinemaButtonVariant.SecondaryDark,
-                    icon = Icons.Default.Info,
-                    onClick = onTrailer,
                 )
                 CinemaButton(
                     text = if (isFavorite) resolvedFavoritedLabel else resolvedFavoriteLabel,
@@ -310,6 +302,84 @@ fun EpisodeCard(
                                 .background(CinemaColors.Accent),
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun PlayerEpisodeSidebarRow(
+    episodeNumber: Int,
+    title: String,
+    durationMinutes: Int,
+    thumbnailUrl: String?,
+    fallbackImageUrl: String?,
+    isPlaying: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    FocusableCinemaCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(88.dp),
+        onClick = onClick,
+        shape = CinemaShapes.Medium,
+        defaultBorderWidth = 0.dp,
+    ) { focused ->
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    when {
+                        focused -> CinemaColors.Surface
+                        isPlaying -> CinemaColors.SurfaceSoft.copy(alpha = 0.85f)
+                        else -> CinemaColors.Background.copy(alpha = 0.5f)
+                    },
+                    CinemaShapes.Medium,
+                )
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.details_episode_number, episodeNumber),
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        color = if (isPlaying) CinemaColors.Accent else CinemaColors.TextSecondary,
+                        fontWeight = FontWeight.SemiBold,
+                    ),
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.White),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(width = 120.dp, height = 68.dp)
+                    .clip(CinemaShapes.Small),
+            ) {
+                CinemaAsyncImage(
+                    imageUrl = thumbnailUrl ?: fallbackImageUrl,
+                    contentDescription = title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    fallbackLabel = episodeNumber.toString(),
+                )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .background(CinemaColors.Background.copy(alpha = 0.75f), CinemaShapes.Small)
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.details_episode_duration, durationMinutes),
+                        style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.White),
+                    )
                 }
             }
         }

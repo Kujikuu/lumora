@@ -30,6 +30,7 @@ import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
+import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 
 enum class PosterCardVariant {
     PortraitPoster,
@@ -56,15 +57,21 @@ fun PosterCard(
     variant: PosterCardVariant = PosterCardVariant.PortraitPoster,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    fixedWidth: Dp? = CinemaSpacing.PosterCardWidth,
 ) {
     val imageAspectRatio = when (variant) {
         PosterCardVariant.PortraitPoster -> 2f / 3f
         PosterCardVariant.LandscapePoster -> 16f / 9f
         PosterCardVariant.CompactPoster -> 2f / 3f
     }
+    val cardModifier = if (fixedWidth != null) {
+        modifier.width(fixedWidth)
+    } else {
+        modifier
+    }
 
     FocusableCinemaCard(
-        modifier = modifier,
+        modifier = cardModifier,
         onClick = onClick,
         shape = CinemaShapes.Medium,
         contentDescription = data.title,
@@ -113,7 +120,7 @@ fun PosterCard(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 4.dp),
+                    .padding(start = CinemaSpacing.CardGap, end = CinemaSpacing.CardGap, top = 4.dp),
             )
         }
     }

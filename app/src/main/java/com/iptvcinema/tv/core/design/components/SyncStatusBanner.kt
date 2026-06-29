@@ -11,12 +11,15 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.catalog.CatalogRefreshState
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 
@@ -58,5 +61,28 @@ fun SyncStatusBanner(
                 ),
             )
         }
+    }
+}
+
+@Composable
+fun CatalogRefreshBanner(
+    syncBannerText: String?,
+    refreshState: CatalogRefreshState,
+    onRefresh: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val bannerText = when (refreshState) {
+        CatalogRefreshState.Idle -> syncBannerText
+        CatalogRefreshState.Refreshing -> stringResource(R.string.refresh_in_progress)
+        is CatalogRefreshState.Success -> refreshState.message
+        is CatalogRefreshState.Failed -> refreshState.message
+    }
+    bannerText?.let { text ->
+        SyncStatusBanner(
+            text = text,
+            isRefreshing = refreshState == CatalogRefreshState.Refreshing,
+            onClick = onRefresh,
+            modifier = modifier,
+        )
     }
 }

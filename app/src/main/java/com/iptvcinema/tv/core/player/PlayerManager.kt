@@ -18,6 +18,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Singleton
 class PlayerManager @Inject constructor(
@@ -42,21 +44,34 @@ class PlayerManager @Inject constructor(
     private var trackedSubtitleGroupIndex: Int = -1
     private var retryAttempt: Int = 0
     private var retryJob: Job? = null
+    private var playbackGeneration: Int = 0
+    private var pendingErrorMessage: String? = null
+    private var pendingErrorCode: String? = null
 
     fun getExoPlayer(): ExoPlayer = ensurePlayer()
 
     fun play(request: PlaybackRequest, startPositionMs: Long = 0L, isXtreamSource: Boolean = false) {
         retryJob?.cancel()
         retryAttempt = 0
-        playInternal(request, startPositionMs, isXtreamSource)
+        pendingErrorMessage = null
+        pendingErrorCode = null
+        playbackGeneration++
+        playInternal(request, startPositionMs, isXtreamSource, playbackGeneration)
     }
 
     @OptIn(UnstableApi::class)
-    private fun playInternal(request: PlaybackRequest, startPositionMs: Long = 0L, isXtreamSource: Boolean = false) {
+    private fun playInternal(
+        request: PlaybackRequest,
+        startPositionMs: Long = 0L,
+        isXtreamSource: Boolean = false,
+        generation: Int = playbackGeneration,
+    ) {
+        if (generation != playbackGeneration) return
         lastRequest = request
         lastStartPositionMs = startPositionMs
         this.isXtreamSource = isXtreamSource
         val exoPlayer = ensurePlayer()
+        if (generation != playbackGeneration) return
         _state.update {
             it.copy(
                 title = request.title,
@@ -65,6 +80,8 @@ class PlayerManager @Inject constructor(
                 isBuffering = true,
                 isPlaying = true,
                 hasFirstFrame = false,
+                isReconnecting = false,
+                playbackEnded = false,
                 positionMs = startPositionMs,
                 durationMs = request.durationMs,
                 errorMessage = null,
@@ -72,6 +89,8 @@ class PlayerManager @Inject constructor(
                 qualityLabel = null,
             )
         }
+        exoPlayer.stop()
+        exoPlayer.clearMediaItems()
         val mediaItem = MediaItem.Builder()
             .setUri(request.streamUrl)
             .build()
@@ -117,10 +136,14 @@ class PlayerManager @Inject constructor(
         val request = lastRequest ?: return
         retryJob?.cancel()
         retryAttempt = 0
-        playInternal(request, lastStartPositionMs, isXtreamSource)
+        pendingErrorMessage = null
+        pendingErrorCode = null
+        playbackGeneration++
+        playInternal(request, lastStartPositionMs, isXtreamSource, playbackGeneration)
     }
 
     fun release() {
+        playbackGeneration++
         retryJob?.cancel()
         retryJob = null
         player?.removeListener(playerListener)
@@ -128,7 +151,13 @@ class PlayerManager @Inject constructor(
         player = null
         trackedAudioGroupIndex = -1
         trackedSubtitleGroupIndex = -1
+        pendingErrorMessage = null
+        pendingErrorCode = null
         _state.value = PlayerUiState()
+    }
+
+    fun clearPlaybackEnded() {
+        _state.update { it.copy(playbackEnded = false) }
     }
 
     @OptIn(UnstableApi::class)
@@ -279,17 +308,22 @@ class PlayerManager @Inject constructor(
         override fun onPlaybackStateChanged(playbackState: Int) {
             _state.update {
                 it.copy(
-                    isBuffering = playbackState == Player.STATE_BUFFERING,
+                    isBuffering = playbackState == Player.STATE_BUFFERING ||
+                        (it.isReconnecting && playbackState == Player.STATE_IDLE),
                     hasFirstFrame = it.hasFirstFrame || playbackState == Player.STATE_READY,
+                    playbackEnded = playbackState == Player.STATE_ENDED,
+                    isPlaying = if (playbackState == Player.STATE_ENDED) false else it.isPlaying,
                 )
             }
             if (playbackState == Player.STATE_READY) {
+                retryAttempt = 0
                 player?.let { exoPlayer ->
                     updateTrackOptions(exoPlayer)
                     val duration = exoPlayer.duration.takeIf { d -> d > 0 && d != C.TIME_UNSET }
                     _state.update { state ->
                         state.copy(
                             durationMs = if (state.isLive) null else duration ?: state.durationMs,
+                            isReconnecting = false,
                         )
                     }
                 }
@@ -297,20 +331,38 @@ class PlayerManager @Inject constructor(
         }
 
         override fun onRenderedFirstFrame() {
-            _state.update { it.copy(hasFirstFrame = true, isBuffering = false) }
+            _state.update { it.copy(hasFirstFrame = true, isBuffering = false, isReconnecting = false) }
         }
 
         override fun onPlayerError(error: PlaybackException) {
             val (message, code) = PlayerErrorMapper.mapPlaybackError(error, isXtreamSource)
-            _state.update {
-                it.copy(
-                    errorMessage = message,
-                    errorCode = code,
-                    isBuffering = false,
-                    isPlaying = false,
-                )
+            val willRetry = error.isTransientNetworkError() && retryAttempt < MAX_RETRY_ATTEMPTS
+            if (willRetry) {
+                pendingErrorMessage = message
+                pendingErrorCode = code
+                _state.update {
+                    it.copy(
+                        errorMessage = null,
+                        errorCode = null,
+                        isReconnecting = true,
+                        isBuffering = true,
+                        isPlaying = false,
+                    )
+                }
+                scheduleRetryIfTransient(error)
+            } else {
+                pendingErrorMessage = null
+                pendingErrorCode = null
+                _state.update {
+                    it.copy(
+                        errorMessage = message,
+                        errorCode = code,
+                        isReconnecting = false,
+                        isBuffering = false,
+                        isPlaying = false,
+                    )
+                }
             }
-            scheduleRetryIfTransient(error)
         }
 
         override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
@@ -346,17 +398,42 @@ class PlayerManager @Inject constructor(
     private fun scheduleRetryIfTransient(error: PlaybackException) {
         val request = lastRequest ?: return
         if (!error.isTransientNetworkError()) return
-        if (retryAttempt >= MAX_RETRY_ATTEMPTS) return
+        if (retryAttempt >= MAX_RETRY_ATTEMPTS) {
+            showPendingError()
+            return
+        }
         retryJob?.cancel()
         retryAttempt += 1
         val delayMs = RETRY_BASE_DELAY_MS * (1L shl (retryAttempt - 1))
         val retryStartPositionMs = player?.currentPosition
             ?.takeIf { it > 0L && !request.isLive }
             ?: lastStartPositionMs
+        val generationAtSchedule = playbackGeneration
         retryJob = applicationScope.launch {
             delay(delayMs)
-            playInternal(request, retryStartPositionMs, isXtreamSource)
+            withContext(Dispatchers.Main.immediate) {
+                if (generationAtSchedule != playbackGeneration || player == null) return@withContext
+                if (retryAttempt >= MAX_RETRY_ATTEMPTS) {
+                    showPendingError()
+                    return@withContext
+                }
+                playInternal(request, retryStartPositionMs, isXtreamSource, generationAtSchedule)
+            }
         }
+    }
+
+    private fun showPendingError() {
+        _state.update {
+            it.copy(
+                errorMessage = pendingErrorMessage,
+                errorCode = pendingErrorCode,
+                isReconnecting = false,
+                isBuffering = false,
+                isPlaying = false,
+            )
+        }
+        pendingErrorMessage = null
+        pendingErrorCode = null
     }
 
     private fun PlaybackException.isTransientNetworkError(): Boolean =

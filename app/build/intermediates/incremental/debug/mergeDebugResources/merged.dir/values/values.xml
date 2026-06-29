@@ -494,6 +494,8 @@
     <string name="badge_live">LIVE</string>
     <string name="badge_now">NOW</string>
     <string name="badge_saved">SAVED</string>
+    <string name="badge_top_label">TOP</string>
+    <string name="badge_top_number">10</string>
     <string name="benefit_recommendations">Smart Recommendations</string>
     <string name="benefit_recommendations_desc">Get suggestions tailored for you.</string>
     <string name="benefit_resume">Resume Anywhere</string>
@@ -509,6 +511,7 @@
     <string name="btn_clear">Clear</string>
     <string name="btn_close">Close</string>
     <string name="btn_connect">Connect</string>
+    <string name="btn_continue_watching">Continue Watching</string>
     <string name="btn_details">Details</string>
     <string name="btn_edit">Edit</string>
     <string name="btn_edit_playlist">Edit Playlist</string>
@@ -519,6 +522,7 @@
     <string name="btn_play_first">Play First</string>
     <string name="btn_reconnect">Reconnect</string>
     <string name="btn_record">Record</string>
+    <string name="btn_refresh_catalog">Refresh Catalog</string>
     <string name="btn_remove">Remove</string>
     <string name="btn_retry">Retry</string>
     <string name="btn_sign_out">Sign Out</string>
@@ -541,6 +545,8 @@
     <string name="cd_activation_qr">Activation QR code</string>
     <string name="close_drawer">"Close navigation menu"</string>
     <string name="close_sheet">"Close sheet"</string>
+    <string name="content_desc_add_to_list">Add to My List</string>
+    <string name="content_desc_favorite">Favorite</string>
     <string name="copy_toast_msg">Link copied to clipboard</string>
     <string name="default_error_message">"Invalid input"</string>
     <string name="default_popup_window_title" ns2:ignore="ExtraTranslation">"Pop-Up Window"</string>
@@ -687,10 +693,12 @@
     <string name="hint_record_key">●</string>
     <string name="hint_select_desc">Select</string>
     <string name="hint_select_key">OK</string>
+    <string name="home_continue_progress">%1$d%% watched</string>
     <string name="home_continue_watching">Continue Watching</string>
     <string name="home_empty_desc">Connect a source and sync your catalog to see movies, series, and channels.</string>
     <string name="home_empty_title">No content yet</string>
     <string name="home_live_channels">Live Channels</string>
+    <string name="home_mood_row_title">Browse by Mood</string>
     <string name="home_new_releases">New Releases</string>
     <string name="home_popular_series">Popular Series</string>
     <string name="home_trending">Trending Now</string>
@@ -704,6 +712,12 @@
     <string name="livetv_tv_guide">TV Guide</string>
     <string name="livetv_view_guide">View All Guide ›</string>
     <string name="livetv_watch_channel">Play</string>
+    <string name="mood_action">Action</string>
+    <string name="mood_arabic">Arabic</string>
+    <string name="mood_comedy">Comedy</string>
+    <string name="mood_drama">Drama</string>
+    <string name="mood_kids">Kids</string>
+    <string name="mood_new">New</string>
     <string name="movies_empty_title">No movies yet</string>
     <string name="msg_no_content_synced">No content synced yet</string>
     <string name="msg_no_live_channels">No live channels synced</string>
@@ -744,16 +758,34 @@
     <string name="pin_enter">Enter PIN</string>
     <string name="pin_enter_4_digit">Enter 4-digit PIN</string>
     <string name="player_audio">Audio</string>
+    <string name="player_audio_tracks">Audio</string>
+    <string name="player_btn_forward_10">Forward 10</string>
+    <string name="player_btn_pause">Pause</string>
+    <string name="player_btn_play">Play</string>
+    <string name="player_btn_rewind">Rewind</string>
+    <string name="player_btn_rewind_10">Back 10</string>
+    <string name="player_btn_skip_next">Next</string>
+    <string name="player_btn_skip_previous">Previous</string>
     <string name="player_buffering">Buffering…</string>
     <string name="player_channels">Channels</string>
+    <string name="player_close">Close</string>
     <string name="player_episodes">Episodes</string>
     <string name="player_loading_channels">Loading channels…</string>
     <string name="player_loading_episodes">Loading episodes…</string>
+    <string name="player_next_channel">Next channel</string>
+    <string name="player_next_episode">Next episode</string>
     <string name="player_no_channels">No channels available</string>
     <string name="player_no_episodes">No episodes available</string>
+    <string name="player_no_next_episode">No next episode available</string>
     <string name="player_now_playing">Now Playing</string>
+    <string name="player_quality">Quality</string>
+    <string name="player_resume_from">Resuming from %1$s</string>
+    <string name="player_season_episode">Season %1$d · Episode %2$d</string>
     <string name="player_seek_hint">Use ◀ ▶ to seek</string>
+    <string name="player_settings">Settings</string>
     <string name="player_subtitles">Subtitles</string>
+    <string name="player_time_format">%1$s / %2$s</string>
+    <string name="player_track_settings">Audio &amp; Subtitles</string>
     <string name="player_up_next_in">Up Next in %1$d s</string>
     <string name="profile_load_error">Unable to load profiles</string>
     <string name="profile_manage">Manage Profiles</string>
@@ -768,6 +800,13 @@
     <string name="rail_up_next">Up Next</string>
     <string name="range_end">"Range end"</string>
     <string name="range_start">"Range start"</string>
+    <string name="refresh_credentials_missing">Credentials not found for this source</string>
+    <string name="refresh_demo_unavailable">Demo mode — refresh not available</string>
+    <string name="refresh_failed">Refresh failed</string>
+    <string name="refresh_in_progress">Refreshing catalog…</string>
+    <string name="refresh_success">Catalog refreshed</string>
+    <string name="refresh_success_m3u">Synced %1$d channels</string>
+    <string name="refresh_success_xtream">Synced %1$d channels, %2$d movies, %3$d series</string>
     <string name="search_device_keyboard">Device Keyboard</string>
     <string name="search_hint">Search movies, series, channels…</string>
     <string name="search_live_channels">Live Channels</string>
@@ -1189,9 +1228,9 @@
     <declare-styleable name="DividerAttributes">
         
         <attr format="enum" name="embeddingDividerType">
-            <!-- Fixed divider type. -->
+            
             <enum name="fixed" value="0"/>
-            <!-- Draggable divider type. -->
+            
             <enum name="draggable" value="1"/>
         </attr>
         
@@ -1218,23 +1257,14 @@
         <attr format="reference" name="fontProviderCerts"/>
         
         <attr name="fontProviderFetchStrategy">
-            <!-- The blocking font fetch works as follows.
-              First, check the local cache, then if the requested font is not cached, request the
-              font from the provider and wait until it is finished.  You can change the length of
-              the timeout by modifying fontProviderFetchTimeout.  If the timeout happens, the
-              default typeface will be used instead. -->
+            
             <enum name="blocking" value="0"/>
-            <!-- The async font fetch works as follows.
-              First, check the local cache, then if the requested font is not cached, trigger a
-              request the font and continue with layout inflation. Once the font fetch succeeds, the
-              target text view will be refreshed with the downloaded font data. The
-              fontProviderFetchTimeout will be ignored if async loading is specified. -->
+            
             <enum name="async" value="1"/>
         </attr>
         
         <attr format="integer" name="fontProviderFetchTimeout">
-            <!-- A special value for the timeout. In this case, the blocking font fetching will not
-              timeout and wait until a reply is received from the font provider. -->
+            
             <enum name="forever" value="-1"/>
         </attr>
         

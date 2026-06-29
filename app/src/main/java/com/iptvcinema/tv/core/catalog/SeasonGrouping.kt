@@ -24,6 +24,7 @@ object SeasonGrouping {
                             episodeNumber = episode.episodeNumber,
                             title = episode.title,
                             durationMinutes = episode.durationMinutes ?: 0,
+                            thumbnailUrl = episode.thumbnailUrl,
                         )
                     },
             )

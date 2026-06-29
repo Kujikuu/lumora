@@ -32,6 +32,11 @@ class WatchHistoryResumePolicyTest {
     }
 
     @Test
+    fun shouldShowAutoplay_true_whenPlaybackEnded() {
+        assertTrue(WatchHistoryResumePolicy.shouldShowAutoplay(300_000L, 300_000L))
+    }
+
+    @Test
     fun shouldShowAutoplay_true_when30SecondsRemain() {
         assertTrue(WatchHistoryResumePolicy.shouldShowAutoplay(270_000L, 300_000L))
     }

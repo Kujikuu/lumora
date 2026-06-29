@@ -66,6 +66,8 @@
     <string name="badge_live">مباشر</string>
     <string name="badge_now">الآن</string>
     <string name="badge_saved">محفوظ</string>
+    <string name="badge_top_label">TOP</string>
+    <string name="badge_top_number">10</string>
     <string name="benefit_recommendations">توصيات ذكية</string>
     <string name="benefit_recommendations_desc">احصل على اقتراحات مخصصة لك.</string>
     <string name="benefit_resume">استئناف في أي مكان</string>
@@ -81,6 +83,7 @@
     <string name="btn_clear">مسح</string>
     <string name="btn_close">إغلاق</string>
     <string name="btn_connect">اتصال</string>
+    <string name="btn_continue_watching">متابعة المشاهدة</string>
     <string name="btn_details">التفاصيل</string>
     <string name="btn_edit">تعديل</string>
     <string name="btn_edit_playlist">تعديل قائمة التشغيل</string>
@@ -91,6 +94,7 @@
     <string name="btn_play_first">تشغيل الأولى</string>
     <string name="btn_reconnect">إعادة الاتصال</string>
     <string name="btn_record">تسجيل</string>
+    <string name="btn_refresh_catalog">تحديث الفهرس</string>
     <string name="btn_remove">إزالة</string>
     <string name="btn_retry">إعادة المحاولة</string>
     <string name="btn_sign_out">تسجيل الخروج</string>
@@ -113,6 +117,8 @@
     <string name="cd_activation_qr">رمز QR للتفعيل</string>
     <string msgid="406453423630273620" name="close_drawer">"إغلاق قائمة التنقل"</string>
     <string msgid="7573152094250666567" name="close_sheet">"إغلاق الورقة"</string>
+    <string name="content_desc_add_to_list">إضافة إلى قائمتي</string>
+    <string name="content_desc_favorite">المفضلة</string>
     <string msgid="3260749812566568062" name="copy_toast_msg">"تم نسخ الرابط إلى الحافظة."</string>
     <string msgid="8038256446254964252" name="default_error_message">"إدخال غير صالح"</string>
     <string msgid="6312721426453364202" name="default_popup_window_title">"نافذة منبثقة"</string>
@@ -257,10 +263,12 @@
     <string name="hint_record_key">●</string>
     <string name="hint_select_desc">اختيار</string>
     <string name="hint_select_key">OK</string>
+    <string name="home_continue_progress">تمت مشاهدة %1$d%%</string>
     <string name="home_continue_watching">متابعة المشاهدة</string>
     <string name="home_empty_desc">اربط مصدرًا وزامِن الفهرس لعرض الأفلام والمسلسلات والقنوات.</string>
     <string name="home_empty_title">لا يوجد محتوى بعد</string>
     <string name="home_live_channels">القنوات المباشرة</string>
+    <string name="home_mood_row_title">تصفح حسب المزاج</string>
     <string name="home_new_releases">الإصدارات الجديدة</string>
     <string name="home_popular_series">مسلسلات شائعة</string>
     <string name="home_trending">الرائج الآن</string>
@@ -274,6 +282,12 @@
     <string name="livetv_tv_guide">دليل التلفاز</string>
     <string name="livetv_view_guide">عرض الدليل الكامل ›</string>
     <string name="livetv_watch_channel">تشغيل</string>
+    <string name="mood_action">أكشن</string>
+    <string name="mood_arabic">عربي</string>
+    <string name="mood_comedy">كوميديا</string>
+    <string name="mood_drama">دراما</string>
+    <string name="mood_kids">أطفال</string>
+    <string name="mood_new">جديد</string>
     <string name="movies_empty_title">لا توجد أفلام بعد</string>
     <string name="msg_no_content_synced">لم تتم مزامنة أي محتوى بعد</string>
     <string name="msg_no_live_channels">لم تتم مزامنة قنوات مباشرة</string>
@@ -314,16 +328,34 @@
     <string name="pin_enter">أدخل PIN</string>
     <string name="pin_enter_4_digit">أدخل PIN من 4 أرقام</string>
     <string name="player_audio">الصوت</string>
+    <string name="player_audio_tracks">الصوت</string>
+    <string name="player_btn_forward_10">تقديم 10</string>
+    <string name="player_btn_pause">إيقاف مؤقت</string>
+    <string name="player_btn_play">تشغيل</string>
+    <string name="player_btn_rewind">رجوع</string>
+    <string name="player_btn_rewind_10">رجوع 10</string>
+    <string name="player_btn_skip_next">التالي</string>
+    <string name="player_btn_skip_previous">السابق</string>
     <string name="player_buffering">جارٍ التخزين المؤقت…</string>
     <string name="player_channels">القنوات</string>
+    <string name="player_close">إغلاق</string>
     <string name="player_episodes">الحلقات</string>
     <string name="player_loading_channels">جارٍ تحميل القنوات…</string>
     <string name="player_loading_episodes">جارٍ تحميل الحلقات…</string>
+    <string name="player_next_channel">القناة التالية</string>
+    <string name="player_next_episode">الحلقة التالية</string>
     <string name="player_no_channels">لا تتوفر قنوات</string>
     <string name="player_no_episodes">لا تتوفر حلقات</string>
+    <string name="player_no_next_episode">لا توجد حلقة تالية</string>
     <string name="player_now_playing">يُعرض الآن</string>
+    <string name="player_quality">الجودة</string>
+    <string name="player_resume_from">استئناف من %1$s</string>
+    <string name="player_season_episode">الموسم %1$d · الحلقة %2$d</string>
     <string name="player_seek_hint">استخدم ◀ ▶ للتقديم</string>
+    <string name="player_settings">الإعدادات</string>
     <string name="player_subtitles">الترجمة</string>
+    <string name="player_time_format">%1$s / %2$s</string>
+    <string name="player_track_settings">الصوت والترجمة</string>
     <string name="player_up_next_in">التالي خلال %1$d ث</string>
     <string name="profile_load_error">تعذر تحميل الملفات الشخصية</string>
     <string name="profile_manage">إدارة الملفات الشخصية</string>
@@ -338,6 +370,13 @@
     <string name="rail_up_next">التالي</string>
     <string msgid="5941395253238309765" name="range_end">"نهاية النطاق"</string>
     <string msgid="7097486360902471446" name="range_start">"بداية النطاق"</string>
+    <string name="refresh_credentials_missing">لم يتم العثور على بيانات هذا المصدر</string>
+    <string name="refresh_demo_unavailable">الوضع التجريبي — التحديث غير متاح</string>
+    <string name="refresh_failed">فشل التحديث</string>
+    <string name="refresh_in_progress">جارٍ تحديث الفهرس…</string>
+    <string name="refresh_success">تم تحديث الفهرس</string>
+    <string name="refresh_success_m3u">تمت مزامنة %1$d قناة</string>
+    <string name="refresh_success_xtream">تمت مزامنة %1$d قناة و%2$d فيلم و%3$d مسلسل</string>
     <string name="search_device_keyboard">لوحة مفاتيح الجهاز</string>
     <string name="search_hint">ابحث عن أفلام ومسلسلات وقنوات…</string>
     <string name="search_live_channels">القنوات المباشرة</string>

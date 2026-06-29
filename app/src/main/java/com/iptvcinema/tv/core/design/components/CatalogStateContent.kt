@@ -47,6 +47,7 @@ fun CatalogStateContent(
     onRetry: () -> Unit,
     onManageSources: () -> Unit,
     onEditSource: () -> Unit,
+    onRefreshCatalog: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     readyContent: @Composable () -> Unit,
 ) {
@@ -95,10 +96,18 @@ fun CatalogStateContent(
                 EmptyState(
                     title = resolvedEmptyTitle,
                     description = message ?: resolvedEmptyDescription,
-                    primaryAction = stringResource(R.string.btn_manage_sources),
-                    secondaryAction = stringResource(R.string.btn_try_demo),
-                    onPrimary = onManageSources,
-                    onSecondary = onTryDemo,
+                    primaryAction = if (onRefreshCatalog != null) {
+                        stringResource(R.string.btn_refresh_catalog)
+                    } else {
+                        stringResource(R.string.btn_manage_sources)
+                    },
+                    secondaryAction = if (onRefreshCatalog != null) {
+                        stringResource(R.string.btn_manage_sources)
+                    } else {
+                        stringResource(R.string.btn_try_demo)
+                    },
+                    onPrimary = onRefreshCatalog ?: onManageSources,
+                    onSecondary = if (onRefreshCatalog != null) onManageSources else onTryDemo,
                     footerNote = null,
                 )
             }
@@ -116,7 +125,9 @@ fun CatalogStateContent(
             }
         }
         loadState == CatalogLoadState.Ready -> {
-            readyContent()
+            Box(modifier = modifier.fillMaxSize()) {
+                readyContent()
+            }
         }
     }
 }

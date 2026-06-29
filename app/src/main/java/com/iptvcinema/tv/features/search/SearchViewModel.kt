@@ -2,20 +2,15 @@ package com.iptvcinema.tv.features.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toChannelTileData
 import com.iptvcinema.tv.core.data.repository.CatalogLoadState
 import com.iptvcinema.tv.core.data.repository.CatalogRepository
 import com.iptvcinema.tv.core.data.repository.CatalogSearchFilter
 import com.iptvcinema.tv.core.data.repository.ParentalControlsRepository
-import com.iptvcinema.tv.core.datastore.AppPreferences
 import com.iptvcinema.tv.core.datastore.AppSessionRepository
 import com.iptvcinema.tv.core.datastore.RecentSearchRepository
 import com.iptvcinema.tv.core.design.components.ChannelTileData
 import com.iptvcinema.tv.core.design.components.PosterCardData
-import com.iptvcinema.tv.core.design.components.SearchKeyboardLayout
 import com.iptvcinema.tv.core.model.SourceStatus
 import com.iptvcinema.tv.core.model.SourceType
 import com.iptvcinema.tv.R
@@ -33,7 +28,6 @@ import kotlinx.coroutines.launch
 
 data class SearchUiState(
     val query: String = "",
-    val keyboardLayout: SearchKeyboardLayout = SearchKeyboardLayout.English,
     val selectedFilterIndex: Int = 0,
     val loadState: CatalogLoadState = CatalogLoadState.Ready,
     val sourceStatus: SourceStatus? = null,
@@ -55,7 +49,6 @@ class SearchViewModel @Inject constructor(
     private val appSessionRepository: AppSessionRepository,
     private val parentalControlsRepository: ParentalControlsRepository,
     private val parentalGate: ParentalGate,
-    private val dataStore: DataStore<Preferences>,
     private val appStrings: AppStrings,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -69,53 +62,19 @@ class SearchViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            val prefs = dataStore.data.first()
-            val savedLayout = prefs[AppPreferences.SEARCH_KEYBOARD_LAYOUT]
-                ?.let { runCatching { SearchKeyboardLayout.valueOf(it) }.getOrNull() }
-                ?: SearchKeyboardLayout.English
             val profileId = appSessionRepository.sessionState.first().currentProfileId
             val recent = if (profileId != null) {
                 recentSearchRepository.getRecentSearches(profileId)
             } else {
                 emptyList()
             }
-            _uiState.value = _uiState.value.copy(
-                keyboardLayout = savedLayout,
-                recentSearches = recent,
-            )
+            _uiState.value = _uiState.value.copy(recentSearches = recent)
         }
     }
 
     fun updateQuery(query: String) {
         _uiState.value = _uiState.value.copy(query = query)
         scheduleSearch()
-    }
-
-    fun appendToQuery(text: String) {
-        updateQuery(_uiState.value.query + text)
-    }
-
-    fun backspaceQuery() {
-        if (_uiState.value.query.isNotEmpty()) {
-            updateQuery(_uiState.value.query.dropLast(1))
-        }
-    }
-
-    fun toggleKeyboardLayout() {
-        val next = when (_uiState.value.keyboardLayout) {
-            SearchKeyboardLayout.English -> SearchKeyboardLayout.Arabic
-            SearchKeyboardLayout.Arabic -> SearchKeyboardLayout.English
-        }
-        setKeyboardLayout(next)
-    }
-
-    fun setKeyboardLayout(layout: SearchKeyboardLayout) {
-        _uiState.value = _uiState.value.copy(keyboardLayout = layout)
-        viewModelScope.launch {
-            dataStore.edit { prefs ->
-                prefs[AppPreferences.SEARCH_KEYBOARD_LAYOUT] = layout.name
-            }
-        }
     }
 
     fun selectFilter(index: Int) {

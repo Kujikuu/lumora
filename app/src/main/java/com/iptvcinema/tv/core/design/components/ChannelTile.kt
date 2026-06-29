@@ -25,6 +25,7 @@ import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
+import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 
 data class ChannelTileData(
     val id: String? = null,
@@ -97,7 +98,7 @@ fun ChannelTile(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 4.dp),
+                    .padding(start = CinemaSpacing.CardGap, end = CinemaSpacing.CardGap, top = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(1.dp),
             ) {
                 Text(

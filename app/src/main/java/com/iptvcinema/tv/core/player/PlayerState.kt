@@ -43,6 +43,8 @@ data class PlayerUiState(
     val isBuffering: Boolean = false,
     val isPlaying: Boolean = false,
     val hasFirstFrame: Boolean = false,
+    val isReconnecting: Boolean = false,
+    val playbackEnded: Boolean = false,
     val positionMs: Long = 0L,
     val durationMs: Long? = null,
     val errorMessage: String? = null,

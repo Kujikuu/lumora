@@ -28,6 +28,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.ChannelListPanel
@@ -149,27 +150,42 @@ fun LiveTvScreen(
         RemoteHint(R.string.hint_filter_key, R.string.hint_filter_desc),
     )
 
-    val catalogCallbacks = rememberCatalogStateCallbacks(navController)
+    val catalogCallbacks = rememberCatalogStateCallbacks(
+        navController = navController,
+        onRetry = viewModel::refreshCurrentSource,
+    )
 
     MainShellScaffold(
         navController = navController,
         selectedNavItem = NavItem.LiveTv,
         remoteHints = liveHints,
     ) {
-        CatalogStateContent(
-            loadState = uiState.loadState,
-            message = uiState.message,
-            sourceStatus = uiState.sourceStatus,
-            sourceType = uiState.sourceType,
-            skeletonStyle = CatalogSkeletonStyle.Epg,
-            emptyTitle = stringResource(R.string.msg_no_live_channels),
-            emptyDescription = emptyDescription,
-            onAddSource = catalogCallbacks.onAddSource,
-            onTryDemo = catalogCallbacks.onTryDemo,
-            onRetry = catalogCallbacks.onRetry,
-            onManageSources = catalogCallbacks.onManageSources,
-            onEditSource = catalogCallbacks.onEditSource,
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
         ) {
+            CatalogRefreshBanner(
+                syncBannerText = uiState.syncBannerText,
+                refreshState = uiState.refreshState,
+                onRefresh = viewModel::refreshCurrentSource,
+                modifier = Modifier.padding(horizontal = CinemaSpacing.ContentStart),
+            )
+            CatalogStateContent(
+                loadState = uiState.loadState,
+                message = uiState.message,
+                sourceStatus = uiState.sourceStatus,
+                sourceType = uiState.sourceType,
+                skeletonStyle = CatalogSkeletonStyle.Epg,
+                emptyTitle = stringResource(R.string.msg_no_live_channels),
+                emptyDescription = emptyDescription,
+                onAddSource = catalogCallbacks.onAddSource,
+                onTryDemo = catalogCallbacks.onTryDemo,
+                onRetry = catalogCallbacks.onRetry,
+                onManageSources = catalogCallbacks.onManageSources,
+                onEditSource = catalogCallbacks.onEditSource,
+                onRefreshCatalog = viewModel::refreshCurrentSource,
+                modifier = Modifier.weight(1f),
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -266,6 +282,7 @@ fun LiveTvScreen(
                     }
                 }
             }
+        }
         }
     }
 }

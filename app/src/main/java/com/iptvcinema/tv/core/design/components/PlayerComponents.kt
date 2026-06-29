@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -35,7 +37,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
@@ -44,7 +45,20 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.filled.LiveTv
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -87,268 +101,171 @@ fun PlayerBufferingOverlay(modifier: Modifier = Modifier) {
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+private val PlayerSidebarWidth = 380.dp
+
 @Composable
-fun TrackPickerOverlay(
-    title: String,
-    tracks: List<TrackOption>,
-    selectedIndex: Int,
-    showOffOption: Boolean,
-    onSelect: (Int) -> Unit,
-    onDisable: () -> Unit,
-    onDismiss: () -> Unit,
+fun PlayerScrimOverlay(
     modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
 ) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(CinemaColors.Background.copy(alpha = 0.92f))
-            .padding(CinemaSpacing.ScreenPadding),
+            .background(
+                Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0f to Color.Black.copy(alpha = 0.72f),
+                        0.22f to Color.Transparent,
+                        0.78f to Color.Transparent,
+                        1f to Color.Black.copy(alpha = 0.88f),
+                    ),
+                ),
+            ),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-            )
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (showOffOption) {
-                    item {
-                        CinemaButton(
-                            text = stringResource(R.string.toggle_off),
-                            variant = if (selectedIndex < 0) CinemaButtonVariant.PrimaryAccent else CinemaButtonVariant.SecondaryDark,
-                            onClick = onDisable,
-                        )
-                    }
-                }
-                items(tracks, key = { it.index }) { track ->
-                    CinemaButton(
-                        text = track.label,
-                        variant = if (track.index == selectedIndex) {
-                            CinemaButtonVariant.PrimaryAccent
-                        } else {
-                            CinemaButtonVariant.SecondaryDark
-                        },
-                        onClick = { onSelect(track.index) },
-                    )
-                }
-            }
-            CinemaButton(text = stringResource(R.string.btn_close), variant = CinemaButtonVariant.Ghost, onClick = onDismiss)
-        }
+        content()
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun PlayerOverlay(
-    title: String,
-    metadata: List<String>,
-    progress: Float,
-    elapsed: String,
-    remaining: String,
-    isPlaying: Boolean,
-    onPlayPause: () -> Unit,
-    onBack: () -> Unit,
-    isLive: Boolean = false,
-    onRewind: () -> Unit = {},
-    onRewind10: () -> Unit = {},
-    onForward10: () -> Unit = {},
-    onSkipNext: () -> Unit = {},
-    onSkipPrevious: () -> Unit = {},
-    onEpisodes: () -> Unit = {},
-    onChannels: () -> Unit = {},
-    onSubtitles: () -> Unit = {},
-    onAudio: () -> Unit = {},
-    upNextItems: List<PosterCardData> = emptyList(),
-    onUpNextClick: (PosterCardData) -> Unit = {},
-    durationMs: Long = 0L,
-    onSeekTo: (Long) -> Unit = {},
-    onSeekInteraction: () -> Unit = {},
-    qualityLabel: String? = null,
-    resumeHint: String? = null,
-    showSkipNext: Boolean = false,
-    showControlLabels: Boolean = true,
+fun PlayerIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    playPauseFocusRequester: FocusRequester? = null,
+    tint: Color = CinemaColors.White,
+    mirrorIcon: Boolean = false,
 ) {
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(CinemaColors.Background.copy(alpha = 0.85f)),
-    ) {
-        Column(
+    FocusableCinemaCard(
+        modifier = modifier.size(48.dp),
+        onClick = onClick,
+        shape = CircleShape,
+        contentDescription = contentDescription,
+        focusScale = 1.08f,
+    ) { _ ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(CinemaSpacing.ScreenPadding),
-            verticalArrangement = Arrangement.SpaceBetween,
+                .background(CinemaColors.Surface.copy(alpha = 0.35f), CircleShape),
+            contentAlignment = Alignment.Center,
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                CinemaLogo(compact = true)
-                Text(
-                    text = stringResource(R.string.player_now_playing),
-                    style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
-                )
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                )
-                Text(
-                    text = metadata.joinToString("  ·  "),
-                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextSecondary),
-                )
-                resumeHint?.let { hint ->
-                    Text(
-                        text = hint,
-                        style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.Accent),
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (!isLive) {
-                    PlaybackControlButton(
-                        icon = Icons.Default.FastRewind,
-                        label = stringResource(R.string.player_btn_rewind),
-                        showLabel = showControlLabels,
-                        onClick = onRewind,
-                    )
-                    PlaybackControlButton(
-                        icon = Icons.Default.Replay10,
-                        label = stringResource(R.string.player_btn_rewind_10),
-                        showLabel = showControlLabels,
-                        onClick = onRewind10,
-                    )
-                }
-                if (showSkipNext) {
-                    PlaybackControlButton(
-                        icon = Icons.Default.SkipPrevious,
-                        label = stringResource(R.string.player_btn_skip_previous),
-                        showLabel = showControlLabels,
-                        mirrorIcon = isRtl,
-                        onClick = onSkipPrevious,
-                    )
-                }
-                PlaybackControlButton(
-                    icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    label = stringResource(if (isPlaying) R.string.player_btn_pause else R.string.player_btn_play),
-                    showLabel = showControlLabels,
-                    onClick = onPlayPause,
-                    large = true,
-                    modifier = playPauseFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
-                )
-                if (!isLive) {
-                    PlaybackControlButton(
-                        icon = Icons.Default.Forward10,
-                        label = stringResource(R.string.player_btn_forward_10),
-                        showLabel = showControlLabels,
-                        onClick = onForward10,
-                    )
-                    if (showSkipNext) {
-                        PlaybackControlButton(
-                            icon = Icons.Default.SkipNext,
-                            label = stringResource(R.string.player_btn_skip_next),
-                            showLabel = showControlLabels,
-                            mirrorIcon = isRtl,
-                            onClick = onSkipNext,
-                        )
-                    }
-                }
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (!isLive && durationMs > 0L) {
-                    SeekableProgressBar(
-                        progress = progress,
-                        durationMs = durationMs,
-                        elapsed = elapsed,
-                        remaining = remaining,
-                        onSeekTo = onSeekTo,
-                        onInteraction = onSeekInteraction,
-                    )
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
-                ) {
-                    if (showSkipNext) {
-                        CinemaButton(text = stringResource(R.string.player_episodes), variant = CinemaButtonVariant.Ghost, onClick = onEpisodes)
-                    }
-                    if (isLive) {
-                        CinemaButton(text = stringResource(R.string.player_channels), variant = CinemaButtonVariant.Ghost, onClick = onChannels)
-                    }
-                    CinemaButton(text = stringResource(R.string.player_subtitles), variant = CinemaButtonVariant.Ghost, onClick = onSubtitles)
-                    CinemaButton(text = stringResource(R.string.player_audio), variant = CinemaButtonVariant.Ghost, onClick = onAudio)
-                    qualityLabel?.let { label ->
-                        BadgeChip(text = label, backgroundColor = CinemaColors.SurfaceSoft)
-                    }
-                    CinemaButton(text = stringResource(R.string.btn_back), variant = CinemaButtonVariant.SecondaryDark, onClick = onBack)
-                }
-                if (upNextItems.isNotEmpty()) {
-                    ContentRail(title = stringResource(R.string.rail_up_next), items = upNextItems) { item ->
-                        PosterCard(data = item, variant = PosterCardVariant.CompactPoster, onClick = { onUpNextClick(item) })
-                    }
-                }
-            }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier
+                    .size(24.dp)
+                    .graphicsLayer(scaleX = if (mirrorIcon) -1f else 1f),
+            )
         }
     }
 }
 
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun PlaybackControlButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+fun PlayerQualityPill(
     label: String,
-    onClick: () -> Unit,
-    large: Boolean = false,
-    contentDescription: String = label,
-    showLabel: Boolean = true,
-    mirrorIcon: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    val size = if (large) 72.dp else 48.dp
-    val controlWidth = if (large) 92.dp else 80.dp
-    val controlHeight = if (showLabel) 96.dp else size
-    FocusableCinemaCard(
+    Text(
+        text = label,
         modifier = modifier
-            .padding(horizontal = 8.dp)
-            .width(controlWidth)
-            .height(controlHeight),
-        onClick = onClick,
-        shape = CinemaShapes.Large,
-        contentDescription = contentDescription,
-    ) { _ ->
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            .background(CinemaColors.Surface.copy(alpha = 0.55f), CinemaShapes.Large)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        style = MaterialTheme.typography.labelMedium.copy(
+            color = CinemaColors.White,
+            fontWeight = FontWeight.SemiBold,
+        ),
+    )
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun PlayerTopBar(
+    title: String,
+    subtitle: String,
+    qualityLabel: String?,
+    resumeHint: String?,
+    showEpisodesAction: Boolean,
+    showChannelsAction: Boolean,
+    onClose: () -> Unit,
+    onEpisodes: () -> Unit,
+    onChannels: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = CinemaSpacing.ScreenPadding, vertical = 16.dp),
+    ) {
+        Row(
+            modifier = Modifier.align(Alignment.CenterStart),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(size)
-                    .background(
-                        color = if (large) CinemaColors.White else CinemaColors.SurfaceSoft.copy(alpha = 0.6f),
-                        shape = CircleShape,
+            PlayerIconButton(
+                icon = Icons.Default.Close,
+                contentDescription = stringResource(R.string.player_close),
+                onClick = onClose,
+            )
+            qualityLabel?.let { label ->
+                PlayerQualityPill(label = label)
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .widthIn(max = 520.dp)
+                .padding(horizontal = 96.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    color = CinemaColors.White,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                ),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (subtitle.isNotBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        color = CinemaColors.TextSecondary,
+                        textAlign = TextAlign.Center,
                     ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = if (large) CinemaColors.Background else CinemaColors.White,
-                    modifier = Modifier
-                        .size(if (large) 36.dp else 24.dp)
-                        .graphicsLayer(scaleX = if (mirrorIcon) -1f else 1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            if (showLabel) {
+            resumeHint?.let { hint ->
                 Text(
-                    text = label,
-                    maxLines = 1,
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = CinemaColors.TextSecondary,
-                        fontWeight = FontWeight.Medium,
-                    ),
+                    text = hint,
+                    style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.Accent),
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.align(Alignment.CenterEnd),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (showEpisodesAction) {
+                PlayerIconButton(
+                    icon = Icons.Default.VideoLibrary,
+                    contentDescription = stringResource(R.string.player_episodes),
+                    onClick = onEpisodes,
+                )
+            }
+            if (showChannelsAction) {
+                PlayerIconButton(
+                    icon = Icons.Default.LiveTv,
+                    contentDescription = stringResource(R.string.player_channels),
+                    onClick = onChannels,
                 )
             }
         }
@@ -357,11 +274,9 @@ fun PlaybackControlButton(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun SeekableProgressBar(
+fun PlayerThinProgressBar(
     progress: Float,
     durationMs: Long,
-    elapsed: String,
-    remaining: String,
     onSeekTo: (Long) -> Unit,
     onInteraction: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -377,115 +292,386 @@ fun SeekableProgressBar(
 
     val displayProgress = if (isFocused) previewProgress else progress.coerceIn(0f, 1f)
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val barHeight = if (isFocused) 8.dp else 6.dp
-    val thumbSize = if (isFocused) 18.dp else 12.dp
+    val barHeight = if (isFocused) 6.dp else 4.dp
+    val thumbSize = if (isFocused) 14.dp else 0.dp
     val seekStepMs = maxOf(durationMs / 120L, 5_000L)
 
-    Column(modifier = modifier.fillMaxWidth()) {
-        BoxWithConstraints(
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(if (isFocused) 28.dp else 16.dp)
+            .padding(horizontal = CinemaSpacing.ScreenPadding)
+            .onFocusChanged { focused ->
+                isFocused = focused.isFocused
+                if (focused.isFocused) {
+                    previewProgress = progress.coerceIn(0f, 1f)
+                }
+            }
+            .onKeyEvent { event ->
+                if (!isFocused || durationMs <= 0L) return@onKeyEvent false
+                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                when (event.key) {
+                    Key.DirectionLeft -> {
+                        onInteraction()
+                        val currentMs = (previewProgress * durationMs).toLong()
+                        val newMs = if (isRtl) {
+                            (currentMs + seekStepMs).coerceAtMost(durationMs)
+                        } else {
+                            (currentMs - seekStepMs).coerceAtLeast(0L)
+                        }
+                        previewProgress = newMs.toFloat() / durationMs.toFloat()
+                        onSeekTo(newMs)
+                        true
+                    }
+                    Key.DirectionRight -> {
+                        onInteraction()
+                        val currentMs = (previewProgress * durationMs).toLong()
+                        val newMs = if (isRtl) {
+                            (currentMs - seekStepMs).coerceAtLeast(0L)
+                        } else {
+                            (currentMs + seekStepMs).coerceAtMost(durationMs)
+                        }
+                        previewProgress = newMs.toFloat() / durationMs.toFloat()
+                        onSeekTo(newMs)
+                        true
+                    }
+                    else -> false
+                }
+            }
+            .focusable()
+            .then(
+                if (isFocused) {
+                    Modifier.border(2.dp, CinemaColors.FocusBorder, CinemaShapes.Small)
+                } else {
+                    Modifier
+                },
+            ),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        val trackWidth = maxWidth
+        val thumbProgress = if (isRtl) 1f - displayProgress else displayProgress
+        val thumbOffset = trackWidth * thumbProgress - thumbSize / 2
+
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(36.dp)
-                .onFocusChanged { focused ->
-                    isFocused = focused.isFocused
-                    if (focused.isFocused) {
-                        previewProgress = progress.coerceIn(0f, 1f)
-                    }
-                }
-                .onKeyEvent { event ->
-                    if (!isFocused || durationMs <= 0L) return@onKeyEvent false
-                    if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                    when (event.key) {
-                        Key.DirectionLeft -> {
-                            onInteraction()
-                            val currentMs = (previewProgress * durationMs).toLong()
-                            val newMs = if (isRtl) {
-                                (currentMs + seekStepMs).coerceAtMost(durationMs)
-                            } else {
-                                (currentMs - seekStepMs).coerceAtLeast(0L)
-                            }
-                            previewProgress = newMs.toFloat() / durationMs.toFloat()
-                            onSeekTo(newMs)
-                            true
-                        }
-                        Key.DirectionRight -> {
-                            onInteraction()
-                            val currentMs = (previewProgress * durationMs).toLong()
-                            val newMs = if (isRtl) {
-                                (currentMs - seekStepMs).coerceAtLeast(0L)
-                            } else {
-                                (currentMs + seekStepMs).coerceAtMost(durationMs)
-                            }
-                            previewProgress = newMs.toFloat() / durationMs.toFloat()
-                            onSeekTo(newMs)
-                            true
-                        }
-                        else -> false
-                    }
-                }
-                .focusable()
-                .then(
-                    if (isFocused) {
-                        Modifier.border(2.dp, CinemaColors.FocusBorder, CinemaShapes.Small)
-                    } else {
-                        Modifier
-                    },
-                ),
-            contentAlignment = Alignment.CenterStart,
+                .height(barHeight)
+                .clip(CinemaShapes.Small)
+                .background(CinemaColors.Surface.copy(alpha = 0.55f)),
         ) {
-            val trackWidth = maxWidth
-            val thumbProgress = if (isRtl) 1f - displayProgress else displayProgress
-            val thumbOffset = trackWidth * thumbProgress - thumbSize / 2
-
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .align(if (isRtl) Alignment.CenterEnd else Alignment.CenterStart)
+                    .fillMaxWidth(displayProgress.coerceIn(0f, 1f))
                     .height(barHeight)
-                    .clip(CinemaShapes.Small)
-                    .background(CinemaColors.Surface),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(displayProgress.coerceIn(0f, 1f))
-                        .height(barHeight)
-                        .background(if (isFocused) CinemaColors.Accent else CinemaColors.Accent.copy(alpha = 0.85f)),
-                )
-            }
+                    .background(if (isFocused) CinemaColors.Accent else CinemaColors.Accent.copy(alpha = 0.9f)),
+            )
+        }
 
+        if (thumbSize > 0.dp) {
             Box(
                 modifier = Modifier
                     .offset(x = thumbOffset.coerceIn(0.dp, trackWidth - thumbSize))
                     .size(thumbSize)
                     .clip(CircleShape)
-                    .background(if (isFocused) CinemaColors.Accent else CinemaColors.White)
-                    .then(
-                        if (isFocused) {
-                            Modifier.border(2.dp, CinemaColors.Background, CircleShape)
-                        } else {
-                            Modifier
-                        },
-                    ),
+                    .background(CinemaColors.Accent)
+                    .border(2.dp, CinemaColors.Background, CircleShape),
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun PlayerBottomControls(
+    elapsed: String,
+    total: String,
+    isPlaying: Boolean,
+    isLive: Boolean,
+    showNextAction: Boolean,
+    nextActionAccent: Boolean,
+    isRtl: Boolean,
+    onPlayPause: () -> Unit,
+    onRewind10: () -> Unit,
+    onForward10: () -> Unit,
+    onNext: () -> Unit,
+    onSubtitles: () -> Unit,
+    onSettings: () -> Unit,
+    onBack: () -> Unit,
+    playPauseFocusRequester: FocusRequester? = null,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = CinemaSpacing.ScreenPadding, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PlayerIconButton(
+                icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                contentDescription = stringResource(
+                    if (isPlaying) R.string.player_btn_pause else R.string.player_btn_play,
+                ),
+                onClick = onPlayPause,
+                modifier = playPauseFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
+            )
+            if (!isLive) {
+                PlayerIconButton(
+                    icon = Icons.Default.Replay10,
+                    contentDescription = stringResource(R.string.player_btn_rewind_10),
+                    onClick = onRewind10,
+                    mirrorIcon = isRtl,
+                )
+                PlayerIconButton(
+                    icon = Icons.Default.Forward10,
+                    contentDescription = stringResource(R.string.player_btn_forward_10),
+                    onClick = onForward10,
+                    mirrorIcon = isRtl,
+                )
+            }
         }
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = elapsed,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    color = if (isFocused) CinemaColors.White else CinemaColors.TextMuted,
-                ),
+            if (!isLive && total.isNotBlank()) {
+                Text(
+                    text = stringResource(R.string.player_time_format, elapsed, total),
+                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.White),
+                )
+            }
+            if (showNextAction) {
+                PlayerIconButton(
+                    icon = Icons.Default.SkipNext,
+                    contentDescription = stringResource(
+                        if (isLive) R.string.player_next_channel else R.string.player_next_episode,
+                    ),
+                    onClick = onNext,
+                    tint = if (nextActionAccent) CinemaColors.Accent else CinemaColors.White,
+                    mirrorIcon = isRtl,
+                )
+            }
+            PlayerIconButton(
+                icon = Icons.Default.Subtitles,
+                contentDescription = stringResource(R.string.player_subtitles),
+                onClick = onSubtitles,
             )
-            Text(
-                text = if (isFocused) stringResource(R.string.player_seek_hint) else remaining,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    color = if (isFocused) CinemaColors.TextSecondary else CinemaColors.TextMuted,
-                ),
+            PlayerIconButton(
+                icon = Icons.Default.Settings,
+                contentDescription = stringResource(R.string.player_settings),
+                onClick = onSettings,
             )
+            PlayerIconButton(
+                icon = Icons.Default.Close,
+                contentDescription = stringResource(R.string.btn_back),
+                onClick = onBack,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun PlayerTrackSidebar(
+    audioTracks: List<TrackOption>,
+    subtitleTracks: List<TrackOption>,
+    selectedAudioIndex: Int,
+    selectedSubtitleIndex: Int,
+    onSelectAudio: (Int) -> Unit,
+    onDisableSubtitles: () -> Unit,
+    onSelectSubtitle: (Int) -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    PlayerSidePanel(
+        title = stringResource(R.string.player_track_settings),
+        onDismiss = onDismiss,
+        modifier = modifier,
+    ) {
+        Text(
+            text = stringResource(R.string.player_audio_tracks),
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+        )
+        LazyColumn(
+            modifier = Modifier.heightIn(max = 220.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(audioTracks, key = { "audio-${it.index}" }) { track ->
+                CinemaButton(
+                    text = track.label,
+                    variant = if (track.index == selectedAudioIndex) {
+                        CinemaButtonVariant.PrimaryAccent
+                    } else {
+                        CinemaButtonVariant.SecondaryDark
+                    },
+                    onClick = { onSelectAudio(track.index) },
+                )
+            }
+        }
+        Text(
+            text = stringResource(R.string.player_subtitles),
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        LazyColumn(
+            modifier = Modifier.heightIn(max = 220.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            item {
+                CinemaButton(
+                    text = stringResource(R.string.toggle_off),
+                    variant = if (selectedSubtitleIndex < 0) {
+                        CinemaButtonVariant.PrimaryAccent
+                    } else {
+                        CinemaButtonVariant.SecondaryDark
+                    },
+                    onClick = onDisableSubtitles,
+                )
+            }
+            items(subtitleTracks, key = { "sub-${it.index}" }) { track ->
+                CinemaButton(
+                    text = track.label,
+                    variant = if (track.index == selectedSubtitleIndex) {
+                        CinemaButtonVariant.PrimaryAccent
+                    } else {
+                        CinemaButtonVariant.SecondaryDark
+                    },
+                    onClick = { onSelectSubtitle(track.index) },
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun PlayerSidePanel(
+    title: String,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val panelShape = if (isRtl) {
+        RoundedCornerShape(topEnd = 20.dp, bottomEnd = 20.dp)
+    } else {
+        RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp)
+    }
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = if (isRtl) Alignment.CenterStart else Alignment.CenterEnd,
+    ) {
+        Column(
+            modifier = Modifier
+                .width(PlayerSidebarWidth)
+                .fillMaxSize()
+                .background(CinemaColors.SurfaceGlass, panelShape)
+                .padding(CinemaSpacing.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.weight(1f),
+                )
+                PlayerIconButton(
+                    icon = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.player_close),
+                    onClick = onDismiss,
+                )
+            }
+            content()
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun PlayerOverlay(
+    title: String,
+    subtitle: String,
+    progress: Float,
+    elapsed: String,
+    total: String,
+    isPlaying: Boolean,
+    onPlayPause: () -> Unit,
+    onBack: () -> Unit,
+    isLive: Boolean = false,
+    onRewind10: () -> Unit = {},
+    onForward10: () -> Unit = {},
+    onNext: () -> Unit = {},
+    onEpisodes: () -> Unit = {},
+    onChannels: () -> Unit = {},
+    onSubtitles: () -> Unit = {},
+    onSettings: () -> Unit = {},
+    durationMs: Long = 0L,
+    onSeekTo: (Long) -> Unit = {},
+    onSeekInteraction: () -> Unit = {},
+    qualityLabel: String? = null,
+    resumeHint: String? = null,
+    showEpisodesAction: Boolean = false,
+    showChannelsAction: Boolean = false,
+    showNextAction: Boolean = false,
+    nextActionAccent: Boolean = false,
+    modifier: Modifier = Modifier,
+    playPauseFocusRequester: FocusRequester? = null,
+) {
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    PlayerScrimOverlay(modifier = modifier) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            PlayerTopBar(
+                title = title,
+                subtitle = subtitle,
+                qualityLabel = qualityLabel,
+                resumeHint = resumeHint,
+                showEpisodesAction = showEpisodesAction,
+                showChannelsAction = showChannelsAction,
+                onClose = onBack,
+                onEpisodes = onEpisodes,
+                onChannels = onChannels,
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (!isLive && durationMs > 0L) {
+                    PlayerThinProgressBar(
+                        progress = progress,
+                        durationMs = durationMs,
+                        onSeekTo = onSeekTo,
+                        onInteraction = onSeekInteraction,
+                    )
+                }
+                PlayerBottomControls(
+                    elapsed = elapsed,
+                    total = total,
+                    isPlaying = isPlaying,
+                    isLive = isLive,
+                    showNextAction = showNextAction,
+                    nextActionAccent = nextActionAccent,
+                    isRtl = isRtl,
+                    onPlayPause = onPlayPause,
+                    onRewind10 = onRewind10,
+                    onForward10 = onForward10,
+                    onNext = onNext,
+                    onSubtitles = onSubtitles,
+                    onSettings = onSettings,
+                    onBack = onBack,
+                    playPauseFocusRequester = playPauseFocusRequester,
+                )
+            }
         }
     }
 }
@@ -534,30 +720,34 @@ fun AutoplayCountdownOverlay(
     modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(CinemaColors.Background.copy(alpha = 0.7f)),
+        modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomEnd,
     ) {
         Column(
             modifier = Modifier
                 .padding(CinemaSpacing.ScreenPadding)
                 .background(CinemaColors.SurfaceGlass, CinemaShapes.Medium)
-                .padding(CinemaSpacing.ScreenPadding),
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
                 text = stringResource(R.string.player_up_next_in, secondsRemaining),
-                style = MaterialTheme.typography.titleMedium.copy(
+                style = MaterialTheme.typography.titleSmall.copy(
                     color = CinemaColors.White,
                     fontWeight = FontWeight.SemiBold,
                 ),
             )
             Text(
                 text = nextTitle,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
-            CinemaButton(text = stringResource(R.string.btn_cancel), variant = CinemaButtonVariant.SecondaryDark, onClick = onCancel)
+            CinemaButton(
+                text = stringResource(R.string.btn_cancel),
+                variant = CinemaButtonVariant.SecondaryDark,
+                onClick = onCancel,
+            )
         }
     }
 }
@@ -608,7 +798,10 @@ fun PlayerRebufferOverlay(modifier: Modifier = Modifier) {
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun EpisodePickerOverlay(
+fun PlayerEpisodeSidebar(
+    seriesTitle: String,
+    seriesPosterUrl: String?,
+    currentEpisodeSubtitle: String?,
     seasons: List<SeasonItem>,
     currentEpisodeId: String?,
     isLoading: Boolean,
@@ -634,54 +827,132 @@ fun EpisodePickerOverlay(
         currentEpisodeFocus.requestFocus()
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(CinemaColors.Background.copy(alpha = 0.92f))
-            .padding(CinemaSpacing.ScreenPadding),
+    PlayerSidePanel(
+        title = stringResource(R.string.player_episodes),
+        onDismiss = onDismiss,
+        modifier = modifier,
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
         ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = seriesTitle,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        color = CinemaColors.White,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                currentEpisodeSubtitle?.let { subtitle ->
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextSecondary),
+                    )
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .size(width = 72.dp, height = 108.dp)
+                    .clip(CinemaShapes.Small),
+            ) {
+                CinemaAsyncImage(
+                    imageUrl = seriesPosterUrl,
+                    contentDescription = seriesTitle,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    fallbackLabel = seriesTitle,
+                )
+            }
+        }
+        if (isLoading) {
             Text(
-                text = stringResource(R.string.player_episodes),
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                text = stringResource(R.string.player_loading_episodes),
+                style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextMuted),
             )
-            if (isLoading) {
-                Text(
-                    text = stringResource(R.string.player_loading_episodes),
-                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextMuted),
-                )
-            } else if (seasons.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.player_no_episodes),
-                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextMuted),
-                )
-            } else {
-                SeasonSelector(
-                    seasons = seasons.map { it.seasonNumber },
-                    selectedSeason = selectedSeason,
-                    onSeasonSelected = { selectedSeason = it },
-                )
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    state = listState,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(episodes, key = { it.id }) { episode ->
-                        val isPlaying = episode.id == currentEpisodeId
-                        EpisodeCard(
-                            episodeNumber = episode.episodeNumber,
-                            title = episode.title,
-                            durationMinutes = episode.durationMinutes,
-                            progress = episode.progress,
-                            isPlaying = isPlaying,
-                            onClick = { onEpisodeClick(episode.id) },
-                            modifier = if (isPlaying) {
-                                Modifier.focusRequester(currentEpisodeFocus)
+        } else if (seasons.isEmpty()) {
+            Text(
+                text = stringResource(R.string.player_no_episodes),
+                style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextMuted),
+            )
+        } else {
+            SeasonSelector(
+                seasons = seasons.map { it.seasonNumber },
+                selectedSeason = selectedSeason,
+                onSeasonSelected = { selectedSeason = it },
+            )
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                state = listState,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(episodes, key = { it.id }) { episode ->
+                    val isPlaying = episode.id == currentEpisodeId
+                    PlayerEpisodeSidebarRow(
+                        episodeNumber = episode.episodeNumber,
+                        title = episode.title,
+                        durationMinutes = episode.durationMinutes,
+                        thumbnailUrl = episode.thumbnailUrl,
+                        fallbackImageUrl = seriesPosterUrl,
+                        isPlaying = isPlaying,
+                        onClick = { onEpisodeClick(episode.id) },
+                        modifier = if (isPlaying) {
+                            Modifier.focusRequester(currentEpisodeFocus)
+                        } else {
+                            Modifier
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun PlayerChannelSidebar(
+    channels: List<ChannelTileData>,
+    currentChannelId: String?,
+    isLoading: Boolean,
+    onChannelClick: (String) -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    PlayerSidePanel(
+        title = stringResource(R.string.player_channels),
+        onDismiss = onDismiss,
+        modifier = modifier,
+    ) {
+        if (isLoading) {
+            Text(
+                text = stringResource(R.string.player_loading_channels),
+                style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextMuted),
+            )
+        } else if (channels.isEmpty()) {
+            Text(
+                text = stringResource(R.string.player_no_channels),
+                style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextMuted),
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(channels, key = { it.id ?: it.channelName }) { channel ->
+                    channel.id?.let { channelId ->
+                        val isCurrent = channelId == currentChannelId
+                        ChannelTile(
+                            data = channel,
+                            onClick = { onChannelClick(channelId) },
+                            modifier = if (isCurrent) {
+                                Modifier.border(1.dp, CinemaColors.Accent, CinemaShapes.Medium)
                             } else {
                                 Modifier
                             },
@@ -689,58 +960,6 @@ fun EpisodePickerOverlay(
                     }
                 }
             }
-            CinemaButton(text = stringResource(R.string.btn_close), variant = CinemaButtonVariant.Ghost, onClick = onDismiss)
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-fun ChannelPickerOverlay(
-    channels: List<ChannelTileData>,
-    isLoading: Boolean,
-    onChannelClick: (String) -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(CinemaColors.Background.copy(alpha = 0.92f))
-            .padding(CinemaSpacing.ScreenPadding),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
-            Text(
-                text = stringResource(R.string.player_channels),
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-            )
-            if (isLoading) {
-                Text(
-                    text = stringResource(R.string.player_loading_channels),
-                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextMuted),
-                )
-            } else if (channels.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.player_no_channels),
-                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextMuted),
-                )
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
-                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
-                ) {
-                    items(channels, key = { it.id ?: it.channelName }) { channel ->
-                        channel.id?.let { channelId ->
-                            ChannelTile(
-                                data = channel,
-                                onClick = { onChannelClick(channelId) },
-                            )
-                        }
-                    }
-                }
-            }
-            CinemaButton(text = stringResource(R.string.btn_close), variant = CinemaButtonVariant.Ghost, onClick = onDismiss)
         }
     }
 }

@@ -8,25 +8,36 @@ import com.iptvcinema.tv.core.catalog.CatalogRefreshState
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toChannelItem
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toChannelTileData
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toMovieItem
-import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toPosterCardData
+import com.iptvcinema.tv.core.data.repository.CatalogBrowseState
 import com.iptvcinema.tv.core.data.repository.CatalogLoadState
 import com.iptvcinema.tv.core.data.repository.CatalogRepository
+import com.iptvcinema.tv.core.data.repository.FavoritesRepository
 import com.iptvcinema.tv.core.data.repository.ParentalControlsRepository
 import com.iptvcinema.tv.core.data.repository.UserSettingsRepository
+import com.iptvcinema.tv.core.data.repository.WatchHistoryRepository
+import com.iptvcinema.tv.core.datastore.AppSessionRepository
+import com.iptvcinema.tv.core.design.components.ChannelTileData
+import com.iptvcinema.tv.core.model.FavoriteContentType
+import com.iptvcinema.tv.core.model.FavoriteItem
+import com.iptvcinema.tv.core.model.MovieItem
+import com.iptvcinema.tv.core.model.SourceStatus
+import com.iptvcinema.tv.core.model.SourceType
+import com.iptvcinema.tv.core.model.ParentalControls
+import com.iptvcinema.tv.core.model.WatchHistoryItem
+import com.iptvcinema.tv.core.model.WatchHistoryContentType
+import com.iptvcinema.tv.core.model.catalog.CatalogMovie
+import com.iptvcinema.tv.core.model.catalog.CatalogSeries
+import com.iptvcinema.tv.core.model.catalog.FeaturedCatalogContent
 import com.iptvcinema.tv.core.parental.ParentalGate
 import com.iptvcinema.tv.core.player.PlaybackSessionTracker
 import com.iptvcinema.tv.core.util.AppStrings
 import com.iptvcinema.tv.core.util.SyncStatusFormatter
 import com.iptvcinema.tv.R
-import com.iptvcinema.tv.core.data.repository.WatchHistoryRepository
-import com.iptvcinema.tv.core.datastore.AppSessionRepository
-import com.iptvcinema.tv.core.design.components.ChannelTileData
-import com.iptvcinema.tv.core.design.components.PosterCardData
-import com.iptvcinema.tv.core.model.MovieItem
-import com.iptvcinema.tv.core.model.SourceStatus
-import com.iptvcinema.tv.core.model.SourceType
-import com.iptvcinema.tv.core.model.WatchHistoryContentType
-import com.iptvcinema.tv.core.model.catalog.FeaturedCatalogContent
+import com.iptvcinema.tv.core.model.home.HomeCardAction
+import com.iptvcinema.tv.core.model.home.HomeContentCard
+import com.iptvcinema.tv.core.model.home.MoodCategory
+import com.iptvcinema.tv.core.model.home.toFavoriteContentType
+import com.iptvcinema.tv.features.home.HomeUiMapper.toHomeContentCard
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.delay
@@ -37,25 +48,18 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-
-data class ContinueWatchingItem(
-    val contentId: String,
-    val contentType: String,
-    val seriesId: String? = null,
-    val poster: PosterCardData,
-)
 
 data class HomeUiState(
     val loadState: CatalogLoadState = CatalogLoadState.Loading,
     val featured: FeaturedCatalogContent? = null,
     val heroMovies: List<MovieItem> = emptyList(),
-    val continueWatching: List<ContinueWatchingItem> = emptyList(),
-    val trending: List<PosterCardData> = emptyList(),
-    val featuredSeries: List<PosterCardData> = emptyList(),
+    val continueWatching: List<HomeContentCard> = emptyList(),
+    val trending: List<HomeContentCard> = emptyList(),
+    val featuredSeries: List<HomeContentCard> = emptyList(),
     val liveChannels: List<ChannelTileData> = emptyList(),
-    val newReleases: List<PosterCardData> = emptyList(),
+    val newReleases: List<HomeContentCard> = emptyList(),
+    val moodCategories: List<MoodCategory> = HomeMoodCategories.defaults,
     val message: String? = null,
     val sourceStatus: SourceStatus? = null,
     val sourceType: SourceType? = null,
@@ -67,6 +71,7 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val catalogRepository: CatalogRepository,
     private val watchHistoryRepository: WatchHistoryRepository,
+    private val favoritesRepository: FavoritesRepository,
     private val userSettingsRepository: UserSettingsRepository,
     private val appSessionRepository: AppSessionRepository,
     private val parentalControlsRepository: ParentalControlsRepository,
@@ -109,11 +114,26 @@ class HomeViewModel @Inject constructor(
                 } else {
                     flowOf(emptyList())
                 }
-                combine(continueWatchingFlow, controlsFlow, playbackSessionTracker.currentLiveChannelId) { history, controls, nowPlayingChannelId ->
-                    Triple(catalogState, continueWatchingEnabled, Triple(history, controls, nowPlayingChannelId))
+                val favoritesFlow = if (profileId != null) {
+                    favoritesRepository.observeFavorites(profileId)
+                } else {
+                    flowOf(emptyList())
                 }
-            }.collect { (state, continueWatchingEnabled, historyControlsAndNowPlaying) ->
-                val (history, controls, nowPlayingChannelId) = historyControlsAndNowPlaying
+                combine(
+                    continueWatchingFlow,
+                    controlsFlow,
+                    playbackSessionTracker.currentLiveChannelId,
+                    favoritesFlow,
+                ) { history, controls, nowPlayingChannelId, favorites ->
+                    HomeFlowBundle(state = catalogState, continueWatchingEnabled = continueWatchingEnabled, history = history, controls = controls, nowPlayingChannelId = nowPlayingChannelId, favorites = favorites)
+                }
+            }.collect { bundle ->
+                val state = bundle.state
+                val continueWatchingEnabled = bundle.continueWatchingEnabled
+                val history = bundle.history
+                val controls = bundle.controls
+                val nowPlayingChannelId = bundle.nowPlayingChannelId
+                val favorites = bundle.favorites
                 val session = appSessionRepository.sessionState.first()
                 val featured = state.items.firstOrNull()
                 val continueWatching = if (continueWatchingEnabled) {
@@ -131,17 +151,21 @@ class HomeViewModel @Inject constructor(
                             item = item,
                             isDemoMode = session.isDemoMode,
                         )
-                        ContinueWatchingItem(
+                        val favoriteType = when (item.contentType) {
+                            WatchHistoryContentType.MOVIE -> FavoriteContentType.MOVIE
+                            WatchHistoryContentType.EPISODE -> FavoriteContentType.EPISODE
+                            WatchHistoryContentType.CHANNEL -> return@mapNotNull null
+                        }
+                        HomeContentCard(
                             contentId = item.contentId,
                             contentType = contentType,
                             seriesId = item.seriesId,
-                            poster = PosterCardData(
-                                title = display.title,
-                                subtitle = display.subtitle,
-                                imageUrl = display.posterUrl,
-                                progress = progress,
-                                contentId = item.contentId,
-                            ),
+                            title = display.title,
+                            subtitle = display.subtitle,
+                            imageUrl = display.posterUrl,
+                            progress = progress,
+                            isFavorite = favorites.isFavorite(item.contentId, favoriteType),
+                            primaryAction = HomeCardAction.ContinueWatching,
                         )
                     }
                 } else {
@@ -150,9 +174,9 @@ class HomeViewModel @Inject constructor(
 
                 val current = _uiState.value
                 val nextState = when {
-                    state.sourceStatus == com.iptvcinema.tv.core.model.SourceStatus.EXPIRED ||
-                        (state.sourceStatus == com.iptvcinema.tv.core.model.SourceStatus.FAILED &&
-                            state.sourceType == com.iptvcinema.tv.core.model.SourceType.M3U) -> {
+                    state.sourceStatus == SourceStatus.EXPIRED ||
+                        (state.sourceStatus == SourceStatus.FAILED &&
+                            state.sourceType == SourceType.M3U) -> {
                         HomeUiState(
                             loadState = state.loadState,
                             continueWatching = continueWatching,
@@ -175,17 +199,7 @@ class HomeViewModel @Inject constructor(
                         )
                     }
                     else -> {
-                        val trendingMovies = if (controls != null) {
-                            featured.trendingMovies.filter { movie ->
-                                !parentalGate.isContentBlocked(
-                                    movie.genres.firstOrNull(),
-                                    movie.rating,
-                                    controls,
-                                )
-                            }
-                        } else {
-                            featured.trendingMovies
-                        }
+                        val trendingMovies = filterMovies(featured.trendingMovies, controls)
                         val liveChannelItems = if (controls != null) {
                             featured.liveChannels.filter { channel ->
                                 !parentalGate.isCategoryBlocked(channel.categoryName.orEmpty(), controls)
@@ -193,19 +207,13 @@ class HomeViewModel @Inject constructor(
                         } else {
                             featured.liveChannels
                         }
-                        val newReleaseMovies = if (controls != null) {
-                            featured.newReleaseMovies.filter { movie ->
-                                !parentalGate.isContentBlocked(
-                                    movie.genres.firstOrNull(),
-                                    movie.rating,
-                                    controls,
-                                )
-                            }
-                        } else {
-                            featured.newReleaseMovies
-                        }
+                        val newReleaseMovies = filterMovies(featured.newReleaseMovies, controls)
                         val heroMovies = if (controls != null) {
-                            featured.heroMovies.map { it.toMovieItem() }.filter { movie ->
+                            featured.heroMovies.map { movie ->
+                                movie.toMovieItem(
+                                    isFavorite = favorites.isFavorite(movie.id, FavoriteContentType.MOVIE),
+                                )
+                            }.filter { movie ->
                                 !parentalGate.isContentBlocked(
                                     movie.genres.firstOrNull(),
                                     movie.rating,
@@ -213,30 +221,38 @@ class HomeViewModel @Inject constructor(
                                 )
                             }
                         } else {
-                            featured.heroMovies.map { it.toMovieItem() }
-                        }
-                        val featuredSeries = if (controls != null) {
-                            featured.featuredSeries.filter { series ->
-                                !parentalGate.isContentBlocked(
-                                    series.categoryName,
-                                    series.rating,
-                                    controls,
+                            featured.heroMovies.map { movie ->
+                                movie.toMovieItem(
+                                    isFavorite = favorites.isFavorite(movie.id, FavoriteContentType.MOVIE),
                                 )
                             }
-                        } else {
-                            featured.featuredSeries
                         }
+                        val featuredSeries = filterSeries(featured.featuredSeries, controls)
                         HomeUiState(
                             loadState = CatalogLoadState.Ready,
                             featured = featured,
                             heroMovies = heroMovies,
                             continueWatching = continueWatching,
-                            trending = trendingMovies.map { it.toPosterCardData() },
-                            featuredSeries = featuredSeries.map { it.toPosterCardData() },
-                            liveChannels = liveChannelItems.map {
-                                it.toChannelItem(noProgramInfoTitle = appStrings.get(R.string.msg_no_program_info)).toChannelTileData(nowPlayingChannelId = nowPlayingChannelId)
+                            trending = trendingMovies.mapIndexed { index, movie ->
+                                movie.toHomeContentCard(
+                                    isFavorite = favorites.isFavorite(movie.id, FavoriteContentType.MOVIE),
+                                    showTop10Badge = index < 10,
+                                )
                             },
-                            newReleases = newReleaseMovies.map { it.toPosterCardData() },
+                            featuredSeries = featuredSeries.map { series ->
+                                series.toHomeContentCard(
+                                    isFavorite = favorites.isFavorite(series.id, FavoriteContentType.SERIES),
+                                )
+                            },
+                            liveChannels = liveChannelItems.map {
+                                it.toChannelItem(noProgramInfoTitle = appStrings.get(R.string.msg_no_program_info))
+                                    .toChannelTileData(nowPlayingChannelId = nowPlayingChannelId)
+                            },
+                            newReleases = newReleaseMovies.map { movie ->
+                                movie.toHomeContentCard(
+                                    isFavorite = favorites.isFavorite(movie.id, FavoriteContentType.MOVIE),
+                                )
+                            },
                             sourceStatus = state.sourceStatus,
                             sourceType = state.sourceType,
                         )
@@ -271,6 +287,96 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
+
+    fun toggleFavorite(card: HomeContentCard, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val profileId = appSessionRepository.sessionState.first().currentProfileId ?: return@launch
+            val session = appSessionRepository.sessionState.first()
+            val contentType = card.toFavoriteContentType()
+            runCatching {
+                val isFavorite = favoritesRepository.toggleFavorite(
+                    profileId = profileId,
+                    contentId = card.contentId,
+                    contentType = contentType,
+                    title = card.title,
+                    posterUrl = card.imageUrl,
+                    sourceId = session.currentSourceId,
+                )
+                updateCardFavoriteState(card.contentId, contentType, isFavorite)
+                onResult(isFavorite)
+            }
+        }
+    }
+
+    fun toggleHeroFavorite(movie: MovieItem, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            val profileId = appSessionRepository.sessionState.first().currentProfileId ?: return@launch
+            val session = appSessionRepository.sessionState.first()
+            runCatching {
+                val isFavorite = favoritesRepository.toggleFavorite(
+                    profileId = profileId,
+                    contentId = movie.id,
+                    contentType = FavoriteContentType.MOVIE,
+                    title = movie.title,
+                    posterUrl = movie.imageUrl,
+                    sourceId = session.currentSourceId,
+                )
+                _uiState.value = _uiState.value.copy(
+                    heroMovies = _uiState.value.heroMovies.map {
+                        if (it.id == movie.id) it.copy(isFavorite = isFavorite) else it
+                    },
+                )
+                onResult(isFavorite)
+            }
+        }
+    }
+
+    private fun updateCardFavoriteState(contentId: String, contentType: FavoriteContentType, isFavorite: Boolean) {
+        fun List<HomeContentCard>.update() = map { card ->
+            if (card.contentId == contentId && card.toFavoriteContentType() == contentType) {
+                card.copy(isFavorite = isFavorite)
+            } else {
+                card
+            }
+        }
+        val state = _uiState.value
+        _uiState.value = state.copy(
+            continueWatching = state.continueWatching.update(),
+            trending = state.trending.update(),
+            featuredSeries = state.featuredSeries.update(),
+            newReleases = state.newReleases.update(),
+        )
+    }
+
+    private fun filterMovies(movies: List<CatalogMovie>, controls: ParentalControls?): List<CatalogMovie> =
+        if (controls != null) {
+            movies.filter { movie ->
+                !parentalGate.isContentBlocked(movie.genres.firstOrNull(), movie.rating, controls)
+            }
+        } else {
+            movies
+        }
+
+    private fun filterSeries(series: List<CatalogSeries>, controls: ParentalControls?): List<CatalogSeries> =
+        if (controls != null) {
+            series.filter { item ->
+                !parentalGate.isContentBlocked(item.categoryName, item.rating, controls)
+            }
+        } else {
+            series
+        }
+
+    private fun List<FavoriteItem>.isFavorite(contentId: String, contentType: FavoriteContentType): Boolean =
+        any { it.contentId == contentId && it.contentType == contentType }
+
+    private data class HomeFlowBundle(
+        val state: CatalogBrowseState<FeaturedCatalogContent>,
+        val continueWatchingEnabled: Boolean,
+        val history: List<WatchHistoryItem>,
+        val controls: ParentalControls?,
+        val nowPlayingChannelId: String?,
+        val favorites: List<FavoriteItem>,
+    )
 
     companion object {
         private const val REFRESH_MESSAGE_VISIBLE_MS = 5_000L

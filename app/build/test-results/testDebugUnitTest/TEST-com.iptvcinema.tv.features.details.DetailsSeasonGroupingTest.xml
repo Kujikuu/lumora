@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.iptvcinema.tv.features.details.DetailsSeasonGroupingTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-06-27T00:50:39" hostname="Apples-MacBook-Pro.local" time="0.003">
+  <properties/>
+  <testcase name="toSeasonItems_sortsEpisodesWithinSeasonAndIncludesEmptySeasons" classname="com.iptvcinema.tv.features.details.DetailsSeasonGroupingTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModel;
 import coil.ImageLoader;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.iptvcinema.tv.core.catalog.CatalogRefreshController;
 import com.iptvcinema.tv.core.data.local.LocalCredentialsStore;
 import com.iptvcinema.tv.core.data.repository.CatalogRepository;
 import com.iptvcinema.tv.core.data.repository.supabase.SupabaseAuthRepository;
@@ -601,13 +602,13 @@ public final class DaggerIptvCinemaApp_HiltComponents_SingletonC {
           return (T) new DetailsViewModel(singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseFavoritesRepositoryProvider.get(), singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.episodeCatalogRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.appStringsProvider.get());
 
           case 2: // com.iptvcinema.tv.features.home.HomeViewModel 
-          return (T) new HomeViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.supabaseWatchHistoryRepositoryProvider.get(), singletonCImpl.supabaseUserSettingsRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.playbackSessionTrackerProvider.get(), singletonCImpl.appStringsProvider.get());
+          return (T) new HomeViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.supabaseWatchHistoryRepositoryProvider.get(), singletonCImpl.supabaseFavoritesRepositoryProvider.get(), singletonCImpl.supabaseUserSettingsRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.playbackSessionTrackerProvider.get(), singletonCImpl.catalogRefreshControllerProvider.get(), singletonCImpl.appStringsProvider.get());
 
           case 3: // com.iptvcinema.tv.features.livetv.LiveTvViewModel 
-          return (T) new LiveTvViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.playbackSessionTrackerProvider.get());
+          return (T) new LiveTvViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.playbackSessionTrackerProvider.get(), singletonCImpl.catalogRefreshControllerProvider.get());
 
           case 4: // com.iptvcinema.tv.features.movies.MoviesViewModel 
-          return (T) new MoviesViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get());
+          return (T) new MoviesViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.catalogRefreshControllerProvider.get());
 
           case 5: // com.iptvcinema.tv.features.mylist.MyListViewModel 
           return (T) new MyListViewModel(singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.supabaseFavoritesRepositoryProvider.get(), singletonCImpl.supabaseWatchHistoryRepositoryProvider.get(), singletonCImpl.appStringsProvider.get());
@@ -616,22 +617,22 @@ public final class DaggerIptvCinemaApp_HiltComponents_SingletonC {
           return (T) new ParentalControlsViewModel(singletonCImpl.supabaseProfilesRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.pinHasherProvider.get(), singletonCImpl.parentalGateProvider.get());
 
           case 7: // com.iptvcinema.tv.features.player.PlayerViewModel 
-          return (T) new PlayerViewModel(viewModelCImpl.savedStateHandle, singletonCImpl.playbackRepositoryProvider.get(), singletonCImpl.playerManagerProvider.get(), singletonCImpl.supabaseWatchHistoryRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseUserSettingsRepositoryProvider.get(), singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.nextEpisodeResolverProvider.get(), singletonCImpl.episodeCatalogRepositoryProvider.get(), singletonCImpl.playbackSessionTrackerProvider.get(), singletonCImpl.appStringsProvider.get());
+          return (T) new PlayerViewModel(viewModelCImpl.savedStateHandle, singletonCImpl.playbackRepositoryProvider.get(), singletonCImpl.playerManagerProvider.get(), singletonCImpl.supabaseWatchHistoryRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseUserSettingsRepositoryProvider.get(), singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.nextEpisodeResolverProvider.get(), singletonCImpl.episodeCatalogRepositoryProvider.get(), singletonCImpl.playbackSessionTrackerProvider.get(), singletonCImpl.appStringsProvider.get(), singletonCImpl.provideApplicationScopeProvider.get());
 
           case 8: // com.iptvcinema.tv.features.profiles.ProfileViewModel 
           return (T) new ProfileViewModel(singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseProfilesRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get());
 
           case 9: // com.iptvcinema.tv.features.search.SearchViewModel 
-          return (T) new SearchViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.recentSearchRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.provideAppPreferencesDataStoreProvider.get(), singletonCImpl.appStringsProvider.get());
+          return (T) new SearchViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.recentSearchRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.appStringsProvider.get());
 
           case 10: // com.iptvcinema.tv.features.series.SeriesViewModel 
-          return (T) new SeriesViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get());
+          return (T) new SeriesViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.catalogRefreshControllerProvider.get());
 
           case 11: // com.iptvcinema.tv.core.navigation.SessionViewModel 
           return (T) new SessionViewModel(singletonCImpl.appSessionRepositoryProvider.get());
 
           case 12: // com.iptvcinema.tv.features.settings.SettingsViewModel 
-          return (T) new SettingsViewModel(singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseAuthRepositoryProvider.get(), singletonCImpl.supabaseUserSettingsRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.localCredentialsStoreProvider.get());
+          return (T) new SettingsViewModel(singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseAuthRepositoryProvider.get(), singletonCImpl.supabaseUserSettingsRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.localCredentialsStoreProvider.get(), singletonCImpl.catalogRefreshControllerProvider.get());
 
           case 13: // com.iptvcinema.tv.features.sources.SourceViewModel 
           return (T) new SourceViewModel(singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabasePlaylistSourcesRepositoryProvider.get(), singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.supabaseAuthRepositoryProvider.get(), singletonCImpl.xtreamRepositoryProvider.get(), singletonCImpl.xtreamSyncRepositoryProvider.get(), singletonCImpl.m3uSyncRepositoryProvider.get(), singletonCImpl.localCredentialsStoreProvider.get());
@@ -777,16 +778,6 @@ public final class DaggerIptvCinemaApp_HiltComponents_SingletonC {
 
     private Provider<PlaybackSessionTracker> playbackSessionTrackerProvider;
 
-    private Provider<SupabaseProfilesRepository> supabaseProfilesRepositoryProvider;
-
-    private Provider<PlaybackRepository> playbackRepositoryProvider;
-
-    private Provider<PlayerManager> playerManagerProvider;
-
-    private Provider<NextEpisodeResolver> nextEpisodeResolverProvider;
-
-    private Provider<RecentSearchRepository> recentSearchRepositoryProvider;
-
     private Provider<XmltvParser> xmltvParserProvider;
 
     private Provider<CoroutineScope> provideApplicationScopeProvider;
@@ -798,6 +789,18 @@ public final class DaggerIptvCinemaApp_HiltComponents_SingletonC {
     private Provider<M3uDownloader> m3uDownloaderProvider;
 
     private Provider<M3uSyncRepository> m3uSyncRepositoryProvider;
+
+    private Provider<CatalogRefreshController> catalogRefreshControllerProvider;
+
+    private Provider<SupabaseProfilesRepository> supabaseProfilesRepositoryProvider;
+
+    private Provider<PlaybackRepository> playbackRepositoryProvider;
+
+    private Provider<PlayerManager> playerManagerProvider;
+
+    private Provider<NextEpisodeResolver> nextEpisodeResolverProvider;
+
+    private Provider<RecentSearchRepository> recentSearchRepositoryProvider;
 
     private SingletonCImpl(ApplicationContextModule applicationContextModuleParam) {
       this.applicationContextModule = applicationContextModuleParam;
@@ -841,17 +844,18 @@ public final class DaggerIptvCinemaApp_HiltComponents_SingletonC {
       this.parentalGateProvider = DoubleCheck.provider(new SwitchingProvider<ParentalGate>(singletonCImpl, 24));
       this.supabaseUserSettingsRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<SupabaseUserSettingsRepository>(singletonCImpl, 27));
       this.playbackSessionTrackerProvider = DoubleCheck.provider(new SwitchingProvider<PlaybackSessionTracker>(singletonCImpl, 28));
-      this.supabaseProfilesRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<SupabaseProfilesRepository>(singletonCImpl, 29));
-      this.playbackRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<PlaybackRepository>(singletonCImpl, 30));
-      this.playerManagerProvider = DoubleCheck.provider(new SwitchingProvider<PlayerManager>(singletonCImpl, 31));
-      this.nextEpisodeResolverProvider = DoubleCheck.provider(new SwitchingProvider<NextEpisodeResolver>(singletonCImpl, 32));
-      this.recentSearchRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<RecentSearchRepository>(singletonCImpl, 33));
-      this.xmltvParserProvider = DoubleCheck.provider(new SwitchingProvider<XmltvParser>(singletonCImpl, 36));
-      this.provideApplicationScopeProvider = DoubleCheck.provider(new SwitchingProvider<CoroutineScope>(singletonCImpl, 37));
-      this.epgSyncRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<EpgSyncRepository>(singletonCImpl, 35));
-      this.xtreamSyncRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<XtreamSyncRepository>(singletonCImpl, 34));
-      this.m3uDownloaderProvider = DoubleCheck.provider(new SwitchingProvider<M3uDownloader>(singletonCImpl, 39));
-      this.m3uSyncRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<M3uSyncRepository>(singletonCImpl, 38));
+      this.xmltvParserProvider = DoubleCheck.provider(new SwitchingProvider<XmltvParser>(singletonCImpl, 32));
+      this.provideApplicationScopeProvider = DoubleCheck.provider(new SwitchingProvider<CoroutineScope>(singletonCImpl, 33));
+      this.epgSyncRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<EpgSyncRepository>(singletonCImpl, 31));
+      this.xtreamSyncRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<XtreamSyncRepository>(singletonCImpl, 30));
+      this.m3uDownloaderProvider = DoubleCheck.provider(new SwitchingProvider<M3uDownloader>(singletonCImpl, 35));
+      this.m3uSyncRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<M3uSyncRepository>(singletonCImpl, 34));
+      this.catalogRefreshControllerProvider = DoubleCheck.provider(new SwitchingProvider<CatalogRefreshController>(singletonCImpl, 29));
+      this.supabaseProfilesRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<SupabaseProfilesRepository>(singletonCImpl, 36));
+      this.playbackRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<PlaybackRepository>(singletonCImpl, 37));
+      this.playerManagerProvider = DoubleCheck.provider(new SwitchingProvider<PlayerManager>(singletonCImpl, 38));
+      this.nextEpisodeResolverProvider = DoubleCheck.provider(new SwitchingProvider<NextEpisodeResolver>(singletonCImpl, 39));
+      this.recentSearchRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<RecentSearchRepository>(singletonCImpl, 40));
     }
 
     @Override
@@ -980,38 +984,41 @@ public final class DaggerIptvCinemaApp_HiltComponents_SingletonC {
           case 28: // com.iptvcinema.tv.core.player.PlaybackSessionTracker 
           return (T) new PlaybackSessionTracker();
 
-          case 29: // com.iptvcinema.tv.core.data.repository.supabase.SupabaseProfilesRepository 
-          return (T) new SupabaseProfilesRepository(singletonCImpl.provideSupabaseClientProvider.get());
+          case 29: // com.iptvcinema.tv.core.catalog.CatalogRefreshController 
+          return (T) new CatalogRefreshController(singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.localCredentialsStoreProvider.get(), singletonCImpl.xtreamSyncRepositoryProvider.get(), singletonCImpl.m3uSyncRepositoryProvider.get(), singletonCImpl.appStringsProvider.get());
 
-          case 30: // com.iptvcinema.tv.core.player.PlaybackRepository 
-          return (T) new PlaybackRepository(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.localCredentialsStoreProvider.get(), singletonCImpl.episodeCatalogRepositoryProvider.get());
-
-          case 31: // com.iptvcinema.tv.core.player.PlayerManager 
-          return (T) new PlayerManager(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
-
-          case 32: // com.iptvcinema.tv.core.player.NextEpisodeResolver 
-          return (T) new NextEpisodeResolver(singletonCImpl.episodeCatalogRepositoryProvider.get());
-
-          case 33: // com.iptvcinema.tv.core.datastore.RecentSearchRepository 
-          return (T) new RecentSearchRepository(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
-
-          case 34: // com.iptvcinema.tv.core.xtream.XtreamSyncRepository 
+          case 30: // com.iptvcinema.tv.core.xtream.XtreamSyncRepository 
           return (T) new XtreamSyncRepository(singletonCImpl.xtreamRepositoryProvider.get(), singletonCImpl.catalogDaoFacadeProvider.get(), singletonCImpl.supabasePlaylistSourcesRepositoryProvider.get(), singletonCImpl.epgSyncRepositoryProvider.get(), singletonCImpl.watchedSeriesEpisodePrefetcherProvider.get(), singletonCImpl.episodeCatalogRepositoryProvider.get());
 
-          case 35: // com.iptvcinema.tv.core.epg.EpgSyncRepository 
+          case 31: // com.iptvcinema.tv.core.epg.EpgSyncRepository 
           return (T) new EpgSyncRepository(singletonCImpl.catalogDaoFacadeProvider.get(), singletonCImpl.xmltvParserProvider.get(), singletonCImpl.provideApplicationScopeProvider.get());
 
-          case 36: // com.iptvcinema.tv.core.epg.XmltvParser 
+          case 32: // com.iptvcinema.tv.core.epg.XmltvParser 
           return (T) new XmltvParser();
 
-          case 37: // @com.iptvcinema.tv.core.di.ApplicationScope kotlinx.coroutines.CoroutineScope 
+          case 33: // @com.iptvcinema.tv.core.di.ApplicationScope kotlinx.coroutines.CoroutineScope 
           return (T) CoroutineModule_ProvideApplicationScopeFactory.provideApplicationScope();
 
-          case 38: // com.iptvcinema.tv.core.m3u.M3uSyncRepository 
+          case 34: // com.iptvcinema.tv.core.m3u.M3uSyncRepository 
           return (T) new M3uSyncRepository(singletonCImpl.m3uDownloaderProvider.get(), singletonCImpl.catalogDaoFacadeProvider.get(), singletonCImpl.supabasePlaylistSourcesRepositoryProvider.get(), singletonCImpl.epgSyncRepositoryProvider.get());
 
-          case 39: // com.iptvcinema.tv.core.m3u.M3uDownloader 
+          case 35: // com.iptvcinema.tv.core.m3u.M3uDownloader 
           return (T) new M3uDownloader(singletonCImpl.provideOkHttpClientProvider.get());
+
+          case 36: // com.iptvcinema.tv.core.data.repository.supabase.SupabaseProfilesRepository 
+          return (T) new SupabaseProfilesRepository(singletonCImpl.provideSupabaseClientProvider.get());
+
+          case 37: // com.iptvcinema.tv.core.player.PlaybackRepository 
+          return (T) new PlaybackRepository(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.localCredentialsStoreProvider.get(), singletonCImpl.episodeCatalogRepositoryProvider.get());
+
+          case 38: // com.iptvcinema.tv.core.player.PlayerManager 
+          return (T) new PlayerManager(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.provideApplicationScopeProvider.get());
+
+          case 39: // com.iptvcinema.tv.core.player.NextEpisodeResolver 
+          return (T) new NextEpisodeResolver(singletonCImpl.episodeCatalogRepositoryProvider.get());
+
+          case 40: // com.iptvcinema.tv.core.datastore.RecentSearchRepository 
+          return (T) new RecentSearchRepository(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
           default: throw new AssertionError(id);
         }

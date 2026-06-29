@@ -164,6 +164,19 @@
     <string name="home_live_channels">القنوات المباشرة</string>
     <string name="home_new_releases">الإصدارات الجديدة</string>
     <string name="home_popular_series">مسلسلات شائعة</string>
+    <string name="home_mood_row_title">تصفح حسب المزاج</string>
+    <string name="btn_continue_watching">متابعة المشاهدة</string>
+    <string name="home_continue_progress">تمت مشاهدة %1$d%%</string>
+    <string name="badge_top_label">TOP</string>
+    <string name="badge_top_number">10</string>
+    <string name="mood_action">أكشن</string>
+    <string name="mood_drama">دراما</string>
+    <string name="mood_comedy">كوميديا</string>
+    <string name="mood_kids">أطفال</string>
+    <string name="mood_arabic">عربي</string>
+    <string name="mood_new">جديد</string>
+    <string name="content_desc_add_to_list">إضافة إلى قائمتي</string>
+    <string name="content_desc_favorite">المفضلة</string>
     <string name="hero_featured">★ مميز</string>
     <string name="rail_up_next">التالي</string>
     <string name="rail_more_like_this">المزيد مثل هذا</string>
@@ -252,6 +265,17 @@
     <string name="player_btn_skip_previous">السابق</string>
     <string name="player_btn_play">تشغيل</string>
     <string name="player_btn_pause">إيقاف مؤقت</string>
+    <string name="player_close">إغلاق</string>
+    <string name="player_settings">الإعدادات</string>
+    <string name="player_next_episode">الحلقة التالية</string>
+    <string name="player_next_channel">القناة التالية</string>
+    <string name="player_quality">الجودة</string>
+    <string name="player_season_episode">الموسم %1$d · الحلقة %2$d</string>
+    <string name="player_time_format">%1$s / %2$s</string>
+    <string name="player_track_settings">الصوت والترجمة</string>
+    <string name="player_audio_tracks">الصوت</string>
+    <string name="player_resume_from">استئناف من %1$s</string>
+    <string name="player_no_next_episode">لا توجد حلقة تالية</string>
 
     <string name="settings_title">الإعدادات</string>
     <string name="settings_subtitle">إدارة حسابك وتفضيلاتك وإعدادات الجهاز.</string>

@@ -4,8 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,21 +19,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -51,7 +52,6 @@ import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.MovieItem
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -69,6 +69,12 @@ fun HeroBanner(
     selectedCarouselDot: Int = 0,
     watchNowFocusRequester: FocusRequester? = null,
     backdropUrl: String? = null,
+    onAddToList: (() -> Unit)? = null,
+    onFavorite: (() -> Unit)? = null,
+    isFavorite: Boolean = false,
+    carouselThumbs: List<Pair<String?, String>> = emptyList(),
+    selectedThumbIndex: Int = 0,
+    onThumbSelect: ((Int) -> Unit)? = null,
 ) {
     Box(
         modifier = modifier
@@ -102,13 +108,14 @@ fun HeroBanner(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(240.dp)
+                .height(320.dp)
                 .align(Alignment.BottomCenter)
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            CinemaColors.Background.copy(alpha = 0.6f),
+                            CinemaColors.Background.copy(alpha = 0.5f),
+                            CinemaColors.Background.copy(alpha = 0.85f),
                             CinemaColors.Background,
                         ),
                     ),
@@ -174,12 +181,64 @@ fun HeroBanner(
                     onClick = onWatchNow,
                     modifier = watchNowFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
                 )
-                CinemaButton(
-                    text = stringResource(R.string.btn_details),
-                    variant = CinemaButtonVariant.SecondaryDark,
-                    icon = Icons.Default.Info,
-                    onClick = onDetails,
-                )
+                if (onAddToList != null) {
+                    CinemaButton(
+                        text = "",
+                        variant = CinemaButtonVariant.Icon,
+                        icon = Icons.Default.Add,
+                        onClick = onAddToList,
+                    )
+                }
+                if (onFavorite != null) {
+                    CinemaButton(
+                        text = "",
+                        variant = CinemaButtonVariant.Icon,
+                        icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        onClick = onFavorite,
+                    )
+                } else {
+                    CinemaButton(
+                        text = stringResource(R.string.btn_details),
+                        variant = CinemaButtonVariant.SecondaryDark,
+                        icon = Icons.Default.Info,
+                        onClick = onDetails,
+                    )
+                }
+            }
+        }
+
+        if (carouselThumbs.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = CinemaSpacing.ScreenPadding),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                carouselThumbs.forEachIndexed { index, (imageUrl, label) ->
+                    FocusableCinemaCard(
+                        modifier = Modifier.size(CinemaSpacing.HeroThumbSize),
+                        onClick = { onThumbSelect?.invoke(index) },
+                        shape = CinemaShapes.Medium,
+                        contentDescription = label,
+                        focusScale = if (index == selectedThumbIndex) 1.08f else 1f,
+                    ) { _ ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CinemaShapes.Medium)
+                                .background(CinemaColors.Surface),
+                        ) {
+                            CinemaAsyncImage(
+                                imageUrl = imageUrl,
+                                contentDescription = label,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                                fallbackLabel = label,
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -208,8 +267,6 @@ fun HeroBanner(
     }
 }
 
-private const val HeroCarouselAutoAdvanceMs = 8_000L
-
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun HeroCarousel(
@@ -218,6 +275,8 @@ fun HeroCarousel(
     onDetails: (MovieItem) -> Unit,
     modifier: Modifier = Modifier,
     watchNowFocusRequester: FocusRequester? = null,
+    onAddToList: ((MovieItem) -> Unit)? = null,
+    onFavorite: ((MovieItem) -> Unit)? = null,
 ) {
     if (movies.isEmpty()) return
 
@@ -232,25 +291,19 @@ fun HeroCarousel(
             modifier = modifier,
             watchNowFocusRequester = watchNowFocusRequester,
             backdropUrl = movie.backdropUrl ?: movie.imageUrl,
+            onAddToList = onAddToList?.let { callback -> { callback(movie) } },
+            onFavorite = onFavorite?.let { callback -> { callback(movie) } },
+            isFavorite = movie.isFavorite,
         )
         return
     }
 
     val pagerState = rememberPagerState(pageCount = { movies.size })
     val scope = rememberCoroutineScope()
-    var isFocused by remember { mutableStateOf(false) }
-
-    LaunchedEffect(pagerState.currentPage, isFocused, movies.size) {
-        if (isFocused) return@LaunchedEffect
-        delay(HeroCarouselAutoAdvanceMs)
-        val nextPage = (pagerState.currentPage + 1) % movies.size
-        pagerState.animateScrollToPage(nextPage)
-    }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .onFocusChanged { isFocused = it.hasFocus }
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (event.key) {
@@ -280,6 +333,7 @@ fun HeroCarousel(
             userScrollEnabled = false,
         ) { page ->
             val movie = movies[page]
+            val thumbs = movies.map { (it.backdropUrl ?: it.imageUrl) to it.title }
             HeroBanner(
                 title = movie.title,
                 metadata = heroMovieMetadata(movie),
@@ -291,6 +345,12 @@ fun HeroCarousel(
                 selectedCarouselDot = pagerState.currentPage,
                 watchNowFocusRequester = if (page == pagerState.currentPage) watchNowFocusRequester else null,
                 backdropUrl = movie.backdropUrl ?: movie.imageUrl,
+                onAddToList = onAddToList?.let { callback -> { callback(movie) } },
+                onFavorite = onFavorite?.let { callback -> { callback(movie) } },
+                isFavorite = movie.isFavorite,
+                carouselThumbs = thumbs,
+                selectedThumbIndex = pagerState.currentPage,
+                onThumbSelect = { index -> scope.launch { pagerState.animateScrollToPage(index) } },
             )
         }
     }
@@ -310,15 +370,17 @@ fun PosterGrid(
     modifier: Modifier = Modifier,
     columns: Int = 5,
     firstItemFocusRequester: FocusRequester? = null,
+    contentPadding: PaddingValues = PaddingValues(
+        start = CinemaSpacing.NavRailWidth + 16.dp,
+        end = 24.dp,
+        bottom = CinemaSpacing.SectionGap,
+    ),
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(
-                start = CinemaSpacing.NavRailWidth + 16.dp,
-                end = 24.dp,
-                bottom = CinemaSpacing.SectionGap,
-            ),
+            .verticalScroll(rememberScrollState())
+            .padding(contentPadding),
         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
     ) {
         items.chunked(columns).forEach { rowItems ->
@@ -330,6 +392,7 @@ fun PosterGrid(
                     PosterCard(
                         data = item,
                         onClick = { onItemClick(item) },
+                        fixedWidth = null,
                         modifier = Modifier
                             .weight(1f)
                             .then(

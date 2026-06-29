@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.features.livetv;
 
+import com.iptvcinema.tv.core.catalog.CatalogRefreshController;
 import com.iptvcinema.tv.core.data.repository.CatalogRepository;
 import com.iptvcinema.tv.core.data.repository.ParentalControlsRepository;
 import com.iptvcinema.tv.core.datastore.AppSessionRepository;
@@ -40,21 +41,25 @@ public final class LiveTvViewModel_Factory implements Factory<LiveTvViewModel> {
 
   private final Provider<PlaybackSessionTracker> playbackSessionTrackerProvider;
 
+  private final Provider<CatalogRefreshController> catalogRefreshControllerProvider;
+
   public LiveTvViewModel_Factory(Provider<CatalogRepository> catalogRepositoryProvider,
       Provider<AppSessionRepository> appSessionRepositoryProvider,
       Provider<ParentalControlsRepository> parentalControlsRepositoryProvider,
       Provider<ParentalGate> parentalGateProvider,
-      Provider<PlaybackSessionTracker> playbackSessionTrackerProvider) {
+      Provider<PlaybackSessionTracker> playbackSessionTrackerProvider,
+      Provider<CatalogRefreshController> catalogRefreshControllerProvider) {
     this.catalogRepositoryProvider = catalogRepositoryProvider;
     this.appSessionRepositoryProvider = appSessionRepositoryProvider;
     this.parentalControlsRepositoryProvider = parentalControlsRepositoryProvider;
     this.parentalGateProvider = parentalGateProvider;
     this.playbackSessionTrackerProvider = playbackSessionTrackerProvider;
+    this.catalogRefreshControllerProvider = catalogRefreshControllerProvider;
   }
 
   @Override
   public LiveTvViewModel get() {
-    return newInstance(catalogRepositoryProvider.get(), appSessionRepositoryProvider.get(), parentalControlsRepositoryProvider.get(), parentalGateProvider.get(), playbackSessionTrackerProvider.get());
+    return newInstance(catalogRepositoryProvider.get(), appSessionRepositoryProvider.get(), parentalControlsRepositoryProvider.get(), parentalGateProvider.get(), playbackSessionTrackerProvider.get(), catalogRefreshControllerProvider.get());
   }
 
   public static LiveTvViewModel_Factory create(
@@ -62,8 +67,9 @@ public final class LiveTvViewModel_Factory implements Factory<LiveTvViewModel> {
       javax.inject.Provider<AppSessionRepository> appSessionRepositoryProvider,
       javax.inject.Provider<ParentalControlsRepository> parentalControlsRepositoryProvider,
       javax.inject.Provider<ParentalGate> parentalGateProvider,
-      javax.inject.Provider<PlaybackSessionTracker> playbackSessionTrackerProvider) {
-    return new LiveTvViewModel_Factory(Providers.asDaggerProvider(catalogRepositoryProvider), Providers.asDaggerProvider(appSessionRepositoryProvider), Providers.asDaggerProvider(parentalControlsRepositoryProvider), Providers.asDaggerProvider(parentalGateProvider), Providers.asDaggerProvider(playbackSessionTrackerProvider));
+      javax.inject.Provider<PlaybackSessionTracker> playbackSessionTrackerProvider,
+      javax.inject.Provider<CatalogRefreshController> catalogRefreshControllerProvider) {
+    return new LiveTvViewModel_Factory(Providers.asDaggerProvider(catalogRepositoryProvider), Providers.asDaggerProvider(appSessionRepositoryProvider), Providers.asDaggerProvider(parentalControlsRepositoryProvider), Providers.asDaggerProvider(parentalGateProvider), Providers.asDaggerProvider(playbackSessionTrackerProvider), Providers.asDaggerProvider(catalogRefreshControllerProvider));
   }
 
   public static LiveTvViewModel_Factory create(
@@ -71,14 +77,16 @@ public final class LiveTvViewModel_Factory implements Factory<LiveTvViewModel> {
       Provider<AppSessionRepository> appSessionRepositoryProvider,
       Provider<ParentalControlsRepository> parentalControlsRepositoryProvider,
       Provider<ParentalGate> parentalGateProvider,
-      Provider<PlaybackSessionTracker> playbackSessionTrackerProvider) {
-    return new LiveTvViewModel_Factory(catalogRepositoryProvider, appSessionRepositoryProvider, parentalControlsRepositoryProvider, parentalGateProvider, playbackSessionTrackerProvider);
+      Provider<PlaybackSessionTracker> playbackSessionTrackerProvider,
+      Provider<CatalogRefreshController> catalogRefreshControllerProvider) {
+    return new LiveTvViewModel_Factory(catalogRepositoryProvider, appSessionRepositoryProvider, parentalControlsRepositoryProvider, parentalGateProvider, playbackSessionTrackerProvider, catalogRefreshControllerProvider);
   }
 
   public static LiveTvViewModel newInstance(CatalogRepository catalogRepository,
       AppSessionRepository appSessionRepository,
       ParentalControlsRepository parentalControlsRepository, ParentalGate parentalGate,
-      PlaybackSessionTracker playbackSessionTracker) {
-    return new LiveTvViewModel(catalogRepository, appSessionRepository, parentalControlsRepository, parentalGate, playbackSessionTracker);
+      PlaybackSessionTracker playbackSessionTracker,
+      CatalogRefreshController catalogRefreshController) {
+    return new LiveTvViewModel(catalogRepository, appSessionRepository, parentalControlsRepository, parentalGate, playbackSessionTracker, catalogRefreshController);
   }
 }
