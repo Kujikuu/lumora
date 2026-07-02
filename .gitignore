@@ -20,3 +20,4 @@ out/
 captures/
 output.json
 supabase/activation-companion/config.js
+.worktrees/
