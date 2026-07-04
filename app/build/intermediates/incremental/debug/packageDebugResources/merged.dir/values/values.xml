@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="brand_accent">#E50914</color>
-    <color name="brand_background">#141414</color>
-    <color name="brand_gold">#E50914</color>
+    <color name="brand_accent">#D6243A</color>
+    <color name="brand_background">#08090D</color>
+    <color name="brand_gold">#D6243A</color>
+    <color name="brand_secondary">#8B5CF6</color>
     <plurals name="details_season_count">
         <item quantity="one">%d Season</item>
         <item quantity="other">%d Seasons</item>
@@ -47,6 +48,7 @@
     <string name="btn_clear">Clear</string>
     <string name="btn_close">Close</string>
     <string name="btn_connect">Connect</string>
+    <string name="btn_continue_series">Continue S%1$d E%2$d</string>
     <string name="btn_continue_watching">Continue Watching</string>
     <string name="btn_details">Details</string>
     <string name="btn_edit">Edit</string>
@@ -55,6 +57,7 @@
     <string name="btn_link_tv">Link TV now</string>
     <string name="btn_manage_account">Manage Account</string>
     <string name="btn_manage_sources">Manage Sources</string>
+    <string name="btn_open_in_live_tv">Open in Live TV</string>
     <string name="btn_play_first">Play First</string>
     <string name="btn_reconnect">Reconnect</string>
     <string name="btn_record">Record</string>
@@ -69,9 +72,14 @@
     <string name="btn_try_again">Try Again</string>
     <string name="btn_try_demo">Try Demo Mode</string>
     <string name="btn_watch_fullscreen">Watch Fullscreen</string>
+    <string name="btn_watch_live">Watch Live</string>
     <string name="btn_watch_now">Watch Now</string>
     <string name="catalog_empty_sync_desc">Sync your playlist or try another category.</string>
     <string name="cd_activation_qr">Activation QR code</string>
+    <string name="channel_now_playing">Now Playing</string>
+    <string name="channel_related">Related Channels</string>
+    <string name="channel_today_lineup">Today\'s Lineup</string>
+    <string name="channel_up_next">Up Next</string>
     <string name="content_desc_add_to_list">Add to My List</string>
     <string name="content_desc_favorite">Favorite</string>
     <string name="details_cast">Cast</string>
@@ -169,6 +177,7 @@
     <string name="home_mood_row_title">Browse by Mood</string>
     <string name="home_new_releases">New Releases</string>
     <string name="home_popular_series">Popular Series</string>
+    <string name="home_spotlight">Spotlight</string>
     <string name="home_trending">Trending Now</string>
     <string name="livetv_channels">Channels</string>
     <string name="livetv_no_program_guide">No program guide available</string>
@@ -242,6 +251,7 @@
     <string name="player_no_episodes">No episodes available</string>
     <string name="player_no_next_episode">No next episode available</string>
     <string name="player_now_playing">Now Playing</string>
+    <string name="player_on_now">On now</string>
     <string name="player_quality">Quality</string>
     <string name="player_resume_from">Resuming from %1$s</string>
     <string name="player_season_episode">Season %1$d · Episode %2$d</string>
@@ -250,6 +260,7 @@
     <string name="player_subtitles">Subtitles</string>
     <string name="player_time_format">%1$s / %2$s</string>
     <string name="player_track_settings">Audio &amp; Subtitles</string>
+    <string name="player_up_next">Up next</string>
     <string name="player_up_next_in">Up Next in %1$d s</string>
     <string name="profile_load_error">Unable to load profiles</string>
     <string name="profile_manage">Manage Profiles</string>

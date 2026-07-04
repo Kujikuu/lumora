@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.res.stringResource
@@ -62,7 +63,15 @@ fun CinemaBrandMark(
         val h = this.size.height
         val center = Offset(w / 2f, h / 2f)
 
-        drawCircle(color = CinemaColors.Accent, radius = w / 2f, center = center)
+        drawCircle(
+            brush = Brush.linearGradient(
+                colors = listOf(CinemaColors.Accent, CinemaColors.Secondary),
+                start = Offset(0f, 0f),
+                end = Offset(w, h),
+            ),
+            radius = w / 2f,
+            center = center,
+        )
 
         val playPath = Path().apply {
             moveTo(w * 0.36f, h * 0.22f)

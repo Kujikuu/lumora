@@ -36,6 +36,7 @@ import com.iptvcinema.tv.core.design.components.FilterChipRow
 import com.iptvcinema.tv.core.design.components.LivePreviewCard
 import com.iptvcinema.tv.core.design.components.MiniChannelEpg
 import com.iptvcinema.tv.core.design.components.OnNowPanel
+import com.iptvcinema.tv.core.design.components.ProgramGuideGrid
 import com.iptvcinema.tv.core.design.components.RemoteHint
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.epg.GuideLayoutHelper
@@ -72,6 +73,7 @@ fun LiveTvScreen(
     var showCategoryPin by remember { mutableStateOf(false) }
     var categoryPinError by remember { mutableStateOf<String?>(null) }
     var pendingCategoryIndex by remember { mutableIntStateOf(-1) }
+    var showFullGuide by remember { mutableStateOf(false) }
     val incorrectPinMessage = stringResource(R.string.error_incorrect_pin)
     val emptyDescription = stringResource(R.string.msg_no_live_channels_desc)
 
@@ -242,7 +244,7 @@ fun LiveTvScreen(
                             },
                             onChannelClick = { channel ->
                                 viewModel.onChannelSelected(channel)
-                                playChannel(channel)
+                                navController.navigate(AppRoute.channelDetails(channel.id))
                             },
                             listFocusRequester = channelListFocus,
                             initialFocusedIndex = focusedChannelIndex.coerceIn(0, uiState.channels.lastIndex),
@@ -257,7 +259,12 @@ fun LiveTvScreen(
                         if (previewChannel != null) {
                             LivePreviewCard(
                                 channel = previewChannel,
-                                onWatchFullscreen = { playChannel(previewChannel) },
+                                isFavorite = uiState.isChannelFavorite(previewChannel.id),
+                                onWatchLive = { playChannel(previewChannel) },
+                                onDetails = {
+                                    navController.navigate(AppRoute.channelDetails(previewChannel.id))
+                                },
+                                onFavorite = { viewModel.toggleChannelFavorite(previewChannel) },
                             )
                             MiniChannelEpg(
                                 programs = uiState.selectedChannelPrograms,
@@ -272,12 +279,36 @@ fun LiveTvScreen(
                             )
                             OnNowPanel(
                                 channels = uiState.channels,
-                                onViewAllGuide = { viewModel.jumpGuideToNow() },
+                                onViewAllGuide = {
+                                    showFullGuide = true
+                                    viewModel.jumpGuideToNow()
+                                },
                                 onChannelClick = { channel ->
                                     viewModel.onChannelSelected(channel)
-                                    playChannel(channel)
+                                    navController.navigate(AppRoute.channelDetails(channel.id))
                                 },
                             )
+                            if (showFullGuide) {
+                                ProgramGuideGrid(
+                                    channels = uiState.channels,
+                                    programs = uiState.epgPrograms,
+                                    windowStartMs = uiState.guideWindowStartMs,
+                                    windowEndMs = uiState.guideWindowEndMs,
+                                    nowMs = uiState.nowMs,
+                                    nowPlayingChannelId = uiState.nowPlayingChannelId,
+                                    onProgramClick = { program ->
+                                        val channel = uiState.channels.find { it.id == program.channelId }
+                                        if (channel != null) {
+                                            viewModel.onChannelSelected(channel)
+                                            playChannel(channel)
+                                        }
+                                    },
+                                    onProgramFocused = { program, channel ->
+                                        viewModel.onChannelSelected(channel)
+                                        viewModel.onProgramFocused(program)
+                                    },
+                                )
+                            }
                         }
                     }
                 }

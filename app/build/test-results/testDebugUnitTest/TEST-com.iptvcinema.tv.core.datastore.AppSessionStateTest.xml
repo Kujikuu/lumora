@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.iptvcinema.tv.core.datastore.AppSessionStateTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-06-27T00:50:39" hostname="Apples-MacBook-Pro.local" time="0.005">
+<testsuite name="com.iptvcinema.tv.core.datastore.AppSessionStateTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-07-02T15:25:19" hostname="Apples-MacBook-Pro.local" time="0.005">
   <properties/>
-  <testcase name="resolveStartupDestination_withUserIdStillRequiresProfileBeforeHome" classname="com.iptvcinema.tv.core.datastore.AppSessionStateTest" time="0.003"/>
+  <testcase name="resolveStartupDestination_withUserIdStillRequiresProfileBeforeHome" classname="com.iptvcinema.tv.core.datastore.AppSessionStateTest" time="0.002"/>
   <testcase name="redirectRouteFor_returnsActivationWhenUnauthenticated" classname="com.iptvcinema.tv.core.datastore.AppSessionStateTest" time="0.001"/>
   <testcase name="resolveStartupDestination_ready_returnsHome" classname="com.iptvcinema.tv.core.datastore.AppSessionStateTest" time="0.0"/>
   <testcase name="resolveStartupDestination_noSource_returnsAddSource" classname="com.iptvcinema.tv.core.datastore.AppSessionStateTest" time="0.0"/>
-  <testcase name="resolveStartupDestination_noProfile_returnsProfileSelection" classname="com.iptvcinema.tv.core.datastore.AppSessionStateTest" time="0.001"/>
+  <testcase name="resolveStartupDestination_noProfile_returnsProfileSelection" classname="com.iptvcinema.tv.core.datastore.AppSessionStateTest" time="0.0"/>
   <testcase name="resolveStartupDestination_unauthenticated_returnsActivation" classname="com.iptvcinema.tv.core.datastore.AppSessionStateTest" time="0.0"/>
   <testcase name="connectedSourceLabel_returnsExpectedLabels" classname="com.iptvcinema.tv.core.datastore.AppSessionStateTest" time="0.0"/>
   <testcase name="redirectRouteFor_returnsNullWhenRequirementMet" classname="com.iptvcinema.tv.core.datastore.AppSessionStateTest" time="0.0"/>

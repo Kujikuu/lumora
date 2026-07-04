@@ -51,6 +51,9 @@
     <string name="btn_add_to_favorites">Add to Favorites</string>
     <string name="btn_favorited">Favorited</string>
     <string name="btn_play_first">Play First</string>
+    <string name="btn_continue_series">Continue S%1$d E%2$d</string>
+    <string name="btn_watch_live">Watch Live</string>
+    <string name="btn_open_in_live_tv">Open in Live TV</string>
     <string name="btn_refresh_catalog">Refresh Catalog</string>
 
     <!-- Toggle -->
@@ -167,6 +170,10 @@
     <string name="msg_no_movies_synced">No movies synced</string>
     <string name="msg_no_series_synced">No series synced</string>
     <string name="msg_no_program_info">No program info</string>
+    <string name="channel_now_playing">Now Playing</string>
+    <string name="channel_up_next">Up Next</string>
+    <string name="channel_today_lineup">Today\'s Lineup</string>
+    <string name="channel_related">Related Channels</string>
 
     <!-- Home / Browse -->
     <string name="home_continue_watching">Continue Watching</string>
@@ -175,6 +182,7 @@
     <string name="home_new_releases">New Releases</string>
     <string name="home_popular_series">Popular Series</string>
     <string name="home_mood_row_title">Browse by Mood</string>
+    <string name="home_spotlight">Spotlight</string>
     <string name="btn_continue_watching">Continue Watching</string>
     <string name="home_continue_progress">%1$d%% watched</string>
     <string name="badge_top_label">TOP</string>
@@ -291,6 +299,8 @@
     <string name="player_audio_tracks">Audio</string>
     <string name="player_resume_from">Resuming from %1$s</string>
     <string name="player_no_next_episode">No next episode available</string>
+    <string name="player_on_now">On now</string>
+    <string name="player_up_next">Up next</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>

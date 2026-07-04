@@ -9,11 +9,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -27,9 +29,11 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -38,7 +42,11 @@ import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
+import com.iptvcinema.tv.core.epg.GuideLayoutHelper
 import com.iptvcinema.tv.core.model.CastMember
+import com.iptvcinema.tv.core.model.EpgProgram
+
+private val DetailPosterInsetWidth = 120.dp
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -54,8 +62,23 @@ fun DetailHero(
     favoriteLabel: String = "",
     favoritedLabel: String = "",
     backdropUrl: String? = null,
+    posterUrl: String? = null,
     watchNowFocusRequester: FocusRequester? = null,
 ) {
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val sideGradientColors = if (isRtl) {
+        listOf(
+            Color.Transparent,
+            CinemaColors.Background.copy(alpha = 0.25f),
+            CinemaColors.Background.copy(alpha = 0.86f),
+        )
+    } else {
+        listOf(
+            CinemaColors.Background.copy(alpha = 0.86f),
+            CinemaColors.Background.copy(alpha = 0.25f),
+            Color.Transparent,
+        )
+    }
     val resolvedPrimaryActionLabel = primaryActionLabel.ifBlank {
         stringResource(R.string.btn_watch_now)
     }
@@ -97,21 +120,43 @@ fun DetailHero(
                 .fillMaxSize()
                 .background(
                     Brush.horizontalGradient(
-                        listOf(
-                            CinemaColors.Background.copy(alpha = 0.8f),
-                            CinemaColors.Background.copy(alpha = 0.3f),
-                            Color.Transparent,
-                        ),
+                        sideGradientColors,
                     ),
                 ),
         )
+
+        if (!posterUrl.isNullOrBlank()) {
+            Box(
+                modifier = Modifier
+                    .align(if (isRtl) Alignment.BottomEnd else Alignment.BottomStart)
+                    .padding(
+                        start = if (isRtl) 0.dp else CinemaSpacing.ContentStart,
+                        end = if (isRtl) CinemaSpacing.ContentStart else 0.dp,
+                        bottom = 20.dp,
+                    )
+                    .width(DetailPosterInsetWidth)
+                    .height(DetailPosterInsetWidth * 1.5f)
+                    .clip(CinemaShapes.Medium)
+                    .background(CinemaColors.Surface),
+            ) {
+                CinemaAsyncImage(
+                    imageUrl = posterUrl,
+                    contentDescription = title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    fallbackLabel = title,
+                )
+            }
+        }
 
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth(0.6f)
                 .padding(
-                    start = CinemaSpacing.NavRailWidth + 16.dp,
+                    start = CinemaSpacing.ContentStart +
+                        if (!posterUrl.isNullOrBlank() && !isRtl) DetailPosterInsetWidth + 16.dp else 0.dp,
+                    end = if (!posterUrl.isNullOrBlank() && isRtl) DetailPosterInsetWidth + 16.dp else 0.dp,
                     bottom = 20.dp,
                 ),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -126,10 +171,7 @@ fun DetailHero(
                 overflow = TextOverflow.Ellipsis,
             )
             if (metadata.isNotEmpty()) {
-                Text(
-                    text = metadata.joinToString("  ·  "),
-                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextSecondary),
-                )
+                MetadataRow(items = metadata.take(5))
             }
             if (synopsis.isNotBlank()) {
                 Text(
@@ -155,6 +197,188 @@ fun DetailHero(
                     variant = CinemaButtonVariant.Ghost,
                     icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     onClick = onFavorite,
+                )
+            }
+        }
+    }
+}
+
+private fun programProgress(program: EpgProgram, nowMs: Long): Float {
+    val durationMs = (program.endEpochMs - program.startEpochMs).coerceAtLeast(1)
+    val elapsedMs = (nowMs - program.startEpochMs).coerceIn(0, durationMs)
+    return elapsedMs.toFloat() / durationMs.toFloat()
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun ChannelProgramPanel(
+    currentProgram: EpgProgram?,
+    nextPrograms: List<EpgProgram>,
+    nowMs: Long,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = CinemaSpacing.NavRailWidth + 16.dp),
+        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+    ) {
+        SectionHeader(title = stringResource(R.string.channel_now_playing))
+        if (currentProgram != null) {
+            ChannelProgramRow(
+                program = currentProgram,
+                nowMs = nowMs,
+                showProgress = true,
+            )
+        } else {
+            Text(
+                text = stringResource(R.string.msg_no_program_info),
+                style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
+            )
+        }
+        if (nextPrograms.isNotEmpty()) {
+            SectionHeader(title = stringResource(R.string.channel_up_next))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                nextPrograms.forEach { program ->
+                    ChannelProgramRow(
+                        program = program,
+                        nowMs = nowMs,
+                        showProgress = false,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun ProgramLineupCard(
+    program: EpgProgram,
+    isNowPlaying: Boolean,
+    nowMs: Long,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    FocusableCinemaCard(
+        modifier = modifier
+            .width(220.dp)
+            .height(120.dp),
+        onClick = onClick,
+        shape = CinemaShapes.Medium,
+        defaultBorderWidth = 0.dp,
+    ) { focused ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    if (focused) CinemaColors.Surface else CinemaColors.SurfaceSoft,
+                    CinemaShapes.Medium,
+                )
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = GuideLayoutHelper.formatSlotLabel(program.startEpochMs),
+                    style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.TextMuted),
+                )
+                if (isNowPlaying) {
+                    BadgeChip(text = stringResource(R.string.badge_live))
+                }
+            }
+            Text(
+                text = program.title,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    color = CinemaColors.White,
+                    fontWeight = FontWeight.SemiBold,
+                ),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (isNowPlaying) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .clip(CinemaShapes.Small)
+                        .background(CinemaColors.Surface),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(programProgress(program, nowMs).coerceIn(0f, 1f))
+                            .background(CinemaColors.Accent),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun ChannelProgramRow(
+    program: EpgProgram,
+    nowMs: Long,
+    showProgress: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(CinemaShapes.Medium)
+            .background(CinemaColors.SurfaceSoft, CinemaShapes.Medium)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = program.title,
+            style = MaterialTheme.typography.titleMedium.copy(
+                color = CinemaColors.White,
+                fontWeight = FontWeight.SemiBold,
+            ),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = stringResource(
+                R.string.livetv_program_time,
+                GuideLayoutHelper.formatSlotLabel(program.startEpochMs),
+                GuideLayoutHelper.formatSlotLabel(program.endEpochMs),
+                pluralStringResource(
+                    R.plurals.minutes_remaining,
+                    program.durationMinutes.coerceAtLeast(1),
+                    program.durationMinutes.coerceAtLeast(1),
+                ),
+            ),
+            style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
+        )
+        if (program.description.isNotBlank()) {
+            Text(
+                text = program.description,
+                style = MaterialTheme.typography.bodySmall.copy(color = CinemaColors.TextSecondary),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (showProgress) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .clip(CinemaShapes.Small)
+                    .background(CinemaColors.Surface),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(programProgress(program, nowMs).coerceIn(0f, 1f))
+                        .background(CinemaColors.Accent),
                 )
             }
         }

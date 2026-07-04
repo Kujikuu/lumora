@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="brand_background">#141414</color>
-    <color name="brand_accent">#E50914</color>
-    <color name="brand_gold">#E50914</color>
+    <color name="brand_background">#08090D</color>
+    <color name="brand_accent">#D6243A</color>
+    <color name="brand_gold">#D6243A</color>
+    <color name="brand_secondary">#8B5CF6</color>
 </resources>

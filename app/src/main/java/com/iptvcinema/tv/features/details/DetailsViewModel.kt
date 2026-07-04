@@ -8,6 +8,7 @@ import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper
 import com.iptvcinema.tv.core.data.repository.CatalogRepository
 import com.iptvcinema.tv.core.data.repository.FavoritesRepository
 import com.iptvcinema.tv.core.data.repository.ParentalControlsRepository
+import com.iptvcinema.tv.core.data.repository.WatchHistoryRepository
 import com.iptvcinema.tv.core.datastore.AppSessionRepository
 import com.iptvcinema.tv.core.model.CastMember
 import com.iptvcinema.tv.core.model.FavoriteContentType
@@ -16,8 +17,10 @@ import com.iptvcinema.tv.core.model.SeasonItem
 import com.iptvcinema.tv.core.model.SeriesItem
 import com.iptvcinema.tv.core.model.catalog.CatalogMovie
 import com.iptvcinema.tv.core.model.catalog.CatalogSeries
+import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.parental.ParentalGate
 import com.iptvcinema.tv.core.player.EpisodeCatalogRepository
+import com.iptvcinema.tv.core.player.WatchHistoryResumePolicy
 import com.iptvcinema.tv.core.util.AppStrings
 import com.iptvcinema.tv.core.util.CastParser
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,12 +37,20 @@ enum class DetailsLoadState {
     Error,
 }
 
+data class DetailsContinueWatching(
+    val contentId: String,
+    val resumePositionMs: Long = 0L,
+    val seasonNumber: Int? = null,
+    val episodeNumber: Int? = null,
+)
+
 data class MovieDetailsUiState(
     val loadState: DetailsLoadState = DetailsLoadState.Loading,
     val movie: MovieItem? = null,
     val catalogMovie: CatalogMovie? = null,
     val cast: List<CastMember> = emptyList(),
     val relatedMovies: List<MovieItem> = emptyList(),
+    val continueWatching: DetailsContinueWatching? = null,
     val isDemoMode: Boolean = false,
     val message: String? = null,
     val playbackBlocked: Boolean = false,
@@ -51,6 +62,8 @@ data class SeriesDetailsUiState(
     val catalogSeries: CatalogSeries? = null,
     val seasons: List<SeasonItem> = emptyList(),
     val cast: List<CastMember> = emptyList(),
+    val relatedSeries: List<SeriesItem> = emptyList(),
+    val continueWatching: DetailsContinueWatching? = null,
     val episodesLoading: Boolean = false,
     val isDemoMode: Boolean = false,
     val message: String? = null,
@@ -63,6 +76,7 @@ class DetailsViewModel @Inject constructor(
     private val favoritesRepository: FavoritesRepository,
     private val catalogRepository: CatalogRepository,
     private val episodeCatalogRepository: EpisodeCatalogRepository,
+    private val watchHistoryRepository: WatchHistoryRepository,
     private val parentalControlsRepository: ParentalControlsRepository,
     private val parentalGate: ParentalGate,
     private val appStrings: AppStrings,
@@ -123,12 +137,16 @@ class DetailsViewModel @Inject constructor(
             } else {
                 related
             }
+            val continueWatching = session.currentProfileId?.let { profileId ->
+                loadMovieContinueWatching(profileId, movieId, catalogMovie)
+            }
             _movieUiState.value = MovieDetailsUiState(
                 loadState = DetailsLoadState.Ready,
                 movie = movieItem,
                 catalogMovie = catalogMovie,
                 cast = CastParser.parseCastMembers(catalogMovie.cast),
                 relatedMovies = filteredRelated,
+                continueWatching = continueWatching,
                 playbackBlocked = controls != null &&
                     parentalGate.isContentBlocked(
                         movieItem.genres.firstOrNull(),
@@ -202,12 +220,29 @@ class DetailsViewModel @Inject constructor(
                 genres = genres,
             )
             val controls = session.currentProfileId?.let { parentalControlsRepository.getControls(it) }
+            val relatedSeries = catalogRepository.getRelatedSeries(
+                sourceId = sourceId,
+                categoryId = catalogSeries.categoryId,
+                excludeSeriesId = seriesId,
+            ).map { with(CatalogUiMapper) { it.toSeriesItem() } }
+            val filteredRelatedSeries = if (controls != null) {
+                relatedSeries.filter { item ->
+                    !parentalGate.isContentBlocked(item.genres.firstOrNull(), item.rating, controls)
+                }
+            } else {
+                relatedSeries
+            }
+            val continueWatching = session.currentProfileId?.let { profileId ->
+                loadSeriesContinueWatching(profileId, sourceId, seriesId, seasons)
+            }
             _seriesUiState.value = SeriesDetailsUiState(
                 loadState = DetailsLoadState.Ready,
                 series = seriesItem,
                 catalogSeries = catalogSeries,
                 seasons = seasons,
                 cast = catalogResult.cast,
+                relatedSeries = filteredRelatedSeries,
+                continueWatching = continueWatching,
                 episodesLoading = false,
                 playbackBlocked = controls != null &&
                     parentalGate.isContentBlocked(
@@ -249,6 +284,62 @@ class DetailsViewModel @Inject constructor(
                 onResult(isFavorite)
             }
         }
+    }
+
+    private suspend fun loadMovieContinueWatching(
+        profileId: String,
+        movieId: String,
+        catalogMovie: CatalogMovie,
+    ): DetailsContinueWatching? {
+        val history = watchHistoryRepository.getProgress(
+            profileId = profileId,
+            contentId = movieId,
+            contentType = WatchHistoryContentType.MOVIE,
+        ) ?: return null
+        val durationMs = history.durationMs ?: catalogMovie.durationMinutes?.times(60_000L) ?: return null
+        if (!WatchHistoryResumePolicy.isContinueWatching(history.positionMs, durationMs)) return null
+        val resumeMs = WatchHistoryResumePolicy.resumePositionMs(history.positionMs, durationMs)
+        if (resumeMs <= 0L) return null
+        return DetailsContinueWatching(
+            contentId = movieId,
+            resumePositionMs = resumeMs,
+        )
+    }
+
+    private suspend fun loadSeriesContinueWatching(
+        profileId: String,
+        sourceId: String,
+        seriesId: String,
+        seasons: List<SeasonItem>,
+    ): DetailsContinueWatching? {
+        val historyItems = watchHistoryRepository.observeHistory(profileId, limit = 50).first()
+        val episodeHistory = historyItems
+            .filter { item ->
+                item.contentType == WatchHistoryContentType.EPISODE &&
+                    item.seriesId == seriesId &&
+                    WatchHistoryResumePolicy.isContinueWatching(item.positionMs, item.durationMs)
+            }
+            .maxByOrNull { it.lastWatchedAt }
+            ?: return null
+        val durationMs = episodeHistory.durationMs ?: return null
+        val resumeMs = WatchHistoryResumePolicy.resumePositionMs(episodeHistory.positionMs, durationMs)
+        if (resumeMs <= 0L) return null
+        val catalogEpisode = catalogRepository.getEpisode(sourceId, episodeHistory.contentId)
+        val seasonMatch = if (catalogEpisode == null) {
+            seasons.firstNotNullOfOrNull { season ->
+                season.episodes.find { it.id == episodeHistory.contentId }?.let {
+                    season.seasonNumber to it.episodeNumber
+                }
+            }
+        } else {
+            null
+        }
+        return DetailsContinueWatching(
+            contentId = episodeHistory.contentId,
+            resumePositionMs = resumeMs,
+            seasonNumber = catalogEpisode?.seasonNumber ?: seasonMatch?.first,
+            episodeNumber = catalogEpisode?.episodeNumber ?: seasonMatch?.second,
+        )
     }
 }
 

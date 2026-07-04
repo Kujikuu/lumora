@@ -10,6 +10,7 @@ import com.iptvcinema.tv.core.network.NetworkModule;
 import com.iptvcinema.tv.core.player.PlayerModule;
 import com.iptvcinema.tv.core.supabase.di.SupabaseModule;
 import com.iptvcinema.tv.features.activation.ActivationViewModel_HiltModules;
+import com.iptvcinema.tv.features.details.ChannelDetailsViewModel_HiltModules;
 import com.iptvcinema.tv.features.details.DetailsViewModel_HiltModules;
 import com.iptvcinema.tv.features.home.HomeViewModel_HiltModules;
 import com.iptvcinema.tv.features.livetv.LiveTvViewModel_HiltModules;
@@ -182,6 +183,7 @@ public final class IptvCinemaApp_HiltComponents {
   @Subcomponent(
       modules = {
           ActivationViewModel_HiltModules.KeyModule.class,
+          ChannelDetailsViewModel_HiltModules.KeyModule.class,
           DetailsViewModel_HiltModules.KeyModule.class,
           HiltWrapper_ActivityRetainedComponentManager_LifecycleModule.class,
           HiltWrapper_SavedStateHandleModule.class,
@@ -236,6 +238,7 @@ public final class IptvCinemaApp_HiltComponents {
   @Subcomponent(
       modules = {
           ActivationViewModel_HiltModules.BindsModule.class,
+          ChannelDetailsViewModel_HiltModules.BindsModule.class,
           DetailsViewModel_HiltModules.BindsModule.class,
           HiltWrapper_HiltViewModelFactory_ViewModelModule.class,
           HomeViewModel_HiltModules.BindsModule.class,

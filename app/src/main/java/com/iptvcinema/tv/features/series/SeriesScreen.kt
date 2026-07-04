@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -18,19 +20,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.data.repository.CatalogLoadState
 import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.CategoryListPanel
 import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
+import com.iptvcinema.tv.core.design.components.ExpandedPosterCardVariant
+import com.iptvcinema.tv.core.design.components.FocusAwareContentRail
+import com.iptvcinema.tv.core.design.components.HeroBanner
 import com.iptvcinema.tv.core.design.components.PosterGrid
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
+import com.iptvcinema.tv.core.model.SeriesItem
+import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
 import com.iptvcinema.tv.core.navigation.MainShellScaffold
@@ -46,10 +55,13 @@ fun SeriesScreen(
     viewModel: SeriesViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val watchNowFocus = remember { FocusRequester() }
+    val continueWatchingFocus = remember { FocusRequester() }
     val categoryFocus = remember { FocusRequester() }
     val gridFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("series")
     val categories = uiState.categories
+    val hasFeatured = uiState.featured != null
     val catalogCallbacks = rememberCatalogStateCallbacks(
         navController = navController,
         onRetry = viewModel::refreshCurrentSource,
@@ -75,13 +87,29 @@ fun SeriesScreen(
 
     MainShellBackHandler(navController = navController, isHomeTab = false)
 
-    LaunchedEffect(focusState.hasSavedFocus, selectedFilter, categories.isNotEmpty(), uiState.posters.isNotEmpty()) {
-        val target = if (categories.isNotEmpty()) categoryFocus else gridFocus
+    LaunchedEffect(
+        uiState.loadState,
+        focusState.hasSavedFocus,
+        hasFeatured,
+        uiState.continueSeries.isNotEmpty(),
+        selectedFilter,
+        categories.isNotEmpty(),
+        uiState.posters.isNotEmpty(),
+    ) {
+        if (uiState.loadState != CatalogLoadState.Ready) return@LaunchedEffect
+        val target = when {
+            hasFeatured -> watchNowFocus
+            uiState.continueSeries.isNotEmpty() -> continueWatchingFocus
+            categories.isNotEmpty() -> categoryFocus
+            else -> gridFocus
+        }
         if (focusState.hasSavedFocus) {
             focusState.restoreFocus(target)
         } else {
             focusState.requestInitialFocus(target)
-            focusState.saveFocusIndex(selectedFilter)
+            if (!hasFeatured && uiState.continueSeries.isEmpty()) {
+                focusState.saveFocusIndex(selectedFilter)
+            }
         }
     }
 
@@ -123,38 +151,109 @@ fun SeriesScreen(
                 onRefreshCatalog = viewModel::refreshCurrentSource,
                 modifier = Modifier.weight(1f),
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(start = CinemaSpacing.ContentStart, end = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                Column(
+                    modifier = Modifier.fillMaxSize(),
                 ) {
-                    if (categories.isNotEmpty()) {
-                        CategoryListPanel(
-                            modifier = Modifier.fillMaxHeight(),
-                            items = categories,
-                            selectedIndex = selectedFilter.coerceIn(0, categories.lastIndex),
-                            onSelected = {
-                                selectedFilter = it
-                                focusState.saveFocusIndex(it)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                    ) {
+                        uiState.featured?.let { series ->
+                            SeriesFeaturedHero(
+                                series = series,
+                                watchNowFocusRequester = watchNowFocus,
+                                onWatchNow = {
+                                    navController.navigate(AppRoute.seriesDetails(series.id))
+                                },
+                                onDetails = {
+                                    navController.navigate(AppRoute.seriesDetails(series.id))
+                                },
+                            )
+                        }
+                        if (uiState.continueSeries.isNotEmpty()) {
+                            FocusAwareContentRail(
+                                title = stringResource(R.string.home_continue_watching),
+                                items = uiState.continueSeries,
+                                variant = ExpandedPosterCardVariant.Landscape,
+                                countLabel = uiState.continueSeries.size.toString(),
+                                firstItemFocusRequester = if (!hasFeatured) continueWatchingFocus else null,
+                                onWatchNow = { card -> navigateSeriesCardToPlayer(navController, card) },
+                                onAddToList = viewModel::toggleFavorite,
+                                onFavorite = viewModel::toggleFavorite,
+                                onCardClick = { card -> navigateSeriesCardToPlayer(navController, card) },
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(start = CinemaSpacing.ContentStart, end = 24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                    ) {
+                        if (categories.isNotEmpty()) {
+                            CategoryListPanel(
+                                modifier = Modifier.fillMaxHeight(),
+                                items = categories,
+                                selectedIndex = selectedFilter.coerceIn(0, categories.lastIndex),
+                                onSelected = {
+                                    selectedFilter = it
+                                    focusState.saveFocusIndex(it)
+                                },
+                                listFocusRequester = categoryFocus,
+                                initialFocusedIndex = selectedFilter,
+                            )
+                        }
+                        PosterGrid(
+                            modifier = Modifier.weight(1f),
+                            items = uiState.posters,
+                            firstItemFocusRequester = if (!hasFeatured && uiState.continueSeries.isEmpty()) {
+                                gridFocus
+                            } else {
+                                null
                             },
-                            listFocusRequester = categoryFocus,
-                            initialFocusedIndex = selectedFilter,
+                            contentPadding = PaddingValues(bottom = CinemaSpacing.SectionGap),
+                            onItemClick = { poster ->
+                                poster.contentId?.let { seriesId ->
+                                    navController.navigate(AppRoute.seriesDetails(seriesId))
+                                }
+                            },
                         )
                     }
-                    PosterGrid(
-                        modifier = Modifier.weight(1f),
-                        items = uiState.posters,
-                        firstItemFocusRequester = gridFocus,
-                        contentPadding = PaddingValues(bottom = CinemaSpacing.SectionGap),
-                        onItemClick = { poster ->
-                            poster.contentId?.let { seriesId ->
-                                navController.navigate(AppRoute.seriesDetails(seriesId))
-                            }
-                        },
-                    )
                 }
             }
         }
     }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun SeriesFeaturedHero(
+    series: SeriesItem,
+    onWatchNow: () -> Unit,
+    onDetails: () -> Unit,
+    watchNowFocusRequester: FocusRequester,
+) {
+    HeroBanner(
+        title = series.title,
+        metadata = listOfNotNull(
+            series.year.takeIf { it > 0 }?.toString(),
+            series.genres.joinToString(" ").takeIf { it.isNotBlank() },
+            series.seasonCount.takeIf { it > 0 }?.let { count ->
+                pluralStringResource(R.plurals.details_season_count, count, count)
+            },
+        ),
+        description = series.plot,
+        onWatchNow = onWatchNow,
+        onDetails = onDetails,
+        height = CinemaSpacing.HeroFeaturedMinHeight,
+        watchNowFocusRequester = watchNowFocusRequester,
+        backdropUrl = series.backdropUrl ?: series.imageUrl,
+    )
+}
+
+private fun navigateSeriesCardToPlayer(navController: NavController, card: HomeContentCard) {
+    navController.navigate(AppRoute.player(card.contentId, card.contentType, card.seriesId))
 }

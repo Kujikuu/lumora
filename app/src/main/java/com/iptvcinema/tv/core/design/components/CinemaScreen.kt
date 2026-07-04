@@ -160,7 +160,7 @@ private fun RailItemRow(
         contentDescription = label,
     ) { focused ->
         val contentColor = when {
-            selected -> CinemaColors.White
+            selected -> CinemaColors.AccentSoft
             focused -> CinemaColors.White
             else -> CinemaColors.TextMuted
         }
@@ -169,7 +169,7 @@ private fun RailItemRow(
                 .fillMaxWidth()
                 .background(
                     when {
-                        selected -> CinemaColors.White.copy(alpha = 0.12f)
+                        selected -> CinemaColors.Accent.copy(alpha = 0.15f)
                         focused -> CinemaColors.White.copy(alpha = 0.06f)
                         else -> CinemaColors.Background.copy(alpha = 0f)
                     },

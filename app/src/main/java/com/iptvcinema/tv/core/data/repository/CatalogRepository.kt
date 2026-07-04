@@ -393,6 +393,24 @@ class CatalogRepository @Inject constructor(
             .map { it.toDomain() }
     }
 
+    suspend fun getRelatedSeries(
+        sourceId: String,
+        categoryId: String?,
+        excludeSeriesId: String,
+        limit: Int = 12,
+    ): List<CatalogSeries> {
+        val fetchLimit = limit + 1
+        val series = if (!categoryId.isNullOrBlank()) {
+            catalogDaoFacade.series.getByCategory(sourceId, categoryId, fetchLimit)
+        } else {
+            catalogDaoFacade.series.getFeatured(sourceId, fetchLimit)
+        }
+        return series
+            .filter { it.id != excludeSeriesId }
+            .take(limit)
+            .map { it.toDomain() }
+    }
+
     suspend fun upsertEpisodes(episodes: List<com.iptvcinema.tv.core.database.entity.LocalEpisodeEntity>) {
         if (episodes.isNotEmpty()) {
             catalogDaoFacade.episodes.upsertAll(episodes)

@@ -564,6 +564,211 @@ public final class SeriesDao_Impl implements SeriesDao {
   }
 
   @Override
+  public Object getByCategory(final String sourceId, final String categoryId, final int limit,
+      final Continuation<? super List<LocalSeriesEntity>> $completion) {
+    final String _sql = "\n"
+            + "        SELECT * FROM series\n"
+            + "        WHERE sourceId = ? AND categoryId = ?\n"
+            + "        ORDER BY sortOrder, title\n"
+            + "        LIMIT ?\n"
+            + "        ";
+    final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 3);
+    int _argIndex = 1;
+    _statement.bindString(_argIndex, sourceId);
+    _argIndex = 2;
+    _statement.bindString(_argIndex, categoryId);
+    _argIndex = 3;
+    _statement.bindLong(_argIndex, limit);
+    final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
+    return CoroutinesRoom.execute(__db, false, _cancellationSignal, new Callable<List<LocalSeriesEntity>>() {
+      @Override
+      @NonNull
+      public List<LocalSeriesEntity> call() throws Exception {
+        final Cursor _cursor = DBUtil.query(__db, _statement, false, null);
+        try {
+          final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
+          final int _cursorIndexOfSourceId = CursorUtil.getColumnIndexOrThrow(_cursor, "sourceId");
+          final int _cursorIndexOfTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "title");
+          final int _cursorIndexOfPosterUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "posterUrl");
+          final int _cursorIndexOfBackdropUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "backdropUrl");
+          final int _cursorIndexOfCategoryId = CursorUtil.getColumnIndexOrThrow(_cursor, "categoryId");
+          final int _cursorIndexOfCategoryName = CursorUtil.getColumnIndexOrThrow(_cursor, "categoryName");
+          final int _cursorIndexOfPlot = CursorUtil.getColumnIndexOrThrow(_cursor, "plot");
+          final int _cursorIndexOfRating = CursorUtil.getColumnIndexOrThrow(_cursor, "rating");
+          final int _cursorIndexOfYear = CursorUtil.getColumnIndexOrThrow(_cursor, "year");
+          final int _cursorIndexOfCast = CursorUtil.getColumnIndexOrThrow(_cursor, "cast");
+          final int _cursorIndexOfSortOrder = CursorUtil.getColumnIndexOrThrow(_cursor, "sortOrder");
+          final List<LocalSeriesEntity> _result = new ArrayList<LocalSeriesEntity>(_cursor.getCount());
+          while (_cursor.moveToNext()) {
+            final LocalSeriesEntity _item;
+            final String _tmpId;
+            _tmpId = _cursor.getString(_cursorIndexOfId);
+            final String _tmpSourceId;
+            _tmpSourceId = _cursor.getString(_cursorIndexOfSourceId);
+            final String _tmpTitle;
+            _tmpTitle = _cursor.getString(_cursorIndexOfTitle);
+            final String _tmpPosterUrl;
+            if (_cursor.isNull(_cursorIndexOfPosterUrl)) {
+              _tmpPosterUrl = null;
+            } else {
+              _tmpPosterUrl = _cursor.getString(_cursorIndexOfPosterUrl);
+            }
+            final String _tmpBackdropUrl;
+            if (_cursor.isNull(_cursorIndexOfBackdropUrl)) {
+              _tmpBackdropUrl = null;
+            } else {
+              _tmpBackdropUrl = _cursor.getString(_cursorIndexOfBackdropUrl);
+            }
+            final String _tmpCategoryId;
+            if (_cursor.isNull(_cursorIndexOfCategoryId)) {
+              _tmpCategoryId = null;
+            } else {
+              _tmpCategoryId = _cursor.getString(_cursorIndexOfCategoryId);
+            }
+            final String _tmpCategoryName;
+            if (_cursor.isNull(_cursorIndexOfCategoryName)) {
+              _tmpCategoryName = null;
+            } else {
+              _tmpCategoryName = _cursor.getString(_cursorIndexOfCategoryName);
+            }
+            final String _tmpPlot;
+            if (_cursor.isNull(_cursorIndexOfPlot)) {
+              _tmpPlot = null;
+            } else {
+              _tmpPlot = _cursor.getString(_cursorIndexOfPlot);
+            }
+            final String _tmpRating;
+            if (_cursor.isNull(_cursorIndexOfRating)) {
+              _tmpRating = null;
+            } else {
+              _tmpRating = _cursor.getString(_cursorIndexOfRating);
+            }
+            final Integer _tmpYear;
+            if (_cursor.isNull(_cursorIndexOfYear)) {
+              _tmpYear = null;
+            } else {
+              _tmpYear = _cursor.getInt(_cursorIndexOfYear);
+            }
+            final String _tmpCast;
+            if (_cursor.isNull(_cursorIndexOfCast)) {
+              _tmpCast = null;
+            } else {
+              _tmpCast = _cursor.getString(_cursorIndexOfCast);
+            }
+            final int _tmpSortOrder;
+            _tmpSortOrder = _cursor.getInt(_cursorIndexOfSortOrder);
+            _item = new LocalSeriesEntity(_tmpId,_tmpSourceId,_tmpTitle,_tmpPosterUrl,_tmpBackdropUrl,_tmpCategoryId,_tmpCategoryName,_tmpPlot,_tmpRating,_tmpYear,_tmpCast,_tmpSortOrder);
+            _result.add(_item);
+          }
+          return _result;
+        } finally {
+          _cursor.close();
+          _statement.release();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object getFeatured(final String sourceId, final int limit,
+      final Continuation<? super List<LocalSeriesEntity>> $completion) {
+    final String _sql = "SELECT * FROM series WHERE sourceId = ? ORDER BY sortOrder, title LIMIT ?";
+    final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 2);
+    int _argIndex = 1;
+    _statement.bindString(_argIndex, sourceId);
+    _argIndex = 2;
+    _statement.bindLong(_argIndex, limit);
+    final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
+    return CoroutinesRoom.execute(__db, false, _cancellationSignal, new Callable<List<LocalSeriesEntity>>() {
+      @Override
+      @NonNull
+      public List<LocalSeriesEntity> call() throws Exception {
+        final Cursor _cursor = DBUtil.query(__db, _statement, false, null);
+        try {
+          final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
+          final int _cursorIndexOfSourceId = CursorUtil.getColumnIndexOrThrow(_cursor, "sourceId");
+          final int _cursorIndexOfTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "title");
+          final int _cursorIndexOfPosterUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "posterUrl");
+          final int _cursorIndexOfBackdropUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "backdropUrl");
+          final int _cursorIndexOfCategoryId = CursorUtil.getColumnIndexOrThrow(_cursor, "categoryId");
+          final int _cursorIndexOfCategoryName = CursorUtil.getColumnIndexOrThrow(_cursor, "categoryName");
+          final int _cursorIndexOfPlot = CursorUtil.getColumnIndexOrThrow(_cursor, "plot");
+          final int _cursorIndexOfRating = CursorUtil.getColumnIndexOrThrow(_cursor, "rating");
+          final int _cursorIndexOfYear = CursorUtil.getColumnIndexOrThrow(_cursor, "year");
+          final int _cursorIndexOfCast = CursorUtil.getColumnIndexOrThrow(_cursor, "cast");
+          final int _cursorIndexOfSortOrder = CursorUtil.getColumnIndexOrThrow(_cursor, "sortOrder");
+          final List<LocalSeriesEntity> _result = new ArrayList<LocalSeriesEntity>(_cursor.getCount());
+          while (_cursor.moveToNext()) {
+            final LocalSeriesEntity _item;
+            final String _tmpId;
+            _tmpId = _cursor.getString(_cursorIndexOfId);
+            final String _tmpSourceId;
+            _tmpSourceId = _cursor.getString(_cursorIndexOfSourceId);
+            final String _tmpTitle;
+            _tmpTitle = _cursor.getString(_cursorIndexOfTitle);
+            final String _tmpPosterUrl;
+            if (_cursor.isNull(_cursorIndexOfPosterUrl)) {
+              _tmpPosterUrl = null;
+            } else {
+              _tmpPosterUrl = _cursor.getString(_cursorIndexOfPosterUrl);
+            }
+            final String _tmpBackdropUrl;
+            if (_cursor.isNull(_cursorIndexOfBackdropUrl)) {
+              _tmpBackdropUrl = null;
+            } else {
+              _tmpBackdropUrl = _cursor.getString(_cursorIndexOfBackdropUrl);
+            }
+            final String _tmpCategoryId;
+            if (_cursor.isNull(_cursorIndexOfCategoryId)) {
+              _tmpCategoryId = null;
+            } else {
+              _tmpCategoryId = _cursor.getString(_cursorIndexOfCategoryId);
+            }
+            final String _tmpCategoryName;
+            if (_cursor.isNull(_cursorIndexOfCategoryName)) {
+              _tmpCategoryName = null;
+            } else {
+              _tmpCategoryName = _cursor.getString(_cursorIndexOfCategoryName);
+            }
+            final String _tmpPlot;
+            if (_cursor.isNull(_cursorIndexOfPlot)) {
+              _tmpPlot = null;
+            } else {
+              _tmpPlot = _cursor.getString(_cursorIndexOfPlot);
+            }
+            final String _tmpRating;
+            if (_cursor.isNull(_cursorIndexOfRating)) {
+              _tmpRating = null;
+            } else {
+              _tmpRating = _cursor.getString(_cursorIndexOfRating);
+            }
+            final Integer _tmpYear;
+            if (_cursor.isNull(_cursorIndexOfYear)) {
+              _tmpYear = null;
+            } else {
+              _tmpYear = _cursor.getInt(_cursorIndexOfYear);
+            }
+            final String _tmpCast;
+            if (_cursor.isNull(_cursorIndexOfCast)) {
+              _tmpCast = null;
+            } else {
+              _tmpCast = _cursor.getString(_cursorIndexOfCast);
+            }
+            final int _tmpSortOrder;
+            _tmpSortOrder = _cursor.getInt(_cursorIndexOfSortOrder);
+            _item = new LocalSeriesEntity(_tmpId,_tmpSourceId,_tmpTitle,_tmpPosterUrl,_tmpBackdropUrl,_tmpCategoryId,_tmpCategoryName,_tmpPlot,_tmpRating,_tmpYear,_tmpCast,_tmpSortOrder);
+            _result.add(_item);
+          }
+          return _result;
+        } finally {
+          _cursor.close();
+          _statement.release();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
   public Object getById(final String sourceId, final String seriesId,
       final Continuation<? super LocalSeriesEntity> $completion) {
     final String _sql = "SELECT * FROM series WHERE sourceId = ? AND id = ? LIMIT 1";

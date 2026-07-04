@@ -3,6 +3,7 @@ package com.iptvcinema.tv.features.details;
 import com.iptvcinema.tv.core.data.repository.CatalogRepository;
 import com.iptvcinema.tv.core.data.repository.FavoritesRepository;
 import com.iptvcinema.tv.core.data.repository.ParentalControlsRepository;
+import com.iptvcinema.tv.core.data.repository.WatchHistoryRepository;
 import com.iptvcinema.tv.core.datastore.AppSessionRepository;
 import com.iptvcinema.tv.core.parental.ParentalGate;
 import com.iptvcinema.tv.core.player.EpisodeCatalogRepository;
@@ -40,6 +41,8 @@ public final class DetailsViewModel_Factory implements Factory<DetailsViewModel>
 
   private final Provider<EpisodeCatalogRepository> episodeCatalogRepositoryProvider;
 
+  private final Provider<WatchHistoryRepository> watchHistoryRepositoryProvider;
+
   private final Provider<ParentalControlsRepository> parentalControlsRepositoryProvider;
 
   private final Provider<ParentalGate> parentalGateProvider;
@@ -50,12 +53,14 @@ public final class DetailsViewModel_Factory implements Factory<DetailsViewModel>
       Provider<FavoritesRepository> favoritesRepositoryProvider,
       Provider<CatalogRepository> catalogRepositoryProvider,
       Provider<EpisodeCatalogRepository> episodeCatalogRepositoryProvider,
+      Provider<WatchHistoryRepository> watchHistoryRepositoryProvider,
       Provider<ParentalControlsRepository> parentalControlsRepositoryProvider,
       Provider<ParentalGate> parentalGateProvider, Provider<AppStrings> appStringsProvider) {
     this.appSessionRepositoryProvider = appSessionRepositoryProvider;
     this.favoritesRepositoryProvider = favoritesRepositoryProvider;
     this.catalogRepositoryProvider = catalogRepositoryProvider;
     this.episodeCatalogRepositoryProvider = episodeCatalogRepositoryProvider;
+    this.watchHistoryRepositoryProvider = watchHistoryRepositoryProvider;
     this.parentalControlsRepositoryProvider = parentalControlsRepositoryProvider;
     this.parentalGateProvider = parentalGateProvider;
     this.appStringsProvider = appStringsProvider;
@@ -63,7 +68,7 @@ public final class DetailsViewModel_Factory implements Factory<DetailsViewModel>
 
   @Override
   public DetailsViewModel get() {
-    return newInstance(appSessionRepositoryProvider.get(), favoritesRepositoryProvider.get(), catalogRepositoryProvider.get(), episodeCatalogRepositoryProvider.get(), parentalControlsRepositoryProvider.get(), parentalGateProvider.get(), appStringsProvider.get());
+    return newInstance(appSessionRepositoryProvider.get(), favoritesRepositoryProvider.get(), catalogRepositoryProvider.get(), episodeCatalogRepositoryProvider.get(), watchHistoryRepositoryProvider.get(), parentalControlsRepositoryProvider.get(), parentalGateProvider.get(), appStringsProvider.get());
   }
 
   public static DetailsViewModel_Factory create(
@@ -71,10 +76,11 @@ public final class DetailsViewModel_Factory implements Factory<DetailsViewModel>
       javax.inject.Provider<FavoritesRepository> favoritesRepositoryProvider,
       javax.inject.Provider<CatalogRepository> catalogRepositoryProvider,
       javax.inject.Provider<EpisodeCatalogRepository> episodeCatalogRepositoryProvider,
+      javax.inject.Provider<WatchHistoryRepository> watchHistoryRepositoryProvider,
       javax.inject.Provider<ParentalControlsRepository> parentalControlsRepositoryProvider,
       javax.inject.Provider<ParentalGate> parentalGateProvider,
       javax.inject.Provider<AppStrings> appStringsProvider) {
-    return new DetailsViewModel_Factory(Providers.asDaggerProvider(appSessionRepositoryProvider), Providers.asDaggerProvider(favoritesRepositoryProvider), Providers.asDaggerProvider(catalogRepositoryProvider), Providers.asDaggerProvider(episodeCatalogRepositoryProvider), Providers.asDaggerProvider(parentalControlsRepositoryProvider), Providers.asDaggerProvider(parentalGateProvider), Providers.asDaggerProvider(appStringsProvider));
+    return new DetailsViewModel_Factory(Providers.asDaggerProvider(appSessionRepositoryProvider), Providers.asDaggerProvider(favoritesRepositoryProvider), Providers.asDaggerProvider(catalogRepositoryProvider), Providers.asDaggerProvider(episodeCatalogRepositoryProvider), Providers.asDaggerProvider(watchHistoryRepositoryProvider), Providers.asDaggerProvider(parentalControlsRepositoryProvider), Providers.asDaggerProvider(parentalGateProvider), Providers.asDaggerProvider(appStringsProvider));
   }
 
   public static DetailsViewModel_Factory create(
@@ -82,16 +88,18 @@ public final class DetailsViewModel_Factory implements Factory<DetailsViewModel>
       Provider<FavoritesRepository> favoritesRepositoryProvider,
       Provider<CatalogRepository> catalogRepositoryProvider,
       Provider<EpisodeCatalogRepository> episodeCatalogRepositoryProvider,
+      Provider<WatchHistoryRepository> watchHistoryRepositoryProvider,
       Provider<ParentalControlsRepository> parentalControlsRepositoryProvider,
       Provider<ParentalGate> parentalGateProvider, Provider<AppStrings> appStringsProvider) {
-    return new DetailsViewModel_Factory(appSessionRepositoryProvider, favoritesRepositoryProvider, catalogRepositoryProvider, episodeCatalogRepositoryProvider, parentalControlsRepositoryProvider, parentalGateProvider, appStringsProvider);
+    return new DetailsViewModel_Factory(appSessionRepositoryProvider, favoritesRepositoryProvider, catalogRepositoryProvider, episodeCatalogRepositoryProvider, watchHistoryRepositoryProvider, parentalControlsRepositoryProvider, parentalGateProvider, appStringsProvider);
   }
 
   public static DetailsViewModel newInstance(AppSessionRepository appSessionRepository,
       FavoritesRepository favoritesRepository, CatalogRepository catalogRepository,
       EpisodeCatalogRepository episodeCatalogRepository,
+      WatchHistoryRepository watchHistoryRepository,
       ParentalControlsRepository parentalControlsRepository, ParentalGate parentalGate,
       AppStrings appStrings) {
-    return new DetailsViewModel(appSessionRepository, favoritesRepository, catalogRepository, episodeCatalogRepository, parentalControlsRepository, parentalGate, appStrings);
+    return new DetailsViewModel(appSessionRepository, favoritesRepository, catalogRepository, episodeCatalogRepository, watchHistoryRepository, parentalControlsRepository, parentalGate, appStrings);
   }
 }

@@ -18,6 +18,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -191,8 +196,11 @@ private fun ChannelListRow(
 @Composable
 fun LivePreviewCard(
     channel: ChannelItem,
-    onWatchFullscreen: () -> Unit,
+    onWatchLive: () -> Unit,
+    onDetails: () -> Unit,
+    onFavorite: () -> Unit,
     modifier: Modifier = Modifier,
+    isFavorite: Boolean = false,
 ) {
     Column(
         modifier = modifier
@@ -271,10 +279,25 @@ fun LivePreviewCard(
             )
         }
         CinemaButton(
-            text = stringResource(R.string.btn_watch_fullscreen),
+            text = stringResource(R.string.btn_watch_live),
             variant = CinemaButtonVariant.PrimaryAccent,
-            onClick = onWatchFullscreen,
+            icon = Icons.Default.PlayArrow,
+            onClick = onWatchLive,
         )
+        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
+            CinemaButton(
+                text = stringResource(R.string.btn_details),
+                variant = CinemaButtonVariant.SecondaryDark,
+                icon = Icons.Default.Info,
+                onClick = onDetails,
+            )
+            CinemaButton(
+                text = "",
+                variant = CinemaButtonVariant.Icon,
+                icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                onClick = onFavorite,
+            )
+        }
     }
 }
 

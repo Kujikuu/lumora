@@ -61,6 +61,10 @@ import com.iptvcinema.tv.features.activation.ActivationViewModel;
 import com.iptvcinema.tv.features.activation.ActivationViewModel_HiltModules;
 import com.iptvcinema.tv.features.activation.ActivationViewModel_HiltModules_BindsModule_Binds_LazyMapKey;
 import com.iptvcinema.tv.features.activation.ActivationViewModel_HiltModules_KeyModule_Provide_LazyMapKey;
+import com.iptvcinema.tv.features.details.ChannelDetailsViewModel;
+import com.iptvcinema.tv.features.details.ChannelDetailsViewModel_HiltModules;
+import com.iptvcinema.tv.features.details.ChannelDetailsViewModel_HiltModules_BindsModule_Binds_LazyMapKey;
+import com.iptvcinema.tv.features.details.ChannelDetailsViewModel_HiltModules_KeyModule_Provide_LazyMapKey;
 import com.iptvcinema.tv.features.details.DetailsViewModel;
 import com.iptvcinema.tv.features.details.DetailsViewModel_HiltModules;
 import com.iptvcinema.tv.features.details.DetailsViewModel_HiltModules_BindsModule_Binds_LazyMapKey;
@@ -476,7 +480,7 @@ public final class DaggerIptvCinemaApp_HiltComponents_SingletonC {
 
     @Override
     public Map<Class<?>, Boolean> getViewModelKeys() {
-      return LazyClassKeyMap.<Boolean>of(ImmutableMap.<String, Boolean>builderWithExpectedSize(15).put(ActivationViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, ActivationViewModel_HiltModules.KeyModule.provide()).put(DetailsViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, DetailsViewModel_HiltModules.KeyModule.provide()).put(HomeViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, HomeViewModel_HiltModules.KeyModule.provide()).put(LiveTvViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, LiveTvViewModel_HiltModules.KeyModule.provide()).put(MoviesViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, MoviesViewModel_HiltModules.KeyModule.provide()).put(MyListViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, MyListViewModel_HiltModules.KeyModule.provide()).put(ParentalControlsViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, ParentalControlsViewModel_HiltModules.KeyModule.provide()).put(PlayerViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, PlayerViewModel_HiltModules.KeyModule.provide()).put(ProfileViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, ProfileViewModel_HiltModules.KeyModule.provide()).put(SearchViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, SearchViewModel_HiltModules.KeyModule.provide()).put(SeriesViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, SeriesViewModel_HiltModules.KeyModule.provide()).put(SessionViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, SessionViewModel_HiltModules.KeyModule.provide()).put(SettingsViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, SettingsViewModel_HiltModules.KeyModule.provide()).put(SourceViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, SourceViewModel_HiltModules.KeyModule.provide()).put(SplashViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, SplashViewModel_HiltModules.KeyModule.provide()).build());
+      return LazyClassKeyMap.<Boolean>of(ImmutableMap.<String, Boolean>builderWithExpectedSize(16).put(ActivationViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, ActivationViewModel_HiltModules.KeyModule.provide()).put(ChannelDetailsViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, ChannelDetailsViewModel_HiltModules.KeyModule.provide()).put(DetailsViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, DetailsViewModel_HiltModules.KeyModule.provide()).put(HomeViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, HomeViewModel_HiltModules.KeyModule.provide()).put(LiveTvViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, LiveTvViewModel_HiltModules.KeyModule.provide()).put(MoviesViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, MoviesViewModel_HiltModules.KeyModule.provide()).put(MyListViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, MyListViewModel_HiltModules.KeyModule.provide()).put(ParentalControlsViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, ParentalControlsViewModel_HiltModules.KeyModule.provide()).put(PlayerViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, PlayerViewModel_HiltModules.KeyModule.provide()).put(ProfileViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, ProfileViewModel_HiltModules.KeyModule.provide()).put(SearchViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, SearchViewModel_HiltModules.KeyModule.provide()).put(SeriesViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, SeriesViewModel_HiltModules.KeyModule.provide()).put(SessionViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, SessionViewModel_HiltModules.KeyModule.provide()).put(SettingsViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, SettingsViewModel_HiltModules.KeyModule.provide()).put(SourceViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, SourceViewModel_HiltModules.KeyModule.provide()).put(SplashViewModel_HiltModules_KeyModule_Provide_LazyMapKey.lazyClassKeyName, SplashViewModel_HiltModules.KeyModule.provide()).build());
     }
 
     @Override
@@ -505,6 +509,8 @@ public final class DaggerIptvCinemaApp_HiltComponents_SingletonC {
     private final ViewModelCImpl viewModelCImpl = this;
 
     private Provider<ActivationViewModel> activationViewModelProvider;
+
+    private Provider<ChannelDetailsViewModel> channelDetailsViewModelProvider;
 
     private Provider<DetailsViewModel> detailsViewModelProvider;
 
@@ -548,25 +554,26 @@ public final class DaggerIptvCinemaApp_HiltComponents_SingletonC {
     private void initialize(final SavedStateHandle savedStateHandleParam,
         final ViewModelLifecycle viewModelLifecycleParam) {
       this.activationViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 0);
-      this.detailsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 1);
-      this.homeViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 2);
-      this.liveTvViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 3);
-      this.moviesViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 4);
-      this.myListViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 5);
-      this.parentalControlsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 6);
-      this.playerViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 7);
-      this.profileViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 8);
-      this.searchViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 9);
-      this.seriesViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 10);
-      this.sessionViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 11);
-      this.settingsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 12);
-      this.sourceViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 13);
-      this.splashViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 14);
+      this.channelDetailsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 1);
+      this.detailsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 2);
+      this.homeViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 3);
+      this.liveTvViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 4);
+      this.moviesViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 5);
+      this.myListViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 6);
+      this.parentalControlsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 7);
+      this.playerViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 8);
+      this.profileViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 9);
+      this.searchViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 10);
+      this.seriesViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 11);
+      this.sessionViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 12);
+      this.settingsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 13);
+      this.sourceViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 14);
+      this.splashViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 15);
     }
 
     @Override
     public Map<Class<?>, javax.inject.Provider<ViewModel>> getHiltViewModelMap() {
-      return LazyClassKeyMap.<javax.inject.Provider<ViewModel>>of(ImmutableMap.<String, javax.inject.Provider<ViewModel>>builderWithExpectedSize(15).put(ActivationViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) activationViewModelProvider)).put(DetailsViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) detailsViewModelProvider)).put(HomeViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) homeViewModelProvider)).put(LiveTvViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) liveTvViewModelProvider)).put(MoviesViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) moviesViewModelProvider)).put(MyListViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) myListViewModelProvider)).put(ParentalControlsViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) parentalControlsViewModelProvider)).put(PlayerViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) playerViewModelProvider)).put(ProfileViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) profileViewModelProvider)).put(SearchViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) searchViewModelProvider)).put(SeriesViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) seriesViewModelProvider)).put(SessionViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) sessionViewModelProvider)).put(SettingsViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) settingsViewModelProvider)).put(SourceViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) sourceViewModelProvider)).put(SplashViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) splashViewModelProvider)).build());
+      return LazyClassKeyMap.<javax.inject.Provider<ViewModel>>of(ImmutableMap.<String, javax.inject.Provider<ViewModel>>builderWithExpectedSize(16).put(ActivationViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) activationViewModelProvider)).put(ChannelDetailsViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) channelDetailsViewModelProvider)).put(DetailsViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) detailsViewModelProvider)).put(HomeViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) homeViewModelProvider)).put(LiveTvViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) liveTvViewModelProvider)).put(MoviesViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) moviesViewModelProvider)).put(MyListViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) myListViewModelProvider)).put(ParentalControlsViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) parentalControlsViewModelProvider)).put(PlayerViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) playerViewModelProvider)).put(ProfileViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) profileViewModelProvider)).put(SearchViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) searchViewModelProvider)).put(SeriesViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) seriesViewModelProvider)).put(SessionViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) sessionViewModelProvider)).put(SettingsViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) settingsViewModelProvider)).put(SourceViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) sourceViewModelProvider)).put(SplashViewModel_HiltModules_BindsModule_Binds_LazyMapKey.lazyClassKeyName, ((Provider) splashViewModelProvider)).build());
     }
 
     @Override
@@ -598,46 +605,49 @@ public final class DaggerIptvCinemaApp_HiltComponents_SingletonC {
           case 0: // com.iptvcinema.tv.features.activation.ActivationViewModel 
           return (T) new ActivationViewModel(singletonCImpl.supabaseAuthRepositoryProvider.get(), singletonCImpl.supabaseDeviceActivationRepositoryProvider.get(), singletonCImpl.startupSessionBootstrapProvider.get());
 
-          case 1: // com.iptvcinema.tv.features.details.DetailsViewModel 
-          return (T) new DetailsViewModel(singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseFavoritesRepositoryProvider.get(), singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.episodeCatalogRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.appStringsProvider.get());
+          case 1: // com.iptvcinema.tv.features.details.ChannelDetailsViewModel 
+          return (T) new ChannelDetailsViewModel(singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.supabaseFavoritesRepositoryProvider.get(), singletonCImpl.appStringsProvider.get());
 
-          case 2: // com.iptvcinema.tv.features.home.HomeViewModel 
+          case 2: // com.iptvcinema.tv.features.details.DetailsViewModel 
+          return (T) new DetailsViewModel(singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseFavoritesRepositoryProvider.get(), singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.episodeCatalogRepositoryProvider.get(), singletonCImpl.supabaseWatchHistoryRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.appStringsProvider.get());
+
+          case 3: // com.iptvcinema.tv.features.home.HomeViewModel 
           return (T) new HomeViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.supabaseWatchHistoryRepositoryProvider.get(), singletonCImpl.supabaseFavoritesRepositoryProvider.get(), singletonCImpl.supabaseUserSettingsRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.playbackSessionTrackerProvider.get(), singletonCImpl.catalogRefreshControllerProvider.get(), singletonCImpl.appStringsProvider.get());
 
-          case 3: // com.iptvcinema.tv.features.livetv.LiveTvViewModel 
-          return (T) new LiveTvViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.playbackSessionTrackerProvider.get(), singletonCImpl.catalogRefreshControllerProvider.get());
+          case 4: // com.iptvcinema.tv.features.livetv.LiveTvViewModel 
+          return (T) new LiveTvViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.supabaseFavoritesRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.playbackSessionTrackerProvider.get(), singletonCImpl.catalogRefreshControllerProvider.get());
 
-          case 4: // com.iptvcinema.tv.features.movies.MoviesViewModel 
-          return (T) new MoviesViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.catalogRefreshControllerProvider.get());
+          case 5: // com.iptvcinema.tv.features.movies.MoviesViewModel 
+          return (T) new MoviesViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.supabaseWatchHistoryRepositoryProvider.get(), singletonCImpl.supabaseFavoritesRepositoryProvider.get(), singletonCImpl.supabaseUserSettingsRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.catalogRefreshControllerProvider.get());
 
-          case 5: // com.iptvcinema.tv.features.mylist.MyListViewModel 
+          case 6: // com.iptvcinema.tv.features.mylist.MyListViewModel 
           return (T) new MyListViewModel(singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.supabaseFavoritesRepositoryProvider.get(), singletonCImpl.supabaseWatchHistoryRepositoryProvider.get(), singletonCImpl.appStringsProvider.get());
 
-          case 6: // com.iptvcinema.tv.features.parental.ParentalControlsViewModel 
+          case 7: // com.iptvcinema.tv.features.parental.ParentalControlsViewModel 
           return (T) new ParentalControlsViewModel(singletonCImpl.supabaseProfilesRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.pinHasherProvider.get(), singletonCImpl.parentalGateProvider.get());
 
-          case 7: // com.iptvcinema.tv.features.player.PlayerViewModel 
+          case 8: // com.iptvcinema.tv.features.player.PlayerViewModel 
           return (T) new PlayerViewModel(viewModelCImpl.savedStateHandle, singletonCImpl.playbackRepositoryProvider.get(), singletonCImpl.playerManagerProvider.get(), singletonCImpl.supabaseWatchHistoryRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseUserSettingsRepositoryProvider.get(), singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.nextEpisodeResolverProvider.get(), singletonCImpl.episodeCatalogRepositoryProvider.get(), singletonCImpl.playbackSessionTrackerProvider.get(), singletonCImpl.appStringsProvider.get(), singletonCImpl.provideApplicationScopeProvider.get());
 
-          case 8: // com.iptvcinema.tv.features.profiles.ProfileViewModel 
+          case 9: // com.iptvcinema.tv.features.profiles.ProfileViewModel 
           return (T) new ProfileViewModel(singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseProfilesRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get());
 
-          case 9: // com.iptvcinema.tv.features.search.SearchViewModel 
+          case 10: // com.iptvcinema.tv.features.search.SearchViewModel 
           return (T) new SearchViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.recentSearchRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.appStringsProvider.get());
 
-          case 10: // com.iptvcinema.tv.features.series.SeriesViewModel 
-          return (T) new SeriesViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.catalogRefreshControllerProvider.get());
+          case 11: // com.iptvcinema.tv.features.series.SeriesViewModel 
+          return (T) new SeriesViewModel(singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.supabaseWatchHistoryRepositoryProvider.get(), singletonCImpl.supabaseFavoritesRepositoryProvider.get(), singletonCImpl.supabaseUserSettingsRepositoryProvider.get(), singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.catalogRefreshControllerProvider.get());
 
-          case 11: // com.iptvcinema.tv.core.navigation.SessionViewModel 
+          case 12: // com.iptvcinema.tv.core.navigation.SessionViewModel 
           return (T) new SessionViewModel(singletonCImpl.appSessionRepositoryProvider.get());
 
-          case 12: // com.iptvcinema.tv.features.settings.SettingsViewModel 
+          case 13: // com.iptvcinema.tv.features.settings.SettingsViewModel 
           return (T) new SettingsViewModel(singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabaseAuthRepositoryProvider.get(), singletonCImpl.supabaseUserSettingsRepositoryProvider.get(), singletonCImpl.supabaseParentalControlsRepositoryProvider.get(), singletonCImpl.parentalGateProvider.get(), singletonCImpl.localCredentialsStoreProvider.get(), singletonCImpl.catalogRefreshControllerProvider.get());
 
-          case 13: // com.iptvcinema.tv.features.sources.SourceViewModel 
+          case 14: // com.iptvcinema.tv.features.sources.SourceViewModel 
           return (T) new SourceViewModel(singletonCImpl.appSessionRepositoryProvider.get(), singletonCImpl.supabasePlaylistSourcesRepositoryProvider.get(), singletonCImpl.catalogRepositoryProvider.get(), singletonCImpl.supabaseAuthRepositoryProvider.get(), singletonCImpl.xtreamRepositoryProvider.get(), singletonCImpl.xtreamSyncRepositoryProvider.get(), singletonCImpl.m3uSyncRepositoryProvider.get(), singletonCImpl.localCredentialsStoreProvider.get());
 
-          case 14: // com.iptvcinema.tv.features.splash.SplashViewModel 
+          case 15: // com.iptvcinema.tv.features.splash.SplashViewModel 
           return (T) new SplashViewModel(singletonCImpl.startupSessionBootstrapProvider.get());
 
           default: throw new AssertionError(id);

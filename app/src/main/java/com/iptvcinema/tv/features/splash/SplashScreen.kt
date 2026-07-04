@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -40,7 +41,15 @@ fun SplashScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(CinemaColors.Background),
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            CinemaColors.Accent.copy(alpha = 0.10f),
+                            CinemaColors.Background,
+                            CinemaColors.Secondary.copy(alpha = 0.06f),
+                        ),
+                    ),
+                ),
             contentAlignment = Alignment.Center,
         ) {
             Column(

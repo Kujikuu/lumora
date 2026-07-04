@@ -43,11 +43,11 @@ fun CinemaButton(
 ) {
     val (backgroundColor, contentColor) = when (variant) {
         CinemaButtonVariant.PrimaryAccent -> Pair(
+            CinemaColors.Accent,
             CinemaColors.White,
-            CinemaColors.Background,
         )
         CinemaButtonVariant.SecondaryDark -> Pair(
-            CinemaColors.SurfaceSoft.copy(alpha = 0.7f),
+            CinemaColors.SurfaceGlass,
             CinemaColors.White,
         )
         CinemaButtonVariant.Danger -> Pair(
@@ -55,18 +55,18 @@ fun CinemaButton(
             CinemaColors.White,
         )
         CinemaButtonVariant.Ghost -> Pair(
-            CinemaColors.SurfaceSoft.copy(alpha = 0.5f),
+            CinemaColors.Surface.copy(alpha = 0.52f),
             CinemaColors.White,
         )
         CinemaButtonVariant.Icon -> Pair(
-            CinemaColors.SurfaceSoft.copy(alpha = 0.5f),
+            CinemaColors.SurfaceGlass,
             CinemaColors.White,
         )
     }
 
     val shape = CinemaShapes.Small
     val horizontalPadding = if (variant == CinemaButtonVariant.Icon) 0.dp else 20.dp
-    val minSize = 40.dp
+    val minSize = 44.dp
 
     FocusableCinemaCard(
         modifier = modifier.defaultMinSize(

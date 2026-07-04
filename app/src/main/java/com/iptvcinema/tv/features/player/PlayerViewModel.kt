@@ -13,6 +13,8 @@ import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toChannelTileData
 import com.iptvcinema.tv.core.design.components.ChannelTileData
 import com.iptvcinema.tv.core.design.components.PosterCardData
 import com.iptvcinema.tv.core.di.ApplicationScope
+import com.iptvcinema.tv.core.epg.GuideLayoutHelper
+import com.iptvcinema.tv.core.model.EpgProgram
 import com.iptvcinema.tv.core.model.SeasonItem
 import com.iptvcinema.tv.core.model.SourceType
 import com.iptvcinema.tv.core.model.WatchHistoryContentType
@@ -63,6 +65,16 @@ data class PlayerScreenState(
     val channelPickerLoading: Boolean = false,
     val seriesTitle: String? = null,
     val seriesPosterUrl: String? = null,
+    val currentLiveProgram: PlayerLiveProgramUi? = null,
+    val nextLiveProgram: PlayerLiveProgramUi? = null,
+)
+
+data class PlayerLiveProgramUi(
+    val title: String,
+    val subtitle: String? = null,
+    val progress: Float? = null,
+    val startMs: Long? = null,
+    val endMs: Long? = null,
 )
 
 @HiltViewModel
@@ -83,6 +95,7 @@ class PlayerViewModel @Inject constructor(
     private val contentId: String = savedStateHandle.get<String>("contentId").orEmpty()
     private val contentType: String = savedStateHandle.get<String>("contentType").orEmpty()
     private val seriesIdArg: String? = savedStateHandle.get<String>("seriesId")
+    private val resumePositionArg: Long? = savedStateHandle.get<Long>("resumePositionMs")?.takeIf { it >= 0L }
 
     private val _screenState = MutableStateFlow(PlayerScreenState(seriesId = seriesIdArg))
     val screenState: StateFlow<PlayerScreenState> = _screenState.asStateFlow()
@@ -93,6 +106,7 @@ class PlayerViewModel @Inject constructor(
     private var positionTickerJob: Job? = null
     private var autoplayJob: Job? = null
     private var channelBannerJob: Job? = null
+    private var epgRefreshJob: Job? = null
     private var lastSavedPositionMs: Long = 0L
     private var currentEpisode: CatalogEpisode? = null
     private var autoplayState = AutoplayState.IDLE
@@ -346,7 +360,11 @@ class PlayerViewModel @Inject constructor(
         }
         when (result) {
             is PlaybackResolveResult.Success -> {
-                val resumeMs = if (continueWatchingEnabled) loadResumePosition(result.request) else 0L
+                val resumeMs = when {
+                    resumePositionArg != null && resumePositionArg > 0L -> resumePositionArg
+                    continueWatchingEnabled -> loadResumePosition(result.request)
+                    else -> 0L
+                }
                 _screenState.value = PlayerScreenState(
                     isLoading = false,
                     playbackRequest = result.request,
@@ -357,6 +375,8 @@ class PlayerViewModel @Inject constructor(
                 playerManager.play(result.request, resumeMs, isXtreamSource())
                 updateLivePlaybackSession(result.request)
                 scheduleProgressSave()
+                loadLiveProgramInfo(result.request)
+                startEpgRefresh(result.request)
                 loadUpNext(result.request)
                 loadSeriesMetadata(result.request)
                 prefetchEpisodeCatalog(result.request)
@@ -406,12 +426,9 @@ class PlayerViewModel @Inject constructor(
                 ?: return
             currentEpisode = episode
             val next = nextEpisodeResolver.nextEpisode(sourceId, episode)
-            _screenState.value = _screenState.value.copy(
-                nextEpisodeTitle = next?.title,
-            )
-            if (autoplayNextEpisode) return
             val upNext = nextEpisodeResolver.upNextEpisodes(sourceId, episode, limit = 3)
             _screenState.value = _screenState.value.copy(
+                nextEpisodeTitle = next?.title,
                 upNextItems = upNext.map { it.toPosterCardData() },
             )
         }
@@ -468,6 +485,8 @@ class PlayerViewModel @Inject constructor(
                     )
                     playerManager.play(result.request, 0L, isXtreamSource())
                     scheduleProgressSave()
+                    loadLiveProgramInfo(result.request)
+                    stopEpgRefresh()
                     loadUpNext(result.request)
                     loadSeriesMetadata(result.request)
                     prefetchEpisodeCatalog(result.request)
@@ -532,10 +551,74 @@ class PlayerViewModel @Inject constructor(
                 playerManager.play(updatedRequest, 0L, isXtreamSource())
                 updateLivePlaybackSession(updatedRequest)
                 saveLiveWatchEntry(updatedRequest)
+                loadLiveProgramInfo(updatedRequest)
+                startEpgRefresh(updatedRequest)
                 showChannelBannerBriefly()
             }
             is PlaybackResolveResult.Error -> Unit
         }
+    }
+
+    private suspend fun loadLiveProgramInfo(request: PlaybackRequest) {
+        if (!request.isLive) {
+            stopEpgRefresh()
+            _screenState.value = _screenState.value.copy(
+                currentLiveProgram = null,
+                nextLiveProgram = null,
+            )
+            return
+        }
+        val sourceId = request.sourceId ?: return
+        val nowMs = System.currentTimeMillis()
+        runCatching {
+            val programs = catalogRepository.getEpgForChannels(
+                sourceId = sourceId,
+                channelIds = listOf(request.contentId),
+                windowStartMs = nowMs - 5 * 60_000L,
+                windowEndMs = nowMs + 4 * 60 * 60_000L,
+            ).filter { it.channelId == request.contentId }
+                .sortedBy { it.startEpochMs }
+            val current = programs.firstOrNull { it.startEpochMs <= nowMs && it.endEpochMs > nowMs }
+            val next = programs.firstOrNull { it.startEpochMs > nowMs }
+            _screenState.value = _screenState.value.copy(
+                currentLiveProgram = current?.toPlayerLiveProgram(nowMs),
+                nextLiveProgram = next?.toPlayerLiveProgram(nowMs),
+            )
+        }
+    }
+
+    private fun startEpgRefresh(request: PlaybackRequest) {
+        epgRefreshJob?.cancel()
+        if (!request.isLive) return
+        epgRefreshJob = viewModelScope.launch {
+            while (isActive) {
+                delay(EPG_REFRESH_INTERVAL_MS)
+                val currentRequest = _screenState.value.playbackRequest ?: break
+                if (!currentRequest.isLive) break
+                loadLiveProgramInfo(currentRequest)
+            }
+        }
+    }
+
+    private fun stopEpgRefresh() {
+        epgRefreshJob?.cancel()
+        epgRefreshJob = null
+    }
+
+    private fun EpgProgram.toPlayerLiveProgram(nowMs: Long): PlayerLiveProgramUi {
+        val durationMs = (endEpochMs - startEpochMs).coerceAtLeast(1L)
+        val progress = if (startEpochMs <= nowMs && endEpochMs > nowMs) {
+            ((nowMs - startEpochMs).toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+        } else {
+            null
+        }
+        return PlayerLiveProgramUi(
+            title = title,
+            subtitle = "${GuideLayoutHelper.formatSlotLabel(startEpochMs)} - ${GuideLayoutHelper.formatSlotLabel(endEpochMs)}",
+            progress = progress,
+            startMs = startEpochMs,
+            endMs = endEpochMs,
+        )
     }
 
     private fun handlePlaybackEnded() {
@@ -818,6 +901,7 @@ class PlayerViewModel @Inject constructor(
         positionTickerJob?.cancel()
         autoplayJob?.cancel()
         channelBannerJob?.cancel()
+        stopEpgRefresh()
         playbackSessionTracker.setCurrentLiveChannel(null)
         if (finalRequest != null) {
             applicationScope.launch {
@@ -864,6 +948,7 @@ class PlayerViewModel @Inject constructor(
     companion object {
         private const val PROGRESS_SAVE_DEBOUNCE_MS = 10_000L
         private const val AUTOPLAY_COUNTDOWN_SECONDS = 10
+        private const val EPG_REFRESH_INTERVAL_MS = 60_000L
     }
 }
 

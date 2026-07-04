@@ -40,9 +40,11 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -76,6 +78,22 @@ fun HeroBanner(
     selectedThumbIndex: Int = 0,
     onThumbSelect: ((Int) -> Unit)? = null,
 ) {
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val sideGradientColors = if (isRtl) {
+        listOf(
+            Color.Transparent,
+            Color.Transparent,
+            CinemaColors.Background.copy(alpha = 0.42f),
+            CinemaColors.Background.copy(alpha = 0.9f),
+        )
+    } else {
+        listOf(
+            CinemaColors.Background.copy(alpha = 0.9f),
+            CinemaColors.Background.copy(alpha = 0.42f),
+            Color.Transparent,
+            Color.Transparent,
+        )
+    }
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -128,12 +146,7 @@ fun HeroBanner(
                 .fillMaxSize()
                 .background(
                     Brush.horizontalGradient(
-                        colors = listOf(
-                            CinemaColors.Background.copy(alpha = 0.8f),
-                            CinemaColors.Background.copy(alpha = 0.4f),
-                            Color.Transparent,
-                            Color.Transparent,
-                        ),
+                        colors = sideGradientColors,
                     ),
                 ),
         )
@@ -148,6 +161,10 @@ fun HeroBanner(
                 ),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            BadgeChip(
+                text = stringResource(R.string.home_spotlight),
+                backgroundColor = CinemaColors.AccentDeep,
+            )
             Text(
                 text = title,
                 style = MaterialTheme.typography.displaySmall.copy(
@@ -196,14 +213,13 @@ fun HeroBanner(
                         icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         onClick = onFavorite,
                     )
-                } else {
-                    CinemaButton(
-                        text = stringResource(R.string.btn_details),
-                        variant = CinemaButtonVariant.SecondaryDark,
-                        icon = Icons.Default.Info,
-                        onClick = onDetails,
-                    )
                 }
+                CinemaButton(
+                    text = stringResource(R.string.btn_details),
+                    variant = CinemaButtonVariant.SecondaryDark,
+                    icon = Icons.Default.Info,
+                    onClick = onDetails,
+                )
             }
         }
 

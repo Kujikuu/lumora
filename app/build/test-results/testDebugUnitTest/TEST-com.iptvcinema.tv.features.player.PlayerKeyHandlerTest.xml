@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.iptvcinema.tv.features.player.PlayerKeyHandlerTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-06-27T00:50:39" hostname="Apples-MacBook-Pro.local" time="0.007">
+<testsuite name="com.iptvcinema.tv.features.player.PlayerKeyHandlerTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-07-02T15:25:19" hostname="Apples-MacBook-Pro.local" time="0.011">
   <properties/>
-  <testcase name="resolve_channelNext_forLive" classname="com.iptvcinema.tv.features.player.PlayerKeyHandlerTest" time="0.005"/>
+  <testcase name="resolve_channelNext_forLive" classname="com.iptvcinema.tv.features.player.PlayerKeyHandlerTest" time="0.007"/>
   <testcase name="toCommand_mapsEpisodeControls" classname="com.iptvcinema.tv.features.player.PlayerKeyHandlerTest" time="0.001"/>
   <testcase name="toCommand_mapsPlayPause" classname="com.iptvcinema.tv.features.player.PlayerKeyHandlerTest" time="0.0"/>
   <testcase name="resolve_seekLeft_forVodWhenOverlayHidden" classname="com.iptvcinema.tv.features.player.PlayerKeyHandlerTest" time="0.0"/>

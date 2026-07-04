@@ -49,6 +49,9 @@
     <string name="btn_add_to_favorites">إضافة إلى المفضلة</string>
     <string name="btn_favorited">في المفضلة</string>
     <string name="btn_play_first">تشغيل الأولى</string>
+    <string name="btn_continue_series">متابعة S%1$d E%2$d</string>
+    <string name="btn_watch_live">شاهد مباشر</string>
+    <string name="btn_open_in_live_tv">فتح في البث المباشر</string>
     <string name="btn_refresh_catalog">تحديث الفهرس</string>
 
     <string name="toggle_on">تشغيل</string>
@@ -158,6 +161,10 @@
     <string name="msg_no_movies_synced">لم تتم مزامنة أفلام</string>
     <string name="msg_no_series_synced">لم تتم مزامنة مسلسلات</string>
     <string name="msg_no_program_info">لا توجد معلومات عن البرنامج</string>
+    <string name="channel_now_playing">يعرض الآن</string>
+    <string name="channel_up_next">التالي</string>
+    <string name="channel_today_lineup">جدول اليوم</string>
+    <string name="channel_related">قنوات ذات صلة</string>
 
     <string name="home_continue_watching">متابعة المشاهدة</string>
     <string name="home_trending">الرائج الآن</string>
@@ -165,6 +172,7 @@
     <string name="home_new_releases">الإصدارات الجديدة</string>
     <string name="home_popular_series">مسلسلات شائعة</string>
     <string name="home_mood_row_title">تصفح حسب المزاج</string>
+    <string name="home_spotlight">واجهة العرض</string>
     <string name="btn_continue_watching">متابعة المشاهدة</string>
     <string name="home_continue_progress">تمت مشاهدة %1$d%%</string>
     <string name="badge_top_label">TOP</string>
@@ -276,6 +284,8 @@
     <string name="player_audio_tracks">الصوت</string>
     <string name="player_resume_from">استئناف من %1$s</string>
     <string name="player_no_next_episode">لا توجد حلقة تالية</string>
+    <string name="player_on_now">يُعرض الآن</string>
+    <string name="player_up_next">التالي</string>
 
     <string name="settings_title">الإعدادات</string>
     <string name="settings_subtitle">إدارة حسابك وتفضيلاتك وإعدادات الجهاز.</string>

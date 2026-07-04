@@ -3,18 +3,22 @@ package com.iptvcinema.tv.core.design.theme
 import androidx.compose.ui.graphics.Color
 
 object CinemaColors {
-    val Background = Color(0xFF141414)
-    val BackgroundSoft = Color(0xFF1A1A1A)
-    val Surface = Color(0xFF2A2A2A)
-    val SurfaceSoft = Color(0xFF333333)
-    val SurfaceGlass = Color(0xB3181818)
+    val Background = Color(0xFF08090D)
+    val BackgroundSoft = Color(0xFF0C0E14)
+    val Surface = Color(0xFF11131A)
+    val SurfaceSoft = Color(0xFF181B24)
+    val SurfaceGlass = Color(0xD111131A)
 
-    val Accent = Color(0xFFE50914)
-    val AccentSoft = Color(0xFFFF3B46)
-    val AccentDeep = Color(0xFFB20710)
-    val AccentGlow = Color(0xFFE50914)
+    val Accent = Color(0xFFD6243A)
+    val AccentSoft = Color(0xFFFF4D63)
+    val AccentDeep = Color(0xFFA81830)
+    val AccentGlow = Color(0xFFD6243A)
 
-    // Backwards-compatible aliases — now map to the red brand accent.
+    val Secondary = Color(0xFF8B5CF6)
+    val SecondarySoft = Color(0xFFA78BFA)
+    val SecondaryDeep = Color(0xFF6D28D9)
+
+    // Backwards-compatible aliases — older components still call these names.
     val Gold = Accent
     val GoldSoft = AccentSoft
     val GoldDeep = AccentDeep
@@ -22,15 +26,15 @@ object CinemaColors {
     val AmberWarm = Color(0xFFFFC95C)
 
     val White = Color(0xFFFFFFFF)
-    val TextPrimary = Color(0xFFE5E5E5)
-    val TextSecondary = Color(0xFF999999)
-    val TextMuted = Color(0xFF666666)
+    val TextPrimary = Color(0xFFFFFFFF)
+    val TextSecondary = Color(0xFFB8BCC8)
+    val TextMuted = Color(0xFF707684)
 
-    val Border = Color(0xFF404040)
-    val FocusBorder = Color(0xFFE5E5E5)
+    val Border = Color(0xFF2A2D36)
+    val FocusBorder = Color(0xFFFF4D63)
 
-    val LiveRed = Color(0xFFE50914)
+    val LiveRed = Color(0xFFE02424)
     val Success = Color(0xFF46D369)
     val Warning = Color(0xFFF5C518)
-    val Danger = Color(0xFFE50914)
+    val Danger = Color(0xFFE02424)
 }

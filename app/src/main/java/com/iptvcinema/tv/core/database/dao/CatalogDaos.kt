@@ -202,6 +202,19 @@ interface SeriesDao {
     @Query("SELECT * FROM series WHERE sourceId = :sourceId ORDER BY sortOrder LIMIT :limit")
     fun observeFeatured(sourceId: String, limit: Int): Flow<List<LocalSeriesEntity>>
 
+    @Query(
+        """
+        SELECT * FROM series
+        WHERE sourceId = :sourceId AND categoryId = :categoryId
+        ORDER BY sortOrder, title
+        LIMIT :limit
+        """,
+    )
+    suspend fun getByCategory(sourceId: String, categoryId: String, limit: Int): List<LocalSeriesEntity>
+
+    @Query("SELECT * FROM series WHERE sourceId = :sourceId ORDER BY sortOrder, title LIMIT :limit")
+    suspend fun getFeatured(sourceId: String, limit: Int): List<LocalSeriesEntity>
+
     @Query("SELECT * FROM series WHERE sourceId = :sourceId AND id = :seriesId LIMIT 1")
     suspend fun getById(sourceId: String, seriesId: String): LocalSeriesEntity?
 

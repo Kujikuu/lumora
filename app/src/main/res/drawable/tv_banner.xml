@@ -9,18 +9,18 @@
 
     <!-- Dark background -->
     <path
-        android:fillColor="#141414"
+        android:fillColor="#08090D"
         android:pathData="M0,0h320v180H0z" />
 
     <!-- Subtle gradient accent -->
     <path
-        android:fillColor="#E50914"
+        android:fillColor="#D6243A"
         android:fillAlpha="0.08"
         android:pathData="M0,0h320v180H0z" />
 
     <!-- Red circle brand mark -->
     <path
-        android:fillColor="#E50914"
+        android:fillColor="#D6243A"
         android:pathData="M70,90 m-40,0 a40,40 0 1,1 80,0 a40,40 0 1,1 -80,0" />
 
     <!-- White play triangle inside circle -->

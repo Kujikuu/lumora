@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -160,6 +161,53 @@ fun PlayerIconButton(
     }
 }
 
+@Composable
+fun PlayerCenterButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = CinemaColors.White,
+    size: androidx.compose.ui.unit.Dp = 64.dp,
+    iconSize: androidx.compose.ui.unit.Dp = 30.dp,
+    mirrorIcon: Boolean = false,
+    focusRequester: FocusRequester? = null,
+) {
+    FocusableCinemaCard(
+        modifier = modifier
+            .size(size)
+            .then(focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier),
+        onClick = onClick,
+        shape = CircleShape,
+        contentDescription = contentDescription,
+        focusScale = 1.1f,
+    ) { focused ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    if (focused) CinemaColors.Accent else CinemaColors.SurfaceGlass,
+                    CircleShape,
+                )
+                .border(
+                    width = 1.dp,
+                    color = if (focused) CinemaColors.AccentSoft else CinemaColors.White.copy(alpha = 0.16f),
+                    shape = CircleShape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (focused) CinemaColors.Background else tint,
+                modifier = Modifier
+                    .size(iconSize)
+                    .graphicsLayer(scaleX = if (mirrorIcon) -1f else 1f),
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun PlayerQualityPill(
@@ -178,13 +226,20 @@ fun PlayerQualityPill(
     )
 }
 
+enum class PlayerTrackTab {
+    Audio,
+    Subtitles,
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun PlayerTopBar(
     title: String,
     subtitle: String,
+    isLive: Boolean,
     qualityLabel: String?,
     resumeHint: String?,
+    channelLogoUrl: String? = null,
     showEpisodesAction: Boolean,
     showChannelsAction: Boolean,
     onClose: () -> Unit,
@@ -207,6 +262,31 @@ fun PlayerTopBar(
                 contentDescription = stringResource(R.string.player_close),
                 onClick = onClose,
             )
+            if (isLive && !channelLogoUrl.isNullOrBlank()) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CinemaShapes.Small)
+                        .background(CinemaColors.Surface.copy(alpha = 0.55f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CinemaAsyncImage(
+                        imageUrl = channelLogoUrl,
+                        contentDescription = title,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CinemaShapes.Small),
+                        contentScale = ContentScale.Fit,
+                        fallbackLabel = title,
+                    )
+                }
+            }
+            if (isLive) {
+                BadgeChip(
+                    text = stringResource(R.string.badge_live),
+                    backgroundColor = CinemaColors.LiveRed,
+                )
+            }
             qualityLabel?.let { label ->
                 PlayerQualityPill(label = label)
             }
@@ -268,6 +348,113 @@ fun PlayerTopBar(
                     onClick = onChannels,
                 )
             }
+        }
+    }
+}
+
+data class PlayerLiveProgramDisplay(
+    val title: String,
+    val subtitle: String? = null,
+    val progress: Float? = null,
+)
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun PlayerLiveProgramPanel(
+    channelName: String,
+    currentProgram: PlayerLiveProgramDisplay?,
+    nextProgram: PlayerLiveProgramDisplay?,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .widthIn(max = 460.dp)
+            .background(CinemaColors.SurfaceGlass, CinemaShapes.Large)
+            .border(1.dp, CinemaColors.White.copy(alpha = 0.12f), CinemaShapes.Large)
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BadgeChip(
+                text = stringResource(R.string.badge_live),
+                backgroundColor = CinemaColors.LiveRed,
+            )
+            Text(
+                text = channelName,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    color = CinemaColors.White,
+                    fontWeight = FontWeight.Bold,
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        ProgramTextBlock(
+            label = stringResource(R.string.player_on_now),
+            program = currentProgram,
+            fallback = stringResource(R.string.msg_no_program_info),
+        )
+        currentProgram?.progress?.takeIf { it > 0f }?.let { progress ->
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .clip(CinemaShapes.Small)
+                    .background(CinemaColors.SurfaceSoft),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(progress.coerceIn(0f, 1f))
+                        .background(CinemaColors.LiveRed),
+                )
+            }
+        }
+        if (nextProgram != null) {
+            ProgramTextBlock(
+                label = stringResource(R.string.player_up_next),
+                program = nextProgram,
+                fallback = "",
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun ProgramTextBlock(
+    label: String,
+    program: PlayerLiveProgramDisplay?,
+    fallback: String,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(
+                color = CinemaColors.AccentSoft,
+                fontWeight = FontWeight.Bold,
+            ),
+        )
+        Text(
+            text = program?.title?.takeIf { it.isNotBlank() } ?: fallback,
+            style = MaterialTheme.typography.labelLarge.copy(
+                color = CinemaColors.TextPrimary,
+                fontWeight = FontWeight.SemiBold,
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        program?.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.TextMuted),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -383,6 +570,58 @@ fun PlayerThinProgressBar(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+fun PlayerCenterControls(
+    isPlaying: Boolean,
+    isLive: Boolean,
+    isRtl: Boolean,
+    onPlayPause: () -> Unit,
+    onRewind10: () -> Unit,
+    onForward10: () -> Unit,
+    playPauseFocusRequester: FocusRequester? = null,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (!isLive) {
+            PlayerCenterButton(
+                icon = Icons.Default.Replay10,
+                contentDescription = stringResource(R.string.player_btn_rewind_10),
+                onClick = onRewind10,
+                size = 58.dp,
+                iconSize = 28.dp,
+                mirrorIcon = isRtl,
+            )
+            Spacer(modifier = Modifier.width(20.dp))
+        }
+        PlayerCenterButton(
+            icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+            contentDescription = stringResource(
+                if (isPlaying) R.string.player_btn_pause else R.string.player_btn_play,
+            ),
+            onClick = onPlayPause,
+            size = 76.dp,
+            iconSize = 38.dp,
+            focusRequester = playPauseFocusRequester,
+        )
+        if (!isLive) {
+            Spacer(modifier = Modifier.width(20.dp))
+            PlayerCenterButton(
+                icon = Icons.Default.Forward10,
+                contentDescription = stringResource(R.string.player_btn_forward_10),
+                onClick = onForward10,
+                size = 58.dp,
+                iconSize = 28.dp,
+                mirrorIcon = isRtl,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
 fun PlayerBottomControls(
     elapsed: String,
     total: String,
@@ -409,29 +648,18 @@ fun PlayerBottomControls(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            PlayerIconButton(
-                icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                contentDescription = stringResource(
-                    if (isPlaying) R.string.player_btn_pause else R.string.player_btn_play,
-                ),
-                onClick = onPlayPause,
-                modifier = playPauseFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
-            )
-            if (!isLive) {
-                PlayerIconButton(
-                    icon = Icons.Default.Replay10,
-                    contentDescription = stringResource(R.string.player_btn_rewind_10),
-                    onClick = onRewind10,
-                    mirrorIcon = isRtl,
+            if (isLive) {
+                BadgeChip(
+                    text = stringResource(R.string.badge_live),
+                    backgroundColor = CinemaColors.LiveRed,
                 )
-                PlayerIconButton(
-                    icon = Icons.Default.Forward10,
-                    contentDescription = stringResource(R.string.player_btn_forward_10),
-                    onClick = onForward10,
-                    mirrorIcon = isRtl,
+            } else if (total.isNotBlank()) {
+                Text(
+                    text = stringResource(R.string.player_time_format, elapsed, total),
+                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.White),
                 )
             }
         }
@@ -440,12 +668,6 @@ fun PlayerBottomControls(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (!isLive && total.isNotBlank()) {
-                Text(
-                    text = stringResource(R.string.player_time_format, elapsed, total),
-                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.White),
-                )
-            }
             if (showNextAction) {
                 PlayerIconButton(
                     icon = Icons.Default.SkipNext,
@@ -478,6 +700,181 @@ fun PlayerBottomControls(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+fun SeekableProgressTimeline(
+    progress: Float,
+    elapsed: String,
+    remaining: String,
+    durationMs: Long,
+    onSeekTo: (Long) -> Unit,
+    onInteraction: () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    var previewProgress by remember { mutableFloatStateOf(progress.coerceIn(0f, 1f)) }
+
+    LaunchedEffect(progress) {
+        if (!isFocused) {
+            previewProgress = progress.coerceIn(0f, 1f)
+        }
+    }
+
+    val displayProgress = if (isFocused) previewProgress else progress.coerceIn(0f, 1f)
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val seekStepMs = maxOf(durationMs / 120L, 5_000L)
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = CinemaSpacing.ScreenPadding)
+            .onFocusChanged { focused ->
+                isFocused = focused.isFocused
+                if (focused.isFocused) {
+                    previewProgress = progress.coerceIn(0f, 1f)
+                }
+            }
+            .onKeyEvent { event ->
+                if (!isFocused || durationMs <= 0L) return@onKeyEvent false
+                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                when (event.key) {
+                    Key.DirectionLeft -> {
+                        onInteraction()
+                        val currentMs = (previewProgress * durationMs).toLong()
+                        val newMs = if (isRtl) {
+                            (currentMs + seekStepMs).coerceAtMost(durationMs)
+                        } else {
+                            (currentMs - seekStepMs).coerceAtLeast(0L)
+                        }
+                        previewProgress = newMs.toFloat() / durationMs.toFloat()
+                        onSeekTo(newMs)
+                        true
+                    }
+                    Key.DirectionRight -> {
+                        onInteraction()
+                        val currentMs = (previewProgress * durationMs).toLong()
+                        val newMs = if (isRtl) {
+                            (currentMs - seekStepMs).coerceAtLeast(0L)
+                        } else {
+                            (currentMs + seekStepMs).coerceAtMost(durationMs)
+                        }
+                        previewProgress = newMs.toFloat() / durationMs.toFloat()
+                        onSeekTo(newMs)
+                        true
+                    }
+                    else -> false
+                }
+            }
+            .focusable()
+            .then(
+                if (isFocused) {
+                    Modifier.border(2.dp, CinemaColors.FocusBorder, CinemaShapes.Small)
+                } else {
+                    Modifier
+                },
+            )
+            .padding(vertical = 4.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(if (isFocused) 8.dp else 6.dp)
+                .clip(CinemaShapes.Small)
+                .background(CinemaColors.Surface.copy(alpha = 0.55f)),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(displayProgress.coerceIn(0f, 1f))
+                    .height(if (isFocused) 8.dp else 6.dp)
+                    .background(if (isFocused) CinemaColors.Accent else CinemaColors.Accent.copy(alpha = 0.9f)),
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = elapsed,
+                style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.TextMuted),
+            )
+            Text(
+                text = remaining,
+                style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.TextMuted),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun PlayerUpNextRail(
+    items: List<PosterCardData>,
+    onItemClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (items.isEmpty()) return
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = CinemaSpacing.ScreenPadding),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.player_up_next),
+            style = MaterialTheme.typography.labelMedium.copy(
+                color = CinemaColors.TextSecondary,
+                fontWeight = FontWeight.SemiBold,
+            ),
+        )
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
+        ) {
+            items(items, key = { it.contentId ?: it.title }) { item ->
+                item.contentId?.let { contentId ->
+                    FocusableCinemaCard(
+                        modifier = Modifier
+                            .width(120.dp)
+                            .height(68.dp),
+                        onClick = { onItemClick(contentId) },
+                        shape = CinemaShapes.Small,
+                        defaultBorderWidth = 0.dp,
+                    ) { _ ->
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            CinemaAsyncImage(
+                                imageUrl = item.imageUrl,
+                                contentDescription = item.title,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                                fallbackLabel = item.title,
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .fillMaxWidth()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)),
+                                        ),
+                                    )
+                                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                            ) {
+                                Text(
+                                    text = item.runtime ?: item.title,
+                                    style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.White),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
 fun PlayerTrackSidebar(
     audioTracks: List<TrackOption>,
     subtitleTracks: List<TrackOption>,
@@ -487,63 +884,74 @@ fun PlayerTrackSidebar(
     onDisableSubtitles: () -> Unit,
     onSelectSubtitle: (Int) -> Unit,
     onDismiss: () -> Unit,
+    selectedTab: PlayerTrackTab = PlayerTrackTab.Subtitles,
     modifier: Modifier = Modifier,
 ) {
+    var activeTab by remember(selectedTab) { mutableStateOf(selectedTab) }
     PlayerSidePanel(
         title = stringResource(R.string.player_track_settings),
         onDismiss = onDismiss,
         modifier = modifier,
     ) {
-        Text(
-            text = stringResource(R.string.player_audio_tracks),
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-        )
-        LazyColumn(
-            modifier = Modifier.heightIn(max = 220.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(audioTracks, key = { "audio-${it.index}" }) { track ->
-                CinemaButton(
-                    text = track.label,
-                    variant = if (track.index == selectedAudioIndex) {
-                        CinemaButtonVariant.PrimaryAccent
-                    } else {
-                        CinemaButtonVariant.SecondaryDark
-                    },
-                    onClick = { onSelectAudio(track.index) },
-                )
-            }
+        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
+            CategoryChip(
+                label = stringResource(R.string.player_audio_tracks),
+                isSelected = activeTab == PlayerTrackTab.Audio,
+                onClick = { activeTab = PlayerTrackTab.Audio },
+            )
+            CategoryChip(
+                label = stringResource(R.string.player_subtitles),
+                isSelected = activeTab == PlayerTrackTab.Subtitles,
+                onClick = { activeTab = PlayerTrackTab.Subtitles },
+            )
         }
-        Text(
-            text = stringResource(R.string.player_subtitles),
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            modifier = Modifier.padding(top = 8.dp),
-        )
-        LazyColumn(
-            modifier = Modifier.heightIn(max = 220.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            item {
-                CinemaButton(
-                    text = stringResource(R.string.toggle_off),
-                    variant = if (selectedSubtitleIndex < 0) {
-                        CinemaButtonVariant.PrimaryAccent
-                    } else {
-                        CinemaButtonVariant.SecondaryDark
-                    },
-                    onClick = onDisableSubtitles,
-                )
+        when (activeTab) {
+            PlayerTrackTab.Audio -> {
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(audioTracks, key = { "audio-${it.index}" }) { track ->
+                        CinemaButton(
+                            text = track.label,
+                            variant = if (track.index == selectedAudioIndex) {
+                                CinemaButtonVariant.PrimaryAccent
+                            } else {
+                                CinemaButtonVariant.SecondaryDark
+                            },
+                            onClick = { onSelectAudio(track.index) },
+                        )
+                    }
+                }
             }
-            items(subtitleTracks, key = { "sub-${it.index}" }) { track ->
-                CinemaButton(
-                    text = track.label,
-                    variant = if (track.index == selectedSubtitleIndex) {
-                        CinemaButtonVariant.PrimaryAccent
-                    } else {
-                        CinemaButtonVariant.SecondaryDark
-                    },
-                    onClick = { onSelectSubtitle(track.index) },
-                )
+            PlayerTrackTab.Subtitles -> {
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    item {
+                        CinemaButton(
+                            text = stringResource(R.string.toggle_off),
+                            variant = if (selectedSubtitleIndex < 0) {
+                                CinemaButtonVariant.PrimaryAccent
+                            } else {
+                                CinemaButtonVariant.SecondaryDark
+                            },
+                            onClick = onDisableSubtitles,
+                        )
+                    }
+                    items(subtitleTracks, key = { "sub-${it.index}" }) { track ->
+                        CinemaButton(
+                            text = track.label,
+                            variant = if (track.index == selectedSubtitleIndex) {
+                                CinemaButtonVariant.PrimaryAccent
+                            } else {
+                                CinemaButtonVariant.SecondaryDark
+                            },
+                            onClick = { onSelectSubtitle(track.index) },
+                        )
+                    }
+                }
             }
         }
     }
@@ -604,6 +1012,7 @@ fun PlayerOverlay(
     progress: Float,
     elapsed: String,
     total: String,
+    remaining: String = "",
     isPlaying: Boolean,
     onPlayPause: () -> Unit,
     onBack: () -> Unit,
@@ -620,10 +1029,15 @@ fun PlayerOverlay(
     onSeekInteraction: () -> Unit = {},
     qualityLabel: String? = null,
     resumeHint: String? = null,
+    channelLogoUrl: String? = null,
     showEpisodesAction: Boolean = false,
     showChannelsAction: Boolean = false,
     showNextAction: Boolean = false,
     nextActionAccent: Boolean = false,
+    upNextItems: List<PosterCardData> = emptyList(),
+    onUpNextClick: (String) -> Unit = {},
+    currentLiveProgram: PlayerLiveProgramDisplay? = null,
+    nextLiveProgram: PlayerLiveProgramDisplay? = null,
     modifier: Modifier = Modifier,
     playPauseFocusRequester: FocusRequester? = null,
 ) {
@@ -636,19 +1050,50 @@ fun PlayerOverlay(
             PlayerTopBar(
                 title = title,
                 subtitle = subtitle,
+                isLive = isLive,
                 qualityLabel = qualityLabel,
                 resumeHint = resumeHint,
+                channelLogoUrl = channelLogoUrl,
                 showEpisodesAction = showEpisodesAction,
                 showChannelsAction = showChannelsAction,
                 onClose = onBack,
                 onEpisodes = onEpisodes,
                 onChannels = onChannels,
             )
-            Spacer(modifier = Modifier.weight(1f))
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                if (isLive) {
+                    PlayerLiveProgramPanel(
+                        channelName = title,
+                        currentProgram = currentLiveProgram,
+                        nextProgram = nextLiveProgram,
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = CinemaSpacing.ScreenPadding),
+                    )
+                }
+                PlayerCenterControls(
+                    isPlaying = isPlaying,
+                    isLive = isLive,
+                    isRtl = isRtl,
+                    onPlayPause = onPlayPause,
+                    onRewind10 = onRewind10,
+                    onForward10 = onForward10,
+                    playPauseFocusRequester = playPauseFocusRequester,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (!isLive && upNextItems.isNotEmpty()) {
+                    PlayerUpNextRail(
+                        items = upNextItems,
+                        onItemClick = onUpNextClick,
+                    )
+                }
                 if (!isLive && durationMs > 0L) {
-                    PlayerThinProgressBar(
+                    SeekableProgressTimeline(
                         progress = progress,
+                        elapsed = elapsed,
+                        remaining = remaining.ifBlank { "-$total" },
                         durationMs = durationMs,
                         onSeekTo = onSeekTo,
                         onInteraction = onSeekInteraction,

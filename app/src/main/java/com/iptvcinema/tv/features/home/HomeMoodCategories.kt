@@ -11,7 +11,7 @@ object HomeMoodCategories {
             labelRes = R.string.mood_action,
             filter = "Action",
             target = MoodBrowseTarget.Movies,
-            gradientStartArgb = 0xFFE50914,
+            gradientStartArgb = 0xFFD6243A,
             gradientEndArgb = 0xFF831010,
         ),
         MoodCategory(
@@ -43,8 +43,8 @@ object HomeMoodCategories {
             labelRes = R.string.mood_arabic,
             filter = "Arabic",
             target = MoodBrowseTarget.Series,
-            gradientStartArgb = 0xFF3DA9FC,
-            gradientEndArgb = 0xFF1565C0,
+            gradientStartArgb = 0xFF8B5CF6,
+            gradientEndArgb = 0xFF5B21B6,
         ),
         MoodCategory(
             id = "new",

@@ -22,6 +22,7 @@ import com.iptvcinema.tv.core.datastore.StartupDestination
 import com.iptvcinema.tv.core.datastore.route
 import com.iptvcinema.tv.features.activation.ActivationScreenWithViewModel
 import com.iptvcinema.tv.features.activation.ActivationViewModel
+import com.iptvcinema.tv.features.details.ChannelDetailsScreen
 import com.iptvcinema.tv.features.details.MovieDetailsScreen
 import com.iptvcinema.tv.features.details.SeriesDetailsScreen
 import com.iptvcinema.tv.features.home.HomeScreen
@@ -325,6 +326,18 @@ fun AppNavGraph(
         }
 
         composable(
+            route = AppRoute.CHANNEL_DETAILS,
+            arguments = listOf(navArgument("channelId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            SessionRouteGuard(navController = navController, requirement = SessionRequirement.Ready) {
+                ChannelDetailsScreen(
+                    channelId = backStackEntry.arguments?.getString("channelId").orEmpty(),
+                    navController = navController,
+                )
+            }
+        }
+
+        composable(
             route = AppRoute.PLAYER,
             arguments = listOf(
                 navArgument("contentId") { type = NavType.StringType },
@@ -334,6 +347,10 @@ fun AppNavGraph(
                     nullable = true
                     defaultValue = null
                 },
+                navArgument("resumePositionMs") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                },
             ),
         ) { backStackEntry ->
             SessionRouteGuard(navController = navController, requirement = SessionRequirement.Ready) {
@@ -341,6 +358,7 @@ fun AppNavGraph(
                     contentId = backStackEntry.arguments?.getString("contentId").orEmpty(),
                     contentType = backStackEntry.arguments?.getString("contentType").orEmpty(),
                     seriesId = backStackEntry.arguments?.getString("seriesId"),
+                    resumePositionMs = backStackEntry.arguments?.getLong("resumePositionMs")?.takeIf { it >= 0L },
                     navController = navController,
                 )
             }

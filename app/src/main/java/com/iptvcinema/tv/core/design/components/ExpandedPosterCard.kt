@@ -25,6 +25,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -121,12 +123,12 @@ private fun VerticalHomeCard(
         shape = CinemaShapes.Medium,
         defaultBorderWidth = 0.dp,
         contentDescription = data.title,
-    ) { _ ->
+    ) { focused ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(CinemaShapes.Medium)
-                .background(CinemaColors.BackgroundSoft),
+                .background(if (focused) CinemaColors.SurfaceSoft else CinemaColors.BackgroundSoft),
         ) {
             PosterImageBox(
                 data = data,
@@ -170,6 +172,19 @@ private fun PosterImageBox(
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
             fallbackLabel = data.title,
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.Transparent,
+                            Color.Transparent,
+                            CinemaColors.Background.copy(alpha = 0.68f),
+                        ),
+                    ),
+                ),
         )
         if (showTop10Badge) {
             Top10Badge(
@@ -311,11 +326,11 @@ private fun PrimaryActionChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .defaultMinSize(minHeight = 36.dp)
+        Row(
+            modifier = modifier
+                .defaultMinSize(minHeight = 36.dp)
             .clip(CinemaShapes.Small)
-            .background(CinemaColors.White, CinemaShapes.Small)
+            .background(CinemaColors.Accent, CinemaShapes.Small)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,

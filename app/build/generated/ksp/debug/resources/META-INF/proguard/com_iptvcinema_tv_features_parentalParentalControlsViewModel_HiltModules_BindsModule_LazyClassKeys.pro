@@ -12,6 +12,8 @@
 -keep,allowobfuscation,allowshrinking class com.iptvcinema.tv.features.mylist.MyListViewModel
 -keep,allowobfuscation,allowshrinking class com.iptvcinema.tv.features.activation.ActivationViewModel
 -keep,allowobfuscation,allowshrinking class com.iptvcinema.tv.features.activation.ActivationViewModel
+-keep,allowobfuscation,allowshrinking class com.iptvcinema.tv.features.details.ChannelDetailsViewModel
+-keep,allowobfuscation,allowshrinking class com.iptvcinema.tv.features.details.ChannelDetailsViewModel
 -keep,allowobfuscation,allowshrinking class com.iptvcinema.tv.features.details.DetailsViewModel
 -keep,allowobfuscation,allowshrinking class com.iptvcinema.tv.features.details.DetailsViewModel
 -keep,allowobfuscation,allowshrinking class com.iptvcinema.tv.features.search.SearchViewModel

@@ -23,7 +23,8 @@ object AppRoute {
     const val SERIES = "series?filter={filter}"
     const val MOVIE_DETAILS = "movie_details/{movieId}"
     const val SERIES_DETAILS = "series_details/{seriesId}"
-    const val PLAYER = "player/{contentId}/{contentType}?seriesId={seriesId}"
+    const val CHANNEL_DETAILS = "channel_details/{channelId}"
+    const val PLAYER = "player/{contentId}/{contentType}?seriesId={seriesId}&resumePositionMs={resumePositionMs}"
     const val SEARCH = "search"
     const val MY_LIST = "my_list"
     const val SETTINGS = "settings"
@@ -40,12 +41,25 @@ object AppRoute {
 
     fun movieDetails(movieId: String) = "movie_details/$movieId"
     fun seriesDetails(seriesId: String) = "series_details/$seriesId"
-    fun player(contentId: String, contentType: String, seriesId: String? = null): String =
-        if (seriesId.isNullOrBlank()) {
+    fun channelDetails(channelId: String) = "channel_details/$channelId"
+    fun player(
+        contentId: String,
+        contentType: String,
+        seriesId: String? = null,
+        resumePositionMs: Long? = null,
+    ): String {
+        val params = buildList {
+            if (!seriesId.isNullOrBlank()) add("seriesId=$seriesId")
+            if (resumePositionMs != null && resumePositionMs >= 0L) {
+                add("resumePositionMs=$resumePositionMs")
+            }
+        }
+        return if (params.isEmpty()) {
             "player/$contentId/$contentType"
         } else {
-            "player/$contentId/$contentType?seriesId=$seriesId"
+            "player/$contentId/$contentType?${params.joinToString("&")}"
         }
+    }
     fun movies(filter: String = "") = "movies?filter=$filter"
     fun series(filter: String = "") = "series?filter=$filter"
     fun liveTv(channelId: String? = null): String = "live_tv?channelId=${channelId.orEmpty()}"

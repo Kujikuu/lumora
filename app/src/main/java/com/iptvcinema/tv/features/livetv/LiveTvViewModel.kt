@@ -8,7 +8,10 @@ import com.iptvcinema.tv.core.catalog.CatalogRefreshSupport
 import com.iptvcinema.tv.core.data.fake.FakeDataProvider
 import com.iptvcinema.tv.core.data.repository.CatalogLoadState
 import com.iptvcinema.tv.core.data.repository.CatalogRepository
+import com.iptvcinema.tv.core.data.repository.FavoritesRepository
 import com.iptvcinema.tv.core.datastore.AppSessionRepository
+import com.iptvcinema.tv.core.model.FavoriteContentType
+import com.iptvcinema.tv.core.model.FavoriteItem
 import com.iptvcinema.tv.core.epg.GuideLayoutHelper
 import com.iptvcinema.tv.core.model.ChannelItem
 import com.iptvcinema.tv.core.model.EpgProgram
@@ -45,6 +48,7 @@ data class LiveTvUiState(
     val sourceStatus: SourceStatus? = null,
     val sourceType: SourceType? = null,
     val nowPlayingChannelId: String? = null,
+    val favoriteChannelIds: Set<String> = emptySet(),
     val syncBannerText: String? = null,
     val refreshState: CatalogRefreshState = CatalogRefreshState.Idle,
 ) {
@@ -61,11 +65,14 @@ data class LiveTvUiState(
 
     val selectedChannelId: String?
         get() = selectedChannel?.id
+
+    fun isChannelFavorite(channelId: String): Boolean = channelId in favoriteChannelIds
 }
 
 @HiltViewModel
 class LiveTvViewModel @Inject constructor(
     private val catalogRepository: CatalogRepository,
+    private val favoritesRepository: FavoritesRepository,
     private val appSessionRepository: AppSessionRepository,
     private val parentalControlsRepository: ParentalControlsRepository,
     private val parentalGate: ParentalGate,
@@ -78,6 +85,7 @@ class LiveTvViewModel @Inject constructor(
     private val selectedChannel = MutableStateFlow<ChannelItem?>(null)
     private val nowMs = MutableStateFlow(System.currentTimeMillis())
     private val epgPrograms = MutableStateFlow<List<EpgProgram>>(emptyList())
+    private val favoriteChannelIds = MutableStateFlow<Set<String>>(emptySet())
     private var currentParentalControls: com.iptvcinema.tv.core.model.ParentalControls? = null
     private val browseState = MutableStateFlow(
         LiveTvBrowseSlice(
@@ -108,10 +116,14 @@ class LiveTvViewModel @Inject constructor(
                 val controlsFlow = session.currentProfileId?.let { profileId ->
                     parentalControlsRepository.observeControls(profileId)
                 } ?: flowOf(null)
+                val favoritesFlow = session.currentProfileId?.let { profileId ->
+                    favoritesRepository.observeFavorites(profileId)
+                } ?: flowOf(emptyList())
                 combine(
                     catalogRepository.observeLiveTv(categoryName),
                     controlsFlow,
-                ) { state, controls ->
+                    favoritesFlow,
+                ) { state, controls, favorites ->
                     val filteredCategories = if (controls != null) {
                         parentalGate.filterCategoryNames(state.categories, controls)
                     } else {
@@ -134,11 +146,13 @@ class LiveTvViewModel @Inject constructor(
                             sourceType = state.sourceType,
                         ),
                         controls = controls,
+                        favoriteChannelIds = favorites.channelIds(),
                     )
                 }
             }.collect { result ->
                 browseState.value = result.slice
                 currentParentalControls = result.controls
+                favoriteChannelIds.value = result.favoriteChannelIds
                 val slice = result.slice
                 if (slice.loadState == CatalogLoadState.Ready && slice.channels.isNotEmpty()) {
                     selectedChannel.value = selectedChannel.value?.takeIf { selected ->
@@ -156,11 +170,18 @@ class LiveTvViewModel @Inject constructor(
                 combine(browseState, guideWindowStartMs, focusedProgram, selectedChannel) { browse, windowStart, program, channel ->
                     LiveTvCombineLeft(browse, windowStart, program, channel)
                 },
-                combine(nowMs, epgPrograms, playbackSessionTracker.currentLiveChannelId) { clock, epg, nowPlayingId ->
-                    Triple(clock, epg, nowPlayingId)
+                combine(
+                    nowMs,
+                    epgPrograms,
+                    playbackSessionTracker.currentLiveChannelId,
+                    favoriteChannelIds,
+                ) { clock, epg, nowPlayingId, favorites ->
+                    LiveTvCombineRight(clock, epg, nowPlayingId, favorites)
                 },
             ) { left, right ->
-                val (clock, epg, nowPlayingId) = right
+                val clock = right.clock
+                val epg = right.epg
+                val nowPlayingId = right.nowPlayingId
                 val windowEnd = GuideLayoutHelper.windowEndFromStart(left.windowStart)
                 val channelPrograms = left.channel?.let { channel ->
                     GuideLayoutHelper.programsForSelectedChannel(
@@ -185,6 +206,7 @@ class LiveTvViewModel @Inject constructor(
                     sourceStatus = left.browse.sourceStatus,
                     sourceType = left.browse.sourceType,
                     nowPlayingChannelId = nowPlayingId,
+                    favoriteChannelIds = right.favoriteChannelIds,
                     syncBannerText = _uiState.value.syncBannerText,
                     refreshState = _uiState.value.refreshState,
                 )
@@ -240,6 +262,23 @@ class LiveTvViewModel @Inject constructor(
     fun onProgramFocused(program: EpgProgram) {
         if (program.channelId == selectedChannel.value?.id) {
             focusedProgram.value = program
+        }
+    }
+
+    fun toggleChannelFavorite(channel: ChannelItem) {
+        viewModelScope.launch {
+            val profileId = appSessionRepository.sessionState.first().currentProfileId ?: return@launch
+            val session = appSessionRepository.sessionState.first()
+            runCatching {
+                favoritesRepository.toggleFavorite(
+                    profileId = profileId,
+                    contentId = channel.id,
+                    contentType = FavoriteContentType.CHANNEL,
+                    title = channel.name,
+                    posterUrl = channel.logoUrl,
+                    sourceId = session.currentSourceId,
+                )
+            }
         }
     }
 
@@ -299,10 +338,23 @@ class LiveTvViewModel @Inject constructor(
         val channel: ChannelItem?,
     )
 
+    private data class LiveTvCombineRight(
+        val clock: Long,
+        val epg: List<EpgProgram>,
+        val nowPlayingId: String?,
+        val favoriteChannelIds: Set<String>,
+    )
+
     private data class LiveTvBrowseResult(
         val slice: LiveTvBrowseSlice,
         val controls: com.iptvcinema.tv.core.model.ParentalControls?,
+        val favoriteChannelIds: Set<String>,
     )
+
+    private fun List<FavoriteItem>.channelIds(): Set<String> =
+        filter { it.contentType == FavoriteContentType.CHANNEL }
+            .map { it.contentId }
+            .toSet()
 
     private data class LiveTvBrowseSlice(
         val loadState: CatalogLoadState,

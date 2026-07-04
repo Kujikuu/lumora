@@ -100,6 +100,12 @@ fun MovieDetailsScreen(
         }
         DetailsLoadState.Ready -> {
             val movie = uiState.movie ?: return
+            val continueWatching = uiState.continueWatching
+            val primaryActionLabel = if (continueWatching != null) {
+                stringResource(R.string.btn_continue_watching)
+            } else {
+                stringResource(R.string.btn_watch_now)
+            }
             MainShellScaffold(
                 navController = navController,
                 selectedNavItem = NavItem.Movies,
@@ -122,11 +128,18 @@ fun MovieDetailsScreen(
                             movie.rating.takeIf { it.isNotBlank() }?.let { stringResource(R.string.details_rating, it) },
                         ),
                         synopsis = movie.plot,
+                        primaryActionLabel = primaryActionLabel,
                         onWatchNow = {
                             if (uiState.playbackBlocked) {
                                 showFeedback(feedbackRatingBlocked)
                             } else {
-                                navController.navigate(AppRoute.player(movie.id, "movie"))
+                                navController.navigate(
+                                    AppRoute.player(
+                                        contentId = continueWatching?.contentId ?: movie.id,
+                                        contentType = "movie",
+                                        resumePositionMs = continueWatching?.resumePositionMs,
+                                    ),
+                                )
                             }
                         },
                         onFavorite = {
@@ -141,6 +154,7 @@ fun MovieDetailsScreen(
                         },
                         isFavorite = isFavorite,
                         backdropUrl = movie.backdropUrl ?: movie.imageUrl,
+                        posterUrl = movie.imageUrl,
                         watchNowFocusRequester = watchNowFocus,
                     )
                     if (uiState.isDemoMode) {
@@ -248,6 +262,17 @@ fun SeriesDetailsScreen(
         }
         DetailsLoadState.Ready -> {
             val series = uiState.series ?: return
+            val continueWatching = uiState.continueWatching
+            val primaryActionLabel = when {
+                continueWatching?.seasonNumber != null && continueWatching.episodeNumber != null -> {
+                    stringResource(
+                        R.string.btn_continue_series,
+                        continueWatching.seasonNumber,
+                        continueWatching.episodeNumber,
+                    )
+                }
+                else -> stringResource(R.string.btn_play_first)
+            }
             MainShellScaffold(
                 navController = navController,
                 selectedNavItem = NavItem.Series,
@@ -276,13 +301,22 @@ fun SeriesDetailsScreen(
                             series.rating.takeIf { it.isNotBlank() }?.let { stringResource(R.string.details_rating, it) },
                         ),
                         synopsis = series.plot,
-                        primaryActionLabel = stringResource(R.string.btn_play_first),
+                        primaryActionLabel = primaryActionLabel,
                         onWatchNow = {
                             if (uiState.playbackBlocked) {
                                 showFeedback(feedbackRatingBlocked)
                             } else {
-                                episodes.firstOrNull()?.let {
-                                    navController.navigate(AppRoute.player(it.id, "episode", seriesId))
+                                val targetEpisodeId = continueWatching?.contentId
+                                    ?: episodes.firstOrNull()?.id
+                                targetEpisodeId?.let { episodeId ->
+                                    navController.navigate(
+                                        AppRoute.player(
+                                            contentId = episodeId,
+                                            contentType = "episode",
+                                            seriesId = seriesId,
+                                            resumePositionMs = continueWatching?.resumePositionMs,
+                                        ),
+                                    )
                                 }
                             }
                         },
@@ -298,6 +332,7 @@ fun SeriesDetailsScreen(
                         },
                         isFavorite = isFavorite,
                         backdropUrl = series.backdropUrl ?: series.imageUrl,
+                        posterUrl = series.imageUrl,
                         watchNowFocusRequester = watchNowFocus,
                     )
                     when {
@@ -320,7 +355,13 @@ fun SeriesDetailsScreen(
                                         if (uiState.playbackBlocked) {
                                             showFeedback(feedbackRatingBlocked)
                                         } else {
-                                            navController.navigate(AppRoute.player(episode.id, "episode", seriesId))
+                                            navController.navigate(
+                                                AppRoute.player(
+                                                    contentId = episode.id,
+                                                    contentType = "episode",
+                                                    seriesId = seriesId,
+                                                ),
+                                            )
                                         }
                                     },
                                 )
@@ -347,6 +388,17 @@ fun SeriesDetailsScreen(
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap)) {
                             uiState.cast.forEach { CastCard(member = it) }
+                        }
+                    }
+                    if (!uiState.isDemoMode && uiState.relatedSeries.isNotEmpty()) {
+                        ContentRail(
+                            title = stringResource(R.string.rail_more_like_this),
+                            items = uiState.relatedSeries,
+                        ) { related ->
+                            PosterCard(
+                                data = related.toPosterCardData(),
+                                onClick = { navController.navigate(AppRoute.seriesDetails(related.id)) },
+                            )
                         }
                     }
                 }
@@ -394,6 +446,15 @@ private fun com.iptvcinema.tv.core.model.MovieItem.toPosterCardData() =
         title = title,
         year = year.takeIf { it > 0 }?.toString(),
         runtime = runtimeMinutes.takeIf { it > 0 }?.let { "${it / 60}h ${it % 60}m" },
+        imageUrl = imageUrl,
+        is4K = is4K,
+        contentId = id,
+    )
+
+private fun com.iptvcinema.tv.core.model.SeriesItem.toPosterCardData() =
+    com.iptvcinema.tv.core.design.components.PosterCardData(
+        title = title,
+        year = year.takeIf { it > 0 }?.toString(),
         imageUrl = imageUrl,
         is4K = is4K,
         contentId = id,

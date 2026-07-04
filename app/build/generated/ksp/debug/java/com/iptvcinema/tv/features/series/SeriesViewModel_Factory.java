@@ -2,7 +2,10 @@ package com.iptvcinema.tv.features.series;
 
 import com.iptvcinema.tv.core.catalog.CatalogRefreshController;
 import com.iptvcinema.tv.core.data.repository.CatalogRepository;
+import com.iptvcinema.tv.core.data.repository.FavoritesRepository;
 import com.iptvcinema.tv.core.data.repository.ParentalControlsRepository;
+import com.iptvcinema.tv.core.data.repository.UserSettingsRepository;
+import com.iptvcinema.tv.core.data.repository.WatchHistoryRepository;
 import com.iptvcinema.tv.core.datastore.AppSessionRepository;
 import com.iptvcinema.tv.core.parental.ParentalGate;
 import dagger.internal.DaggerGenerated;
@@ -32,6 +35,12 @@ import javax.annotation.processing.Generated;
 public final class SeriesViewModel_Factory implements Factory<SeriesViewModel> {
   private final Provider<CatalogRepository> catalogRepositoryProvider;
 
+  private final Provider<WatchHistoryRepository> watchHistoryRepositoryProvider;
+
+  private final Provider<FavoritesRepository> favoritesRepositoryProvider;
+
+  private final Provider<UserSettingsRepository> userSettingsRepositoryProvider;
+
   private final Provider<AppSessionRepository> appSessionRepositoryProvider;
 
   private final Provider<ParentalControlsRepository> parentalControlsRepositoryProvider;
@@ -41,11 +50,17 @@ public final class SeriesViewModel_Factory implements Factory<SeriesViewModel> {
   private final Provider<CatalogRefreshController> catalogRefreshControllerProvider;
 
   public SeriesViewModel_Factory(Provider<CatalogRepository> catalogRepositoryProvider,
+      Provider<WatchHistoryRepository> watchHistoryRepositoryProvider,
+      Provider<FavoritesRepository> favoritesRepositoryProvider,
+      Provider<UserSettingsRepository> userSettingsRepositoryProvider,
       Provider<AppSessionRepository> appSessionRepositoryProvider,
       Provider<ParentalControlsRepository> parentalControlsRepositoryProvider,
       Provider<ParentalGate> parentalGateProvider,
       Provider<CatalogRefreshController> catalogRefreshControllerProvider) {
     this.catalogRepositoryProvider = catalogRepositoryProvider;
+    this.watchHistoryRepositoryProvider = watchHistoryRepositoryProvider;
+    this.favoritesRepositoryProvider = favoritesRepositoryProvider;
+    this.userSettingsRepositoryProvider = userSettingsRepositoryProvider;
     this.appSessionRepositoryProvider = appSessionRepositoryProvider;
     this.parentalControlsRepositoryProvider = parentalControlsRepositoryProvider;
     this.parentalGateProvider = parentalGateProvider;
@@ -54,31 +69,38 @@ public final class SeriesViewModel_Factory implements Factory<SeriesViewModel> {
 
   @Override
   public SeriesViewModel get() {
-    return newInstance(catalogRepositoryProvider.get(), appSessionRepositoryProvider.get(), parentalControlsRepositoryProvider.get(), parentalGateProvider.get(), catalogRefreshControllerProvider.get());
+    return newInstance(catalogRepositoryProvider.get(), watchHistoryRepositoryProvider.get(), favoritesRepositoryProvider.get(), userSettingsRepositoryProvider.get(), appSessionRepositoryProvider.get(), parentalControlsRepositoryProvider.get(), parentalGateProvider.get(), catalogRefreshControllerProvider.get());
   }
 
   public static SeriesViewModel_Factory create(
       javax.inject.Provider<CatalogRepository> catalogRepositoryProvider,
+      javax.inject.Provider<WatchHistoryRepository> watchHistoryRepositoryProvider,
+      javax.inject.Provider<FavoritesRepository> favoritesRepositoryProvider,
+      javax.inject.Provider<UserSettingsRepository> userSettingsRepositoryProvider,
       javax.inject.Provider<AppSessionRepository> appSessionRepositoryProvider,
       javax.inject.Provider<ParentalControlsRepository> parentalControlsRepositoryProvider,
       javax.inject.Provider<ParentalGate> parentalGateProvider,
       javax.inject.Provider<CatalogRefreshController> catalogRefreshControllerProvider) {
-    return new SeriesViewModel_Factory(Providers.asDaggerProvider(catalogRepositoryProvider), Providers.asDaggerProvider(appSessionRepositoryProvider), Providers.asDaggerProvider(parentalControlsRepositoryProvider), Providers.asDaggerProvider(parentalGateProvider), Providers.asDaggerProvider(catalogRefreshControllerProvider));
+    return new SeriesViewModel_Factory(Providers.asDaggerProvider(catalogRepositoryProvider), Providers.asDaggerProvider(watchHistoryRepositoryProvider), Providers.asDaggerProvider(favoritesRepositoryProvider), Providers.asDaggerProvider(userSettingsRepositoryProvider), Providers.asDaggerProvider(appSessionRepositoryProvider), Providers.asDaggerProvider(parentalControlsRepositoryProvider), Providers.asDaggerProvider(parentalGateProvider), Providers.asDaggerProvider(catalogRefreshControllerProvider));
   }
 
   public static SeriesViewModel_Factory create(
       Provider<CatalogRepository> catalogRepositoryProvider,
+      Provider<WatchHistoryRepository> watchHistoryRepositoryProvider,
+      Provider<FavoritesRepository> favoritesRepositoryProvider,
+      Provider<UserSettingsRepository> userSettingsRepositoryProvider,
       Provider<AppSessionRepository> appSessionRepositoryProvider,
       Provider<ParentalControlsRepository> parentalControlsRepositoryProvider,
       Provider<ParentalGate> parentalGateProvider,
       Provider<CatalogRefreshController> catalogRefreshControllerProvider) {
-    return new SeriesViewModel_Factory(catalogRepositoryProvider, appSessionRepositoryProvider, parentalControlsRepositoryProvider, parentalGateProvider, catalogRefreshControllerProvider);
+    return new SeriesViewModel_Factory(catalogRepositoryProvider, watchHistoryRepositoryProvider, favoritesRepositoryProvider, userSettingsRepositoryProvider, appSessionRepositoryProvider, parentalControlsRepositoryProvider, parentalGateProvider, catalogRefreshControllerProvider);
   }
 
   public static SeriesViewModel newInstance(CatalogRepository catalogRepository,
-      AppSessionRepository appSessionRepository,
+      WatchHistoryRepository watchHistoryRepository, FavoritesRepository favoritesRepository,
+      UserSettingsRepository userSettingsRepository, AppSessionRepository appSessionRepository,
       ParentalControlsRepository parentalControlsRepository, ParentalGate parentalGate,
       CatalogRefreshController catalogRefreshController) {
-    return new SeriesViewModel(catalogRepository, appSessionRepository, parentalControlsRepository, parentalGate, catalogRefreshController);
+    return new SeriesViewModel(catalogRepository, watchHistoryRepository, favoritesRepository, userSettingsRepository, appSessionRepository, parentalControlsRepository, parentalGate, catalogRefreshController);
   }
 }

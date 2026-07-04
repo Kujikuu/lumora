@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,19 +48,23 @@ fun ChannelTile(
     modifier: Modifier = Modifier,
 ) {
     FocusableCinemaCard(
-        modifier = modifier.width(148.dp),
+        modifier = modifier.width(172.dp),
         onClick = onClick,
         shape = CinemaShapes.Medium,
         contentDescription = data.channelName,
         defaultBorderWidth = 0.dp,
     ) { focused ->
-        Column {
+        Column(
+            modifier = Modifier
+                .clip(CinemaShapes.Medium)
+                .background(if (focused) CinemaColors.SurfaceSoft else Color.Transparent),
+        ) {
             Box(
                 modifier = Modifier
-                    .width(148.dp)
-                    .height(100.dp)
+                    .width(172.dp)
+                    .height(106.dp)
                     .clip(CinemaShapes.Medium)
-                    .background(CinemaColors.Surface),
+                    .background(CinemaColors.SurfaceSoft),
             ) {
                 CinemaAsyncImage(
                     imageUrl = data.logoUrl,
@@ -66,6 +72,19 @@ fun ChannelTile(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                     fallbackLabel = data.channelName,
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.Transparent,
+                                    CinemaColors.Background.copy(alpha = 0.18f),
+                                    CinemaColors.Background.copy(alpha = 0.7f),
+                                ),
+                            ),
+                        ),
                 )
 
                 if (data.isLive) {
@@ -89,7 +108,7 @@ fun ChannelTile(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .fillMaxWidth(data.programProgress.coerceIn(0f, 1f))
-                                .background(CinemaColors.Accent),
+                                .background(CinemaColors.LiveRed),
                         )
                     }
                 }
@@ -104,8 +123,8 @@ fun ChannelTile(
                 Text(
                     text = data.channelName,
                     style = MaterialTheme.typography.labelMedium.copy(
-                        color = if (focused) CinemaColors.White else CinemaColors.TextSecondary,
-                        fontWeight = FontWeight.Medium,
+                        color = if (focused) CinemaColors.White else CinemaColors.TextPrimary,
+                        fontWeight = if (focused) FontWeight.Bold else FontWeight.Medium,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

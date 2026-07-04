@@ -56,6 +56,7 @@
     <string name="btn_clear">مسح</string>
     <string name="btn_close">إغلاق</string>
     <string name="btn_connect">اتصال</string>
+    <string name="btn_continue_series">متابعة S%1$d E%2$d</string>
     <string name="btn_continue_watching">متابعة المشاهدة</string>
     <string name="btn_details">التفاصيل</string>
     <string name="btn_edit">تعديل</string>
@@ -64,6 +65,7 @@
     <string name="btn_link_tv">ربط التلفاز الآن</string>
     <string name="btn_manage_account">إدارة الحساب</string>
     <string name="btn_manage_sources">إدارة المصادر</string>
+    <string name="btn_open_in_live_tv">فتح في البث المباشر</string>
     <string name="btn_play_first">تشغيل الأولى</string>
     <string name="btn_reconnect">إعادة الاتصال</string>
     <string name="btn_record">تسجيل</string>
@@ -78,9 +80,14 @@
     <string name="btn_try_again">حاول مجددًا</string>
     <string name="btn_try_demo">تجربة الوضع التجريبي</string>
     <string name="btn_watch_fullscreen">مشاهدة ملء الشاشة</string>
+    <string name="btn_watch_live">شاهد مباشر</string>
     <string name="btn_watch_now">شاهد الآن</string>
     <string name="catalog_empty_sync_desc">زامِن قائمة التشغيل أو جرّب فئة أخرى.</string>
     <string name="cd_activation_qr">رمز QR للتفعيل</string>
+    <string name="channel_now_playing">يعرض الآن</string>
+    <string name="channel_related">قنوات ذات صلة</string>
+    <string name="channel_today_lineup">جدول اليوم</string>
+    <string name="channel_up_next">التالي</string>
     <string name="content_desc_add_to_list">إضافة إلى قائمتي</string>
     <string name="content_desc_favorite">المفضلة</string>
     <string name="details_cast">طاقم التمثيل</string>
@@ -178,6 +185,7 @@
     <string name="home_mood_row_title">تصفح حسب المزاج</string>
     <string name="home_new_releases">الإصدارات الجديدة</string>
     <string name="home_popular_series">مسلسلات شائعة</string>
+    <string name="home_spotlight">واجهة العرض</string>
     <string name="home_trending">الرائج الآن</string>
     <string name="livetv_channels">القنوات</string>
     <string name="livetv_no_program_guide">دليل البرامج غير متوفر</string>
@@ -251,6 +259,7 @@
     <string name="player_no_episodes">لا تتوفر حلقات</string>
     <string name="player_no_next_episode">لا توجد حلقة تالية</string>
     <string name="player_now_playing">يُعرض الآن</string>
+    <string name="player_on_now">يُعرض الآن</string>
     <string name="player_quality">الجودة</string>
     <string name="player_resume_from">استئناف من %1$s</string>
     <string name="player_season_episode">الموسم %1$d · الحلقة %2$d</string>
@@ -259,6 +268,7 @@
     <string name="player_subtitles">الترجمة</string>
     <string name="player_time_format">%1$s / %2$s</string>
     <string name="player_track_settings">الصوت والترجمة</string>
+    <string name="player_up_next">التالي</string>
     <string name="player_up_next_in">التالي خلال %1$d ث</string>
     <string name="profile_load_error">تعذر تحميل الملفات الشخصية</string>
     <string name="profile_manage">إدارة الملفات الشخصية</string>

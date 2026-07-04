@@ -7,7 +7,7 @@
 
     <!-- Red circle -->
     <path
-        android:fillColor="#E50914"
+        android:fillColor="#D6243A"
         android:pathData="M54,12 C77.2,12 96,30.8 96,54 C96,77.2 77.2,96 54,96 C30.8,96 12,77.2 12,54 C12,30.8 30.8,12 54,12 Z" />
 
     <!-- White play triangle -->

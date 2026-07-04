@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -77,7 +78,11 @@ fun PosterCard(
         contentDescription = data.title,
         defaultBorderWidth = 0.dp,
     ) { focused ->
-        Column {
+        Column(
+            modifier = Modifier
+                .clip(CinemaShapes.Medium)
+                .background(if (focused) CinemaColors.SurfaceSoft else Color.Transparent),
+        ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -91,6 +96,19 @@ fun PosterCard(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                     fallbackLabel = data.title,
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.Transparent,
+                                    Color.Transparent,
+                                    CinemaColors.Background.copy(alpha = 0.62f),
+                                ),
+                            ),
+                        ),
                 )
 
                 if (data.progress != null && data.progress > 0f) {
@@ -113,14 +131,14 @@ fun PosterCard(
             Text(
                 text = data.title,
                 style = MaterialTheme.typography.labelSmall.copy(
-                    color = if (focused) CinemaColors.White else CinemaColors.TextSecondary,
-                    fontWeight = FontWeight.Medium,
+                    color = if (focused) CinemaColors.White else CinemaColors.TextPrimary,
+                    fontWeight = if (focused) FontWeight.Bold else FontWeight.Medium,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = CinemaSpacing.CardGap, end = CinemaSpacing.CardGap, top = 4.dp),
+                    .padding(horizontal = CinemaSpacing.CardGap, vertical = 7.dp),
             )
         }
     }
@@ -132,7 +150,7 @@ fun PosterCard(
 fun BadgeChip(
     text: String,
     modifier: Modifier = Modifier,
-    backgroundColor: androidx.compose.ui.graphics.Color = CinemaColors.Accent,
+    backgroundColor: androidx.compose.ui.graphics.Color = CinemaColors.LiveRed,
 ) {
     Box(
         modifier = modifier

@@ -69,7 +69,7 @@ fun CategoryChip(
             modifier = Modifier
                 .background(
                     color = when {
-                        isSelected -> CinemaColors.White
+                        isSelected -> CinemaColors.Accent
                         focused -> CinemaColors.Surface
                         else -> CinemaColors.SurfaceSoft
                     },
@@ -88,7 +88,7 @@ fun CategoryChip(
                 text = label,
                 style = MaterialTheme.typography.labelLarge.copy(
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) CinemaColors.Background else CinemaColors.TextPrimary,
+                    color = if (isSelected) CinemaColors.White else CinemaColors.TextPrimary,
                 ),
             )
         }

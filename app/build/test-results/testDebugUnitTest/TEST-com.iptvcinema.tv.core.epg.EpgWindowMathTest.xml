@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.iptvcinema.tv.core.epg.EpgWindowMathTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-06-27T00:50:39" hostname="Apples-MacBook-Pro.local" time="0.005">
+<testsuite name="com.iptvcinema.tv.core.epg.EpgWindowMathTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-02T15:25:19" hostname="Apples-MacBook-Pro.local" time="0.007">
   <properties/>
-  <testcase name="defaultWindowSpansPastAndFuture" classname="com.iptvcinema.tv.core.epg.EpgWindowMathTest" time="0.005"/>
+  <testcase name="defaultWindowSpansPastAndFuture" classname="com.iptvcinema.tv.core.epg.EpgWindowMathTest" time="0.007"/>
   <testcase name="windowEndFromStart_isConsistentWithDefaults" classname="com.iptvcinema.tv.core.epg.EpgWindowMathTest" time="0.0"/>
   <testcase name="trimPastConstant_isTwentyFourHours" classname="com.iptvcinema.tv.core.epg.EpgWindowMathTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>

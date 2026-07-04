@@ -105,8 +105,8 @@ private fun CategoryListRow(
                 .fillMaxWidth()
                 .background(
                     when {
+                        isSelected -> CinemaColors.Accent.copy(alpha = 0.12f)
                         focused -> CinemaColors.Surface
-                        isSelected -> CinemaColors.SurfaceSoft
                         else -> CinemaColors.Background
                     },
                     CinemaShapes.Small,
@@ -114,7 +114,7 @@ private fun CategoryListRow(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             style = MaterialTheme.typography.bodyLarge.copy(
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (isSelected) CinemaColors.White else CinemaColors.TextPrimary,
+                color = if (isSelected) CinemaColors.AccentSoft else CinemaColors.TextPrimary,
             ),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,

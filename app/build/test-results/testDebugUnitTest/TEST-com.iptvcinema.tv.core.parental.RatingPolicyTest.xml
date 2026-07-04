@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.iptvcinema.tv.core.parental.RatingPolicyTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-06-27T00:50:39" hostname="Apples-MacBook-Pro.local" time="0.001">
+<testsuite name="com.iptvcinema.tv.core.parental.RatingPolicyTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-02T15:25:19" hostname="Apples-MacBook-Pro.local" time="0.001">
   <properties/>
-  <testcase name="isAllowed_respectsMaxRatingLadder" classname="com.iptvcinema.tv.core.parental.RatingPolicyTest" time="0.0"/>
+  <testcase name="isAllowed_respectsMaxRatingLadder" classname="com.iptvcinema.tv.core.parental.RatingPolicyTest" time="0.001"/>
   <testcase name="isAllowed_allowsUnratedContent" classname="com.iptvcinema.tv.core.parental.RatingPolicyTest" time="0.0"/>
   <testcase name="isAllowed_normalizesAliases" classname="com.iptvcinema.tv.core.parental.RatingPolicyTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>
