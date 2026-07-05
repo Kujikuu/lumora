@@ -58,7 +58,7 @@ fun ActivationScreen(
         primaryButtonFocus.requestFocus()
     }
 
-    CinemaScreen(showTopNav = false, showRemoteHints = false) {
+    CinemaScreen(showTopNav = false) {
         Box(modifier = Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier

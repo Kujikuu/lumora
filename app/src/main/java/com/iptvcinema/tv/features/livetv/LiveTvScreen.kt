@@ -37,7 +37,6 @@ import com.iptvcinema.tv.core.design.components.LivePreviewCard
 import com.iptvcinema.tv.core.design.components.MiniChannelEpg
 import com.iptvcinema.tv.core.design.components.OnNowPanel
 import com.iptvcinema.tv.core.design.components.ProgramGuideGrid
-import com.iptvcinema.tv.core.design.components.RemoteHint
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.epg.GuideLayoutHelper
 import com.iptvcinema.tv.core.model.ChannelItem
@@ -145,12 +144,6 @@ fun LiveTvScreen(
 
     MainShellBackHandler(navController = navController, isHomeTab = false)
     val previewChannel = uiState.previewChannel
-    val liveHints = listOf(
-        RemoteHint(R.string.hint_select_key, R.string.livetv_watch_channel),
-        RemoteHint(R.string.hint_plus24_key, R.string.hint_plus24_desc),
-        RemoteHint(R.string.hint_minus24_key, R.string.hint_minus24_desc),
-        RemoteHint(R.string.hint_filter_key, R.string.hint_filter_desc),
-    )
 
     val catalogCallbacks = rememberCatalogStateCallbacks(
         navController = navController,
@@ -160,7 +153,6 @@ fun LiveTvScreen(
     MainShellScaffold(
         navController = navController,
         selectedNavItem = NavItem.LiveTv,
-        remoteHints = liveHints,
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),

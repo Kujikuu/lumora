@@ -1409,25 +1409,6 @@ fun PlayerChannelSidebar(
     }
 }
 
-@Composable
-fun playerRemoteHints(isLive: Boolean = false, isEpisode: Boolean = false): List<RemoteHint> {
-    val hints = mutableListOf(
-        RemoteHint(R.string.hint_player_playpause_key, R.string.hint_player_playpause_desc),
-        RemoteHint(R.string.hint_player_seek_key, R.string.hint_player_seek_desc),
-    )
-    if (isLive) {
-        hints.add(RemoteHint(R.string.hint_player_channel_key, R.string.hint_player_channel_desc))
-    }
-    if (isEpisode) {
-        hints.add(RemoteHint(R.string.hint_player_episode_key, R.string.hint_player_episode_desc))
-    }
-    hints.add(RemoteHint(R.string.hint_back_key, R.string.hint_back_desc))
-    return hints
-}
-
-@Composable
-fun playerRemoteHints(): List<RemoteHint> = playerRemoteHints(isLive = false, isEpisode = false)
-
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun SearchKeyboard(

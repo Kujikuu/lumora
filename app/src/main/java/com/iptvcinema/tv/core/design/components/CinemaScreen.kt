@@ -212,12 +212,10 @@ fun CinemaScreen(
     onSearchClick: (() -> Unit)? = null,
     onSettingsClick: (() -> Unit)? = null,
     onProfileClick: (() -> Unit)? = null,
-    showRemoteHints: Boolean = false,
     showBrowseFooter: Boolean = false,
     onFavoritesClick: (() -> Unit)? = null,
     onRecentlyAddedClick: (() -> Unit)? = null,
     onTopRatedClick: (() -> Unit)? = null,
-    remoteHints: List<RemoteHint> = defaultRemoteHints(),
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -242,17 +240,6 @@ fun CinemaScreen(
                 contentAlignment = Alignment.TopStart,
             ) {
                 content()
-            }
-
-            if (showRemoteHints) {
-                RemoteHintBar(
-                    hints = remoteHints,
-                    modifier = Modifier.padding(
-                        start = CinemaSpacing.ContentStart,
-                        end = CinemaSpacing.ScreenPadding,
-                        bottom = 8.dp,
-                    ),
-                )
             }
         }
 

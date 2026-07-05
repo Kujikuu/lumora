@@ -37,7 +37,7 @@ fun SplashScreen(
         startupDestination?.let { onNavigate(it) }
     }
 
-    CinemaScreen(showTopNav = false, showRemoteHints = false) {
+    CinemaScreen(showTopNav = false) {
         Box(
             modifier = Modifier
                 .fillMaxSize()

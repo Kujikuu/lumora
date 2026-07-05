@@ -11,7 +11,6 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,10 +50,7 @@ import com.iptvcinema.tv.core.design.components.PlayerOverlay
 import com.iptvcinema.tv.core.design.components.PlayerRebufferOverlay
 import com.iptvcinema.tv.core.design.components.PlayerTrackSidebar
 import com.iptvcinema.tv.core.design.components.PlayerTrackTab
-import com.iptvcinema.tv.core.design.components.RemoteHintBar
-import com.iptvcinema.tv.core.design.components.playerRemoteHints
 import com.iptvcinema.tv.core.design.theme.CinemaColors
-import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
 import com.iptvcinema.tv.core.player.PlayerCommand
@@ -83,10 +79,6 @@ fun PlayerScreen(
     var overlayActivityToken by remember { mutableIntStateOf(0) }
 
     val pickerOpen = screenState.episodePickerOpen || screenState.channelPickerOpen
-    val playerHints = playerRemoteHints(
-        isLive = playerState.isLive,
-        isEpisode = screenState.isEpisode,
-    )
 
     fun registerOverlayActivity() {
         overlayActivityToken++
@@ -520,18 +512,6 @@ fun PlayerScreen(
                 )
             }
         }
-
-        RemoteHintBar(
-            hints = playerHints,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(
-                    start = CinemaSpacing.ScreenPadding,
-                    end = CinemaSpacing.ScreenPadding,
-                    bottom = 8.dp,
-                ),
-        )
     }
 }
 
