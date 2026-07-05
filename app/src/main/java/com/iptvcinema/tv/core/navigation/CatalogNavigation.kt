@@ -12,7 +12,6 @@ fun rememberCatalogStateCallbacks(
 ): CatalogStateCallbacks = remember(navController, onRetry) {
     CatalogStateCallbacks(
         onAddSource = { navController.navigate(AppRoute.ADD_SOURCE) },
-        onTryDemo = { navController.navigate(AppRoute.HOME) },
         onRetry = onRetry,
         onManageSources = { navController.navigate(AppRoute.PLAYLIST_MANAGEMENT) },
         onEditSource = { navController.navigate(AppRoute.M3U_FORM) },

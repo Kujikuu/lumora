@@ -49,9 +49,9 @@ import androidx.compose.ui.Alignment
 import com.iptvcinema.tv.core.design.components.EmptyState
 import com.iptvcinema.tv.core.design.components.ErrorState
 import com.iptvcinema.tv.core.design.components.SkeletonSourceCards
+import com.iptvcinema.tv.core.model.PlaylistSourceItem
 import com.iptvcinema.tv.core.model.SourceStatus
 import com.iptvcinema.tv.core.model.SourceType
-import com.iptvcinema.tv.core.util.rememberPrototypeFeedback
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -60,7 +60,6 @@ fun AddSourceScreen(
     onBack: () -> Unit = {},
     onXtream: () -> Unit,
     onM3u: () -> Unit,
-    onDemoMode: () -> Unit,
 ) {
     val firstCardFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("add_source")
@@ -102,11 +101,6 @@ fun AddSourceScreen(
                 title = stringResource(R.string.source_m3u_title),
                 description = stringResource(R.string.source_m3u_desc),
                 onClick = onM3u,
-            )
-            SourceTypeCard(
-                title = stringResource(R.string.source_demo_title),
-                description = stringResource(R.string.source_demo_desc),
-                onClick = onDemoMode,
             )
             FooterNote(stringResource(R.string.source_footer))
         }
@@ -379,11 +373,11 @@ fun PlaylistManagementScreen(
     onSetActive: (String) -> Unit = {},
     onResyncSource: (String) -> Unit = {},
     onDeleteSource: (String) -> Unit = {},
+    onEditSource: (PlaylistSourceItem) -> Unit = {},
     onExpiredAccount: () -> Unit = {},
     onInvalidPlaylist: () -> Unit = {},
     onBack: () -> Unit,
 ) {
-    val showFeedback = rememberPrototypeFeedback()
     LaunchedEffect(Unit) { onLoadSources() }
 
     val sources = when (sourcesUiState) {
@@ -501,13 +495,10 @@ fun PlaylistManagementScreen(
                                         else -> onInvalidPlaylist()
                                     }
                                 } else {
-                                    showFeedback("Edit ${source.name} coming soon")
+                                    onEditSource(source)
                                 }
                             },
-                            onRemove = {
-                                onDeleteSource(source.id)
-                                showFeedback("Removed ${source.name}")
-                            },
+                            onRemove = { onDeleteSource(source.id) },
                             modifier = Modifier
                                 .then(
                                     if (index == focusIndex) {

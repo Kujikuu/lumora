@@ -121,11 +121,6 @@ fun AppNavGraph(
                     onBack = { navController.popBackStack() },
                     onXtream = { navController.navigate(AppRoute.XTREAM_FORM) },
                     onM3u = { navController.navigate(AppRoute.M3U_FORM) },
-                    onDemoMode = {
-                        viewModel.saveDemoSource {
-                            navController.navigateOnboardingClearingStack(AppRoute.profileSelection())
-                        }
-                    },
                 )
             }
         }
@@ -209,6 +204,7 @@ fun AppNavGraph(
                         }
                     },
                     onRetry = viewModel::loadProfiles,
+                    onManageProfiles = { navController.navigate(AppRoute.SETTINGS) },
                     onBack = {
                         when (mode) {
                             ProfileSelectionMode.Onboarding -> {
@@ -238,13 +234,19 @@ fun AppNavGraph(
                     type = NavType.StringType
                     defaultValue = ""
                 },
+                navArgument("openGuide") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                },
             ),
         ) { backStackEntry ->
             SessionRouteGuard(navController = navController, requirement = SessionRequirement.Ready) {
                 val channelId = backStackEntry.arguments?.getString("channelId").orEmpty()
+                val openGuide = backStackEntry.arguments?.getBoolean("openGuide") ?: false
                 LiveTvScreen(
                     navController = navController,
                     initialChannelId = channelId.takeIf { it.isNotBlank() },
+                    initialOpenGuide = openGuide,
                 )
             }
         }
@@ -421,6 +423,15 @@ fun AppNavGraph(
                     onSetActive = viewModel::setActiveSource,
                     onResyncSource = viewModel::resyncSource,
                     onDeleteSource = viewModel::deleteSource,
+                    onEditSource = { source ->
+                        when (source.type) {
+                            com.iptvcinema.tv.core.model.SourceType.XTREAM_CODES ->
+                                navController.navigate(AppRoute.XTREAM_FORM)
+                            com.iptvcinema.tv.core.model.SourceType.M3U ->
+                                navController.navigate(AppRoute.M3U_FORM)
+                            else -> Unit
+                        }
+                    },
                     onExpiredAccount = { navController.navigate(AppRoute.EXPIRED_ACCOUNT) },
                     onInvalidPlaylist = { navController.navigate(AppRoute.INVALID_PLAYLIST) },
                     onBack = { navController.popBackStack() },

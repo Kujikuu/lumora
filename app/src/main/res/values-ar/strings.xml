@@ -26,7 +26,6 @@
     <string name="btn_connect">اتصال</string>
     <string name="btn_back">رجوع</string>
     <string name="btn_add_source">إضافة مصدر</string>
-    <string name="btn_try_demo">تجربة الوضع التجريبي</string>
     <string name="btn_close">إغلاق</string>
     <string name="btn_retry">إعادة المحاولة</string>
     <string name="btn_trailer">الإعلان</string>
@@ -85,8 +84,6 @@
     <string name="source_xtream_desc">استخدم عنوان الخادم واسم المستخدم وكلمة المرور.</string>
     <string name="source_m3u_title">قائمة M3U</string>
     <string name="source_m3u_desc">أضف رابط قائمة تشغيل مع دليل EPG اختياري.</string>
-    <string name="source_demo_title">الوضع التجريبي</string>
-    <string name="source_demo_desc">استكشف التطبيق بمحتوى تجريبي.</string>
     <string name="source_connect_xtream">اتصال Xtream Codes</string>
     <string name="source_connect_xtream_desc">أدخل بيانات مزود IPTV.</string>
     <string name="source_add_m3u">إضافة قائمة M3U</string>
@@ -202,6 +199,8 @@
     <string name="rail_arabic_picks">اختيارات عربية</string>
     <string name="sort_newest">الترتيب: الأحدث</string>
     <string name="sort_recently_added">الترتيب: أُضيف حديثًا</string>
+    <string name="sort_title_az">الترتيب: العنوان أ–ي</string>
+    <string name="sort_year">الترتيب: السنة</string>
     <string name="filter_label">تصفية</string>
     <string name="badge_4k">4K</string>
     <string name="badge_live">مباشر</string>
@@ -233,7 +232,7 @@
     <string name="mylist_subtitle">كل أفلامك ومسلسلاتك وقنواتك المحفوظة في مكان واحد.</string>
     <string name="mylist_nothing_saved">لا يوجد شيء محفوظ بعد</string>
     <string name="mylist_nothing_saved_desc">تصفح الأفلام والمسلسلات لإضافتها إلى قائمتك.</string>
-    <string name="mylist_remove_tip">نصيحة: اضغط مطولًا على أي عنصر لإزالته من قائمتك.</string>
+    <string name="mylist_remove_tip">نصيحة: اضغط مطولًا على عنصر لإزالته من قائمتك.</string>
     <string name="mylist_filter_all">الكل</string>
     <string name="mylist_filter_movies">الأفلام</string>
     <string name="mylist_filter_series">المسلسلات</string>
@@ -325,6 +324,11 @@
     <string name="settings_renews">يتجدد %1$s</string>
     <string name="settings_subscription_desc">الخطة المميزة نشطة حتى 15 يوليو 2026.</string>
     <string name="settings_language_desc">تتبع لغة التطبيق لغة نظام Android TV. غيّرها من إعدادات الجهاز ← اللغة.</string>
+    <string name="settings_language_app_desc">اختر لغة عرض التطبيق.</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_arabic">العربية</string>
+    <string name="settings_language_selected">محدد</string>
+    <string name="settings_in_player">في المشغّل</string>
     <string name="settings_notifications_desc">تنبيهات الحلقات الجديدة وإشعارات المزامنة مفعّلة.</string>
     <string name="settings_device_desc">البدء على البث المباشر، بدء آخر ملف شخصي تلقائيًا، وخيارات HDMI-CEC.</string>
     <string name="settings_about_desc">IPTV Cinema v1.0.0 — المرحلة 5 تكامل Supabase</string>
@@ -341,8 +345,12 @@
     <string name="parental_remove_pin">إزالة PIN</string>
     <string name="parental_rating_restrictions">قيود التصنيف</string>
     <string name="parental_hide_adult">إخفاء فئات البالغين</string>
+    <string name="parental_no_blocked_categories">لا توجد فئات محظورة بعد.</string>
+    <string name="parental_add_blocked_category">اضغط على فئة لحظرها</string>
     <string name="parental_lock_playlist">قفل إعدادات قائمة التشغيل</string>
     <string name="parental_require_pin_live">طلب PIN لفئات البث المباشر</string>
+    <string name="parental_playback_blocked">هذا المحتوى مقيد بضوابط الرقابة الأبوية.</string>
+    <string name="account_degraded_message">ميزات الحساب غير متاحة مؤقتًا. قائمة التشغيل المحلية لا تزال متاحة.</string>
     <string name="pin_enter">أدخل PIN</string>
     <string name="pin_enter_4_digit">أدخل PIN من 4 أرقام</string>
 

@@ -23,7 +23,13 @@ object DatabaseModule {
         context,
         IptvDatabase::class.java,
         "iptv_cinema.db",
-    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
+    ).addMigrations(
+        MIGRATION_1_2,
+        MIGRATION_2_3,
+        MIGRATION_3_4,
+        MIGRATION_4_5,
+        MIGRATION_5_6,
+    ).build()
 
     private val MIGRATION_1_2 = object : Migration(1, 2) {
         override fun migrate(db: SupportSQLiteDatabase) {
@@ -49,6 +55,13 @@ object DatabaseModule {
     private val MIGRATION_4_5 = object : Migration(4, 5) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE series ADD COLUMN cast TEXT")
+        }
+    }
+
+    private val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE movies ADD COLUMN youtubeTrailer TEXT")
+            db.execSQL("ALTER TABLE series ADD COLUMN youtubeTrailer TEXT")
         }
     }
 }

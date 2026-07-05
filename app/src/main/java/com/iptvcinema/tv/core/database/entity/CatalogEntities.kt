@@ -43,6 +43,7 @@ data class LocalMovieEntity(
     val plot: String?,
     val genres: String?,
     val cast: String? = null,
+    val youtubeTrailer: String? = null,
     val sortOrder: Int = 0,
     val addedAt: Long? = null,
 )
@@ -60,6 +61,7 @@ data class LocalSeriesEntity(
     val rating: String?,
     val year: Int?,
     val cast: String? = null,
+    val youtubeTrailer: String? = null,
     val sortOrder: Int = 0,
 )
 

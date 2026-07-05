@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -44,7 +45,7 @@ import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
 import com.iptvcinema.tv.core.navigation.navigateOnboardingClearingStack
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
-import com.iptvcinema.tv.core.util.rememberPrototypeFeedback
+import com.iptvcinema.tv.core.platform.AppLocaleHelper
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -55,7 +56,6 @@ fun SettingsScreen(
 ) {
     var selectedSection by remember { mutableIntStateOf(initialSection) }
     var showDevPreviews by remember { mutableStateOf(false) }
-    val showFeedback = rememberPrototypeFeedback()
     val menuFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("settings")
     val session by viewModel.sessionState.collectAsState()
@@ -71,11 +71,7 @@ fun SettingsScreen(
     var playlistPinError by remember { mutableStateOf<String?>(null) }
     val sections = SettingsSection.menuSections
     val sectionLabels = sections.map { stringResource(it.labelRes) }
-    val feedbackAccountSynced = stringResource(R.string.feedback_account_synced)
-    val feedbackQualitySoon = stringResource(R.string.feedback_quality_soon)
-    val feedbackAudioSoon = stringResource(R.string.feedback_audio_soon)
-    val feedbackSubtitleSoon = stringResource(R.string.feedback_subtitle_soon)
-    val feedbackThemeLocked = stringResource(R.string.feedback_theme_locked)
+    val inPlayerLabel = stringResource(R.string.settings_in_player)
     val incorrectPinMessage = stringResource(R.string.error_incorrect_pin)
     val refreshTrailing = when (val state = refreshState) {
         CatalogRefreshState.Idle -> null
@@ -173,7 +169,7 @@ fun SettingsScreen(
                         SettingsSection.Account -> {
                             AccountSummaryCard(
                                 account = account ?: FakeDataProvider.accountSummary,
-                                onManageAccount = { showFeedback(feedbackAccountSynced) },
+                                onManageAccount = {},
                             )
                             if (connectedSource != null) {
                                 SettingsRow(
@@ -215,20 +211,23 @@ fun SettingsScreen(
                             SettingsRow(
                                 label = stringResource(R.string.settings_streaming_quality),
                                 isSelected = false,
-                                onClick = { showFeedback(feedbackQualitySoon) },
-                                trailing = stringResource(R.string.settings_quality_auto),
+                                enabled = false,
+                                onClick = {},
+                                trailing = inPlayerLabel,
                             )
                             SettingsRow(
                                 label = stringResource(R.string.settings_default_audio),
                                 isSelected = false,
-                                onClick = { showFeedback(feedbackAudioSoon) },
-                                trailing = stringResource(R.string.settings_audio_english),
+                                enabled = false,
+                                onClick = {},
+                                trailing = inPlayerLabel,
                             )
                             SettingsRow(
                                 label = stringResource(R.string.settings_subtitles),
                                 isSelected = false,
-                                onClick = { showFeedback(feedbackSubtitleSoon) },
-                                trailing = stringResource(R.string.settings_subtitles_off),
+                                enabled = false,
+                                onClick = {},
+                                trailing = inPlayerLabel,
                             )
                             SettingsToggle(
                                 label = stringResource(R.string.settings_autoplay_next),
@@ -248,15 +247,12 @@ fun SettingsScreen(
                             SettingsRow(
                                 label = stringResource(R.string.settings_theme),
                                 isSelected = false,
-                                onClick = { showFeedback(feedbackThemeLocked) },
-                                trailing = userSettings?.theme?.replace('_', ' ')
-                                    ?: stringResource(R.string.settings_theme_dark),
+                                enabled = false,
+                                onClick = {},
+                                trailing = inPlayerLabel,
                             )
                         }
-                        SettingsSection.Language -> SettingsPlaceholder(
-                            title = stringResource(R.string.settings_language),
-                            description = stringResource(R.string.settings_language_desc),
-                        )
+                        SettingsSection.Language -> LanguageSettingsSection()
                         SettingsSection.Notifications -> SettingsPlaceholder(
                             title = stringResource(R.string.settings_notifications),
                             description = stringResource(R.string.settings_notifications_desc),
@@ -271,6 +267,11 @@ fun SettingsScreen(
                         )
                         SettingsSection.ParentalControls -> Unit
                     }
+                    SettingsRow(
+                        label = stringResource(R.string.livetv_tv_guide),
+                        isSelected = false,
+                        onClick = { navController.navigate(AppRoute.liveTv(openGuide = true)) },
+                    )
                     SettingsRow(
                         label = stringResource(R.string.settings_playlist_sources),
                         isSelected = false,
@@ -322,5 +323,48 @@ private fun SettingsPlaceholder(
     Text(
         text = description,
         style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
+    )
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun LanguageSettingsSection() {
+    var selectedLanguage by remember { mutableStateOf(AppLocaleHelper.currentLanguageTag()) }
+    val englishLabel = stringResource(R.string.settings_language_english)
+    val arabicLabel = stringResource(R.string.settings_language_arabic)
+
+    Text(
+        text = stringResource(R.string.settings_language),
+        style = MaterialTheme.typography.titleLarge.copy(color = CinemaColors.White, fontWeight = FontWeight.Bold),
+    )
+    Text(
+        text = stringResource(R.string.settings_language_app_desc),
+        style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
+    )
+    SettingsRow(
+        label = englishLabel,
+        isSelected = selectedLanguage == AppLocaleHelper.LANGUAGE_EN,
+        onClick = {
+            selectedLanguage = AppLocaleHelper.LANGUAGE_EN
+            AppLocaleHelper.applyLanguage(AppLocaleHelper.LANGUAGE_EN)
+        },
+        trailing = if (selectedLanguage == AppLocaleHelper.LANGUAGE_EN) {
+            stringResource(R.string.settings_language_selected)
+        } else {
+            null
+        },
+    )
+    SettingsRow(
+        label = arabicLabel,
+        isSelected = selectedLanguage == AppLocaleHelper.LANGUAGE_AR,
+        onClick = {
+            selectedLanguage = AppLocaleHelper.LANGUAGE_AR
+            AppLocaleHelper.applyLanguage(AppLocaleHelper.LANGUAGE_AR)
+        },
+        trailing = if (selectedLanguage == AppLocaleHelper.LANGUAGE_AR) {
+            stringResource(R.string.settings_language_selected)
+        } else {
+            null
+        },
     )
 }

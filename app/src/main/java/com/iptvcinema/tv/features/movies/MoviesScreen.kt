@@ -31,6 +31,7 @@ import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
 import com.iptvcinema.tv.core.design.components.ExpandedPosterCardVariant
+import com.iptvcinema.tv.core.catalog.CatalogSortOption
 import com.iptvcinema.tv.core.design.components.FilterChipRow
 import com.iptvcinema.tv.core.design.components.FocusAwareContentRail
 import com.iptvcinema.tv.core.design.components.HeroBanner
@@ -110,6 +111,14 @@ fun MoviesScreen(
         navController = navController,
         onRetry = viewModel::refreshCurrentSource,
     )
+    val sortOptions = listOf(
+        stringResource(R.string.sort_title_az),
+        stringResource(R.string.sort_year),
+    )
+    val selectedSortIndex = when (uiState.sortOption) {
+        CatalogSortOption.TITLE_AZ -> 0
+        CatalogSortOption.YEAR -> 1
+    }
 
     MainShellScaffold(
         navController = navController,
@@ -142,7 +151,6 @@ fun MoviesScreen(
                 emptyTitle = stringResource(R.string.movies_empty_title),
                 emptyDescription = stringResource(R.string.catalog_empty_sync_desc),
                 onAddSource = catalogCallbacks.onAddSource,
-                onTryDemo = catalogCallbacks.onTryDemo,
                 onRetry = catalogCallbacks.onRetry,
                 onManageSources = catalogCallbacks.onManageSources,
                 onEditSource = catalogCallbacks.onEditSource,
@@ -197,6 +205,17 @@ fun MoviesScreen(
                             modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
                         )
                     }
+                    FilterChipRow(
+                        items = sortOptions,
+                        selectedIndex = selectedSortIndex,
+                        onSelected = { index ->
+                            viewModel.selectSort(
+                                if (index == 0) CatalogSortOption.TITLE_AZ else CatalogSortOption.YEAR,
+                            )
+                        },
+                        focusedChipIndex = selectedSortIndex,
+                        modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
+                    )
                     PosterGrid(
                         items = uiState.posters,
                         enableVerticalScroll = false,

@@ -31,6 +31,7 @@ import com.iptvcinema.tv.core.player.PlayerManager
 import com.iptvcinema.tv.core.player.PlayerUiState
 import com.iptvcinema.tv.core.player.WatchHistoryResumePolicy
 import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.parental.ParentalPlaybackGuard
 import com.iptvcinema.tv.core.util.AppStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -89,6 +90,7 @@ class PlayerViewModel @Inject constructor(
     private val nextEpisodeResolver: NextEpisodeResolver,
     private val episodeCatalogRepository: EpisodeCatalogRepository,
     private val playbackSessionTracker: PlaybackSessionTracker,
+    private val parentalPlaybackGuard: ParentalPlaybackGuard,
     private val appStrings: AppStrings,
     @ApplicationScope private val applicationScope: CoroutineScope,
 ) : ViewModel() {
@@ -393,6 +395,16 @@ class PlayerViewModel @Inject constructor(
         }
         when (result) {
             is PlaybackResolveResult.Success -> {
+                val session = appSessionRepository.sessionState.first()
+                if (parentalPlaybackGuard.isPlaybackBlocked(session, result.request)) {
+                    _screenState.value = PlayerScreenState(
+                        isLoading = false,
+                        loadError = appStrings.get(R.string.parental_playback_blocked),
+                        loadErrorCode = appStrings.get(R.string.error_catalog_code),
+                        seriesId = seriesIdArg,
+                    )
+                    return
+                }
                 val resumeMs = when {
                     resumePositionArg != null && resumePositionArg > 0L -> resumePositionArg
                     continueWatchingEnabled -> loadResumePosition(result.request)

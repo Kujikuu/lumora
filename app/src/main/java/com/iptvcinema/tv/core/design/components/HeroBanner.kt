@@ -401,6 +401,7 @@ fun PosterGrid(
     columns: Int = 5,
     firstItemFocusRequester: FocusRequester? = null,
     enableVerticalScroll: Boolean = true,
+    onItemLongClick: ((PosterCardData) -> Unit)? = null,
     contentPadding: PaddingValues = PaddingValues(
         start = CinemaSpacing.NavRailWidth + 16.dp,
         end = 24.dp,
@@ -428,6 +429,7 @@ fun PosterGrid(
                     PosterCard(
                         data = item,
                         onClick = { onItemClick(item) },
+                        onLongClick = onItemLongClick?.let { callback -> { callback(item) } },
                         fixedWidth = null,
                         modifier = Modifier
                             .weight(1f)

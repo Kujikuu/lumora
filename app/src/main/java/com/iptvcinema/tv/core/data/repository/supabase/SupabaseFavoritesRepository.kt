@@ -78,6 +78,17 @@ class SupabaseFavoritesRepository @Inject constructor(
         return true
     }
 
+    override suspend fun removeFavorite(profileId: String, favorite: FavoriteItem) {
+        supabaseClient.from(TABLE)
+            .delete {
+                filter {
+                    eq(COLUMN_PROFILE_ID, profileId)
+                    eq(COLUMN_CONTENT_ID, favorite.contentId)
+                    eq(COLUMN_CONTENT_TYPE, favorite.contentType.name)
+                }
+            }
+    }
+
     private suspend fun getFavorites(profileId: String): List<FavoriteItem> =
         supabaseClient.from(TABLE)
             .select(Columns.ALL) {

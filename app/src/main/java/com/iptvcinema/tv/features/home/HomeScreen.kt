@@ -113,7 +113,6 @@ fun HomeScreen(
             emptyTitle = stringResource(R.string.home_empty_title),
             emptyDescription = stringResource(R.string.home_empty_desc),
             onAddSource = catalogCallbacks.onAddSource,
-            onTryDemo = catalogCallbacks.onTryDemo,
             onRetry = catalogCallbacks.onRetry,
             onManageSources = catalogCallbacks.onManageSources,
             onEditSource = catalogCallbacks.onEditSource,
@@ -273,9 +272,9 @@ fun HomeScreen(
                         title = stringResource(R.string.home_empty_title),
                         description = stringResource(R.string.home_empty_desc),
                         primaryAction = stringResource(R.string.btn_manage_sources),
-                        secondaryAction = stringResource(R.string.btn_try_demo),
+                        secondaryAction = null,
                         onPrimary = catalogCallbacks.onManageSources,
-                        onSecondary = catalogCallbacks.onTryDemo,
+                        onSecondary = null,
                     )
                 }
             }

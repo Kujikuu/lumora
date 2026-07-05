@@ -31,9 +31,9 @@ fun EmptyStateScreen(
                 title = stringResource(R.string.empty_title),
                 description = stringResource(R.string.empty_description),
                 primaryAction = stringResource(R.string.btn_add_source),
-                secondaryAction = stringResource(R.string.btn_try_demo),
+                secondaryAction = null,
                 onPrimary = { navController.navigate(AppRoute.ADD_SOURCE) },
-                onSecondary = { navController.navigate(AppRoute.HOME) },
+                onSecondary = null,
                 footerNote = stringResource(R.string.source_footer),
             )
         }

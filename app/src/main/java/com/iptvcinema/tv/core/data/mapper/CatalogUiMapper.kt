@@ -65,6 +65,7 @@ object CatalogEntityMapper {
         plot = plot,
         genres = genres?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() }.orEmpty(),
         cast = cast,
+        youtubeTrailer = youtubeTrailer,
         sortOrder = sortOrder,
         addedAt = addedAt,
     )
@@ -81,6 +82,7 @@ object CatalogEntityMapper {
         rating = rating,
         year = year,
         cast = cast,
+        youtubeTrailer = youtubeTrailer,
         sortOrder = sortOrder,
     )
 

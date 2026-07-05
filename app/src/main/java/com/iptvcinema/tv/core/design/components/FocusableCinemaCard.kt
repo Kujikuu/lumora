@@ -2,9 +2,11 @@ package com.iptvcinema.tv.core.design.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -41,11 +43,13 @@ private const val FOCUSED_SCALE = 1.05f
 private const val PRESSED_SCALE = 0.97f
 private const val DISABLED_ALPHA = 0.4f
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FocusableCinemaCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     enabled: Boolean = true,
+    onLongClick: (() -> Unit)? = null,
     shape: RoundedCornerShape = CinemaShapes.Medium,
     defaultBorderWidth: Dp = 0.dp,
     focusedBorderWidth: Dp = 2.dp,
@@ -108,11 +112,23 @@ fun FocusableCinemaCard(
                 }
             }
             .focusable(enabled = enabled, interactionSource = interactionSource)
-            .clickable(
-                enabled = enabled,
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
+            .then(
+                if (onLongClick != null) {
+                    Modifier.combinedClickable(
+                        enabled = enabled,
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = onClick,
+                        onLongClick = onLongClick,
+                    )
+                } else {
+                    Modifier.clickable(
+                        enabled = enabled,
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = onClick,
+                    )
+                },
             ),
         contentAlignment = Alignment.Center,
     ) {

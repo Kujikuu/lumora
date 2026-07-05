@@ -15,7 +15,6 @@ import com.iptvcinema.tv.core.model.SourceType
 
 data class CatalogStateCallbacks(
     val onAddSource: () -> Unit,
-    val onTryDemo: () -> Unit,
     val onRetry: () -> Unit,
     val onManageSources: () -> Unit,
     val onEditSource: () -> Unit,
@@ -43,7 +42,6 @@ fun CatalogStateContent(
     emptyTitle: String? = null,
     emptyDescription: String? = null,
     onAddSource: () -> Unit,
-    onTryDemo: () -> Unit,
     onRetry: () -> Unit,
     onManageSources: () -> Unit,
     onEditSource: () -> Unit,
@@ -81,9 +79,9 @@ fun CatalogStateContent(
                     title = stringResource(R.string.empty_title),
                     description = stringResource(R.string.empty_description),
                     primaryAction = stringResource(R.string.btn_add_source),
-                    secondaryAction = stringResource(R.string.btn_try_demo),
+                    secondaryAction = null,
                     onPrimary = onAddSource,
-                    onSecondary = onTryDemo,
+                    onSecondary = null,
                     footerNote = stringResource(R.string.source_footer),
                 )
             }
@@ -104,10 +102,10 @@ fun CatalogStateContent(
                     secondaryAction = if (onRefreshCatalog != null) {
                         stringResource(R.string.btn_manage_sources)
                     } else {
-                        stringResource(R.string.btn_try_demo)
+                        null
                     },
                     onPrimary = onRefreshCatalog ?: onManageSources,
-                    onSecondary = if (onRefreshCatalog != null) onManageSources else onTryDemo,
+                    onSecondary = if (onRefreshCatalog != null) onManageSources else null,
                     footerNote = null,
                 )
             }

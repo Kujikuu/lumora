@@ -80,6 +80,24 @@ class MyListViewModel @Inject constructor(
         }
     }
 
+    fun removeFavorite(favorite: FavoriteItem) {
+        viewModelScope.launch {
+            val profileId = appSessionRepository.sessionState.first().currentProfileId ?: return@launch
+            runCatching {
+                favoritesRepository.removeFavorite(profileId, favorite)
+                val current = _uiState.value
+                if (current is MyListUiState.Ready) {
+                    _uiState.value = current.copy(
+                        favorites = current.favorites.filterNot {
+                            it.contentId == favorite.contentId && it.contentType == favorite.contentType
+                        },
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.value = MyListUiState.Error(error.message ?: appStrings.get(R.string.error_load_list))
+            }
+        }
+    }
 }
 
 fun FavoriteItem.toPosterCardData(): PosterCardData = PosterCardData(

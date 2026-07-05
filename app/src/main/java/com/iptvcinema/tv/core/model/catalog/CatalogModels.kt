@@ -43,6 +43,7 @@ data class CatalogMovie(
     val plot: String?,
     val genres: List<String>,
     val cast: String? = null,
+    val youtubeTrailer: String? = null,
     val sortOrder: Int = 0,
     val addedAt: Long? = null,
 )
@@ -59,6 +60,7 @@ data class CatalogSeries(
     val rating: String?,
     val year: Int?,
     val cast: String? = null,
+    val youtubeTrailer: String? = null,
     val sortOrder: Int = 0,
 )
 

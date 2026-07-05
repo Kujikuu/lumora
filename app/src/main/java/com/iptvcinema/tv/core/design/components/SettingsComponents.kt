@@ -68,12 +68,14 @@ fun SettingsRow(
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     trailing: String? = null,
     trailingIcon: ImageVector? = null,
 ) {
     FocusableCinemaCard(
         modifier = modifier.fillMaxWidth(),
         onClick = onClick,
+        enabled = enabled,
         shape = CinemaShapes.Small,
         defaultBorderWidth = 0.dp,
     ) { focused ->
@@ -82,6 +84,7 @@ fun SettingsRow(
                 .fillMaxWidth()
                 .background(
                     when {
+                        !enabled -> CinemaColors.SurfaceSoft.copy(alpha = 0.5f)
                         focused -> CinemaColors.Surface
                         isSelected -> CinemaColors.SurfaceSoft
                         else -> CinemaColors.Background
@@ -96,7 +99,11 @@ fun SettingsRow(
                 text = label,
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (isSelected) CinemaColors.White else CinemaColors.TextPrimary,
+                    color = when {
+                        !enabled -> CinemaColors.TextMuted
+                        isSelected -> CinemaColors.White
+                        else -> CinemaColors.TextPrimary
+                    },
                 ),
             )
             when {
@@ -106,7 +113,7 @@ fun SettingsRow(
                         style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
                     )
                 }
-                trailingIcon != null -> {
+                trailingIcon != null && enabled -> {
                     Icon(
                         imageVector = trailingIcon,
                         contentDescription = stringResource(R.string.settings_expand_collapse),
@@ -114,7 +121,7 @@ fun SettingsRow(
                         modifier = Modifier.size(20.dp),
                     )
                 }
-                else -> {
+                enabled -> {
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = null,

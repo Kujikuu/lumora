@@ -1,5 +1,7 @@
 package com.iptvcinema.tv.features.details
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -44,7 +47,7 @@ import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
 import com.iptvcinema.tv.core.navigation.PopBackHandler
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
-import com.iptvcinema.tv.core.util.rememberPrototypeFeedback
+import com.iptvcinema.tv.core.util.youtubeTrailerUrl
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -57,7 +60,7 @@ fun MovieDetailsScreen(
     var selectedLang by remember { mutableIntStateOf(0) }
     var selectedSub by remember { mutableIntStateOf(0) }
     val isFavorite by viewModel.isFavorite.collectAsState()
-    val showFeedback = rememberPrototypeFeedback()
+    val context = LocalContext.current
     val feedbackRatingBlocked = stringResource(R.string.feedback_rating_blocked)
     val feedbackAddedToMyList = stringResource(R.string.feedback_added_to_mylist)
     val feedbackRemovedFromMyList = stringResource(R.string.feedback_removed_from_mylist)
@@ -100,6 +103,7 @@ fun MovieDetailsScreen(
         }
         DetailsLoadState.Ready -> {
             val movie = uiState.movie ?: return
+            val trailerUrl = youtubeTrailerUrl(uiState.catalogMovie?.youtubeTrailer)
             val continueWatching = uiState.continueWatching
             val primaryActionLabel = if (continueWatching != null) {
                 stringResource(R.string.btn_continue_watching)
@@ -131,7 +135,7 @@ fun MovieDetailsScreen(
                         primaryActionLabel = primaryActionLabel,
                         onWatchNow = {
                             if (uiState.playbackBlocked) {
-                                showFeedback(feedbackRatingBlocked)
+                                android.widget.Toast.makeText(context, feedbackRatingBlocked, android.widget.Toast.LENGTH_SHORT).show()
                             } else {
                                 navController.navigate(
                                     AppRoute.player(
@@ -149,10 +153,17 @@ fun MovieDetailsScreen(
                                 title = movie.title,
                                 posterUrl = movie.imageUrl,
                             ) { added ->
-                                showFeedback(if (added) feedbackAddedToMyList else feedbackRemovedFromMyList)
+                                val message = if (added) feedbackAddedToMyList else feedbackRemovedFromMyList
+                                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
                             }
                         },
                         isFavorite = isFavorite,
+                        showTrailer = trailerUrl != null,
+                        onTrailer = trailerUrl?.let { url ->
+                            {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            }
+                        },
                         backdropUrl = movie.backdropUrl ?: movie.imageUrl,
                         posterUrl = movie.imageUrl,
                         watchNowFocusRequester = watchNowFocus,
@@ -210,7 +221,7 @@ fun SeriesDetailsScreen(
     var selectedLang by remember { mutableIntStateOf(0) }
     val episodes = seasons.find { it.seasonNumber == selectedSeason }?.episodes.orEmpty()
     val isFavorite by viewModel.isFavorite.collectAsState()
-    val showFeedback = rememberPrototypeFeedback()
+    val context = LocalContext.current
     val feedbackRatingBlocked = stringResource(R.string.feedback_rating_blocked)
     val feedbackAddedToMyList = stringResource(R.string.feedback_added_to_mylist)
     val feedbackRemovedFromMyList = stringResource(R.string.feedback_removed_from_mylist)
@@ -262,6 +273,7 @@ fun SeriesDetailsScreen(
         }
         DetailsLoadState.Ready -> {
             val series = uiState.series ?: return
+            val trailerUrl = youtubeTrailerUrl(uiState.catalogSeries?.youtubeTrailer)
             val continueWatching = uiState.continueWatching
             val primaryActionLabel = when {
                 continueWatching?.seasonNumber != null && continueWatching.episodeNumber != null -> {
@@ -304,7 +316,7 @@ fun SeriesDetailsScreen(
                         primaryActionLabel = primaryActionLabel,
                         onWatchNow = {
                             if (uiState.playbackBlocked) {
-                                showFeedback(feedbackRatingBlocked)
+                                android.widget.Toast.makeText(context, feedbackRatingBlocked, android.widget.Toast.LENGTH_SHORT).show()
                             } else {
                                 val targetEpisodeId = continueWatching?.contentId
                                     ?: episodes.firstOrNull()?.id
@@ -327,10 +339,17 @@ fun SeriesDetailsScreen(
                                 title = series.title,
                                 posterUrl = series.imageUrl,
                             ) { added ->
-                                showFeedback(if (added) feedbackAddedToMyList else feedbackRemovedFromMyList)
+                                val message = if (added) feedbackAddedToMyList else feedbackRemovedFromMyList
+                                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
                             }
                         },
                         isFavorite = isFavorite,
+                        showTrailer = trailerUrl != null,
+                        onTrailer = trailerUrl?.let { url ->
+                            {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            }
+                        },
                         backdropUrl = series.backdropUrl ?: series.imageUrl,
                         posterUrl = series.imageUrl,
                         watchNowFocusRequester = watchNowFocus,
@@ -353,7 +372,7 @@ fun SeriesDetailsScreen(
                                     progress = episode.progress,
                                     onClick = {
                                         if (uiState.playbackBlocked) {
-                                            showFeedback(feedbackRatingBlocked)
+                                            android.widget.Toast.makeText(context, feedbackRatingBlocked, android.widget.Toast.LENGTH_SHORT).show()
                                         } else {
                                             navController.navigate(
                                                 AppRoute.player(

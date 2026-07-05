@@ -12,7 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -34,6 +36,8 @@ import com.iptvcinema.tv.core.design.components.FilterChipRow
 import com.iptvcinema.tv.core.design.components.PosterCard
 import com.iptvcinema.tv.core.design.components.RecentSearchChip
 import com.iptvcinema.tv.core.design.components.SearchInput
+import com.iptvcinema.tv.core.design.components.SearchKeyboard
+import com.iptvcinema.tv.core.design.components.SearchKeyboardLayout
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.navigation.AppRoute
@@ -54,6 +58,7 @@ fun SearchScreen(
     val chipFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("search")
     val catalogCallbacks = rememberCatalogStateCallbacks(navController, onRetry = viewModel::retry)
+    var keyboardLayout by remember { mutableStateOf(SearchKeyboardLayout.English) }
     val searchFilters = listOf(
         stringResource(R.string.filter_all),
         stringResource(R.string.filter_movies),
@@ -103,6 +108,24 @@ fun SearchScreen(
                     .fillMaxWidth()
                     .focusRequester(searchFocus),
             )
+            SearchKeyboard(
+                layout = keyboardLayout,
+                onLayoutToggle = {
+                    keyboardLayout = when (keyboardLayout) {
+                        SearchKeyboardLayout.English -> SearchKeyboardLayout.Arabic
+                        SearchKeyboardLayout.Arabic -> SearchKeyboardLayout.English
+                    }
+                },
+                onDeviceKeyboard = {},
+                showDeviceKeyboard = false,
+                onKeyPress = { key -> viewModel.updateQuery(uiState.query + key) },
+                onBackspace = {
+                    if (uiState.query.isNotEmpty()) {
+                        viewModel.updateQuery(uiState.query.dropLast(1))
+                    }
+                },
+                onClear = viewModel::clearSearch,
+            )
             FilterChipRow(
                 items = searchFilters,
                 selectedIndex = uiState.selectedFilterIndex,
@@ -138,7 +161,6 @@ fun SearchScreen(
                 emptyTitle = stringResource(R.string.search_no_results),
                 emptyDescription = stringResource(R.string.search_no_results_desc),
                 onAddSource = catalogCallbacks.onAddSource,
-                onTryDemo = catalogCallbacks.onTryDemo,
                 onRetry = catalogCallbacks.onRetry,
                 onManageSources = catalogCallbacks.onManageSources,
                 onEditSource = catalogCallbacks.onEditSource,

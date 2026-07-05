@@ -1,7 +1,14 @@
 package com.iptvcinema.tv.core.navigation
 
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.iptvcinema.tv.core.design.components.AccountDegradedBanner
 import com.iptvcinema.tv.core.design.components.CinemaScreen
 
 private fun shellNavigate(
@@ -15,8 +22,10 @@ private fun shellNavigate(
 fun MainShellScaffold(
     navController: NavController,
     selectedNavItem: NavItem,
+    sessionViewModel: SessionViewModel = hiltViewModel(LocalActivity.current as ComponentActivity),
     content: @Composable () -> Unit,
 ) {
+    val isCloudDegraded by sessionViewModel.isCloudDegraded.collectAsState()
     // The left navigation rail now covers Favorites/Search/etc., so the legacy
     // bottom browse footer is redundant chrome. Keep it off for a cleaner,
     // more cinematic layout that gives content rails more vertical room.
@@ -41,6 +50,11 @@ fun MainShellScaffold(
         onRecentlyAddedClick = { shellNavigate(navController, AppRoute.movies()) },
         onTopRatedClick = { shellNavigate(navController, AppRoute.movies("Top Rated")) },
     ) {
-        content()
+        Column {
+            if (isCloudDegraded) {
+                AccountDegradedBanner()
+            }
+            content()
+        }
     }
 }

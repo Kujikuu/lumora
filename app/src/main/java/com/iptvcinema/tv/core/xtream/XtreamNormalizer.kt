@@ -121,6 +121,7 @@ object XtreamNormalizer {
             plot = dto.plot?.trim()?.takeIf { it.isNotBlank() },
             genres = dto.genre?.trim()?.takeIf { it.isNotBlank() },
             cast = dto.cast?.trim()?.takeIf { it.isNotBlank() },
+            youtubeTrailer = dto.youtubeTrailer?.trim()?.takeIf { it.isNotBlank() },
             sortOrder = index,
             addedAt = parseAddedTimestamp(dto.added),
         )
@@ -159,6 +160,7 @@ object XtreamNormalizer {
             rating = dto.rating?.trim()?.takeIf { it.isNotBlank() },
             year = parseYear(dto.releaseDate),
             cast = dto.cast?.trim()?.takeIf { it.isNotBlank() },
+            youtubeTrailer = dto.youtubeTrailer?.trim()?.takeIf { it.isNotBlank() },
             sortOrder = index,
         )
     }

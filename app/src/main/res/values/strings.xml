@@ -28,7 +28,6 @@
     <string name="btn_connect">Connect</string>
     <string name="btn_back">Back</string>
     <string name="btn_add_source">Add Source</string>
-    <string name="btn_try_demo">Try Demo Mode</string>
     <string name="btn_close">Close</string>
     <string name="btn_retry">Retry</string>
     <string name="btn_trailer">Trailer</string>
@@ -91,8 +90,6 @@
     <string name="source_xtream_desc">Use server URL, username, and password.</string>
     <string name="source_m3u_title">M3U Playlist</string>
     <string name="source_m3u_desc">Add a playlist URL with optional EPG.</string>
-    <string name="source_demo_title">Demo Mode</string>
-    <string name="source_demo_desc">Preview the app with sample content.</string>
     <string name="source_connect_xtream">Connect Xtream Codes</string>
     <string name="source_connect_xtream_desc">Enter your IPTV provider details.</string>
     <string name="source_add_m3u">Add M3U Playlist</string>
@@ -212,6 +209,8 @@
     <string name="rail_arabic_picks">Arabic Picks</string>
     <string name="sort_newest">Sort: Newest</string>
     <string name="sort_recently_added">Sort: Recently Added</string>
+    <string name="sort_title_az">Sort: Title A–Z</string>
+    <string name="sort_year">Sort: Year</string>
     <string name="filter_label">Filter</string>
     <string name="badge_4k">4K</string>
     <string name="badge_live">LIVE</string>
@@ -245,7 +244,7 @@
     <string name="mylist_subtitle">All your saved movies, series, and channels in one place.</string>
     <string name="mylist_nothing_saved">Nothing saved yet</string>
     <string name="mylist_nothing_saved_desc">Browse movies and series to add them to your list.</string>
-    <string name="mylist_remove_tip">Tip: Long press on any item to remove it from your list.</string>
+    <string name="mylist_remove_tip">Tip: Long press an item to remove it from your list.</string>
     <string name="mylist_filter_all">All</string>
     <string name="mylist_filter_movies">Movies</string>
     <string name="mylist_filter_series">Series</string>
@@ -341,6 +340,11 @@
     <string name="settings_renews">Renews %1$s</string>
     <string name="settings_subscription_desc">Premium Plan active until July 15, 2026.</string>
     <string name="settings_language_desc">App language follows your Android TV system language. Change it in device Settings → Language.</string>
+    <string name="settings_language_app_desc">Choose the app display language.</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_arabic">Arabic</string>
+    <string name="settings_language_selected">Selected</string>
+    <string name="settings_in_player">In player</string>
     <string name="settings_notifications_desc">New episode alerts and sync notifications are enabled.</string>
     <string name="settings_device_desc">Launch on Live TV, auto-start last profile, and HDMI-CEC options.</string>
     <string name="settings_about_desc">IPTV Cinema v1.0.0 — Phase 5 Supabase Integration</string>
@@ -358,8 +362,12 @@
     <string name="parental_remove_pin">Remove PIN</string>
     <string name="parental_rating_restrictions">Rating restrictions</string>
     <string name="parental_hide_adult">Hide Adult Categories</string>
+    <string name="parental_no_blocked_categories">No categories are blocked yet.</string>
+    <string name="parental_add_blocked_category">Tap a category to block it</string>
     <string name="parental_lock_playlist">Lock Playlist Settings</string>
     <string name="parental_require_pin_live">Require PIN for Live TV categories</string>
+    <string name="parental_playback_blocked">This content is restricted by parental controls.</string>
+    <string name="account_degraded_message">Account features are temporarily unavailable. Your playlist catalog is still available offline.</string>
     <string name="pin_enter">Enter PIN</string>
     <string name="pin_enter_4_digit">Enter 4-digit PIN</string>
 

@@ -61,6 +61,8 @@ fun DetailHero(
     primaryActionLabel: String = "",
     favoriteLabel: String = "",
     favoritedLabel: String = "",
+    showTrailer: Boolean = false,
+    onTrailer: (() -> Unit)? = null,
     backdropUrl: String? = null,
     posterUrl: String? = null,
     watchNowFocusRequester: FocusRequester? = null,
@@ -198,6 +200,13 @@ fun DetailHero(
                     icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     onClick = onFavorite,
                 )
+                if (showTrailer && onTrailer != null) {
+                    CinemaButton(
+                        text = stringResource(R.string.btn_trailer),
+                        variant = CinemaButtonVariant.SecondaryDark,
+                        onClick = onTrailer,
+                    )
+                }
             }
         }
     }

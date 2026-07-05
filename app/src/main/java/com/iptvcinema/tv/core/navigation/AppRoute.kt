@@ -17,7 +17,7 @@ object AppRoute {
     const val M3U_FORM = "m3u_form"
     const val PROFILE_SELECTION = "profile_selection?mode={mode}"
     const val HOME = "home"
-    const val LIVE_TV = "live_tv?channelId={channelId}"
+    const val LIVE_TV = "live_tv?channelId={channelId}&openGuide={openGuide}"
     const val LIVE_TV_BASE = "live_tv"
     const val MOVIES = "movies?filter={filter}"
     const val SERIES = "series?filter={filter}"
@@ -62,7 +62,8 @@ object AppRoute {
     }
     fun movies(filter: String = "") = "movies?filter=$filter"
     fun series(filter: String = "") = "series?filter=$filter"
-    fun liveTv(channelId: String? = null): String = "live_tv?channelId=${channelId.orEmpty()}"
+    fun liveTv(channelId: String? = null, openGuide: Boolean = false): String =
+        "live_tv?channelId=${channelId.orEmpty()}&openGuide=$openGuide"
 
     fun navItemToRoute(item: NavItem): String = when (item) {
         Home -> HOME

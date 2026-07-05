@@ -2,6 +2,8 @@ package com.iptvcinema.tv.features.movies
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.iptvcinema.tv.core.catalog.CatalogSortOption
+import com.iptvcinema.tv.core.catalog.sortedByCatalogOption
 import com.iptvcinema.tv.core.catalog.CatalogRefreshController
 import com.iptvcinema.tv.core.catalog.CatalogRefreshState
 import com.iptvcinema.tv.core.catalog.CatalogRefreshSupport
@@ -49,6 +51,7 @@ data class MoviesUiState(
     val sourceType: SourceType? = null,
     val syncBannerText: String? = null,
     val refreshState: CatalogRefreshState = CatalogRefreshState.Idle,
+    val sortOption: CatalogSortOption = CatalogSortOption.TITLE_AZ,
 )
 
 @HiltViewModel
@@ -64,6 +67,7 @@ class MoviesViewModel @Inject constructor(
     private val catalogSyncProgressTracker: CatalogSyncProgressTracker,
 ) : ViewModel() {
     private val selectedCategory = MutableStateFlow<String?>(null)
+    private val selectedSort = MutableStateFlow(CatalogSortOption.TITLE_AZ)
     private val _uiState = MutableStateFlow(MoviesUiState())
     val uiState: StateFlow<MoviesUiState> = _uiState.asStateFlow()
 
@@ -75,9 +79,10 @@ class MoviesViewModel @Inject constructor(
             combine(
                 appSessionRepository.sessionState,
                 selectedCategory,
-            ) { session, categoryName ->
-                session to categoryName
-            }.flatMapLatest { (session, categoryName) ->
+                selectedSort,
+            ) { session, categoryName, sortOption ->
+                Triple(session, categoryName, sortOption)
+            }.flatMapLatest { (session, categoryName, sortOption) ->
                 val profileId = session.currentProfileId
                 val continueWatchingEnabled = runCatching {
                     userSettingsRepository.getSettings()?.continueWatchingEnabled
@@ -109,6 +114,7 @@ class MoviesViewModel @Inject constructor(
                         history = history,
                         favorites = favorites,
                         continueWatchingEnabled = continueWatchingEnabled,
+                        sortOption = sortOption,
                     )
                 }
             }.collect { bundle ->
@@ -138,11 +144,15 @@ class MoviesViewModel @Inject constructor(
                             controls,
                         )
                 }
-                val gridMovies = if (featured == null) {
+                val gridMovies = (if (featured == null) {
                     movies
                 } else {
                     movies.filter { it.id != featured.id }
-                }
+                }).sortedByCatalogOption(
+                    option = bundle.sortOption,
+                    titleSelector = { it.title },
+                    yearSelector = { it.year },
+                )
                 val continueWatchingMovies = if (bundle.continueWatchingEnabled) {
                     bundle.history.mapNotNull { item ->
                         if (item.contentType != WatchHistoryContentType.MOVIE) return@mapNotNull null
@@ -181,9 +191,14 @@ class MoviesViewModel @Inject constructor(
                     sourceType = state.sourceType,
                     syncBannerText = current.syncBannerText,
                     refreshState = current.refreshState,
+                    sortOption = bundle.sortOption,
                 )
             }
         }
+    }
+
+    fun selectSort(option: CatalogSortOption) {
+        selectedSort.value = option
     }
 
     fun selectCategory(categoryName: String?) {
@@ -266,5 +281,6 @@ class MoviesViewModel @Inject constructor(
         val history: List<com.iptvcinema.tv.core.model.WatchHistoryItem>,
         val favorites: List<FavoriteItem>,
         val continueWatchingEnabled: Boolean,
+        val sortOption: CatalogSortOption,
     )
 }

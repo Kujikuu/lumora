@@ -52,6 +52,7 @@ import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
 fun LiveTvScreen(
     navController: NavController,
     initialChannelId: String? = null,
+    initialOpenGuide: Boolean = false,
     viewModel: LiveTvViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -72,7 +73,7 @@ fun LiveTvScreen(
     var showCategoryPin by remember { mutableStateOf(false) }
     var categoryPinError by remember { mutableStateOf<String?>(null) }
     var pendingCategoryIndex by remember { mutableIntStateOf(-1) }
-    var showFullGuide by remember { mutableStateOf(false) }
+    var showFullGuide by remember { mutableStateOf(initialOpenGuide) }
     val incorrectPinMessage = stringResource(R.string.error_incorrect_pin)
     val emptyDescription = stringResource(R.string.msg_no_live_channels_desc)
 
@@ -173,7 +174,6 @@ fun LiveTvScreen(
                 emptyTitle = stringResource(R.string.msg_no_live_channels),
                 emptyDescription = emptyDescription,
                 onAddSource = catalogCallbacks.onAddSource,
-                onTryDemo = catalogCallbacks.onTryDemo,
                 onRetry = catalogCallbacks.onRetry,
                 onManageSources = catalogCallbacks.onManageSources,
                 onEditSource = catalogCallbacks.onEditSource,

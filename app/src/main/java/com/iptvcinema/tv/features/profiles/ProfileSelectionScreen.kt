@@ -39,7 +39,6 @@ import com.iptvcinema.tv.core.model.UserProfile
 import com.iptvcinema.tv.core.navigation.PopBackHandler
 import com.iptvcinema.tv.core.navigation.ProfileSelectionMode
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
-import com.iptvcinema.tv.core.util.rememberPrototypeFeedback
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -54,7 +53,6 @@ fun ProfileSelectionScreen(
 ) {
     val profileFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("profile_selection")
-    val showFeedback = rememberPrototypeFeedback()
 
     PopBackHandler(onBack = onBack)
 
@@ -86,10 +84,7 @@ fun ProfileSelectionScreen(
                 profileFocus = profileFocus,
                 focusState = focusState,
                 onProfileSelected = onProfileSelected,
-                onManageProfiles = {
-                    showFeedback("Profile management available from Settings")
-                    onManageProfiles()
-                },
+                onManageProfiles = onManageProfiles,
             )
         }
     }

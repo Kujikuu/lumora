@@ -59,6 +59,7 @@ fun PosterCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     fixedWidth: Dp? = CinemaSpacing.PosterCardWidth,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val imageAspectRatio = when (variant) {
         PosterCardVariant.PortraitPoster -> 2f / 3f
@@ -74,6 +75,7 @@ fun PosterCard(
     FocusableCinemaCard(
         modifier = cardModifier,
         onClick = onClick,
+        onLongClick = onLongClick,
         shape = CinemaShapes.Medium,
         contentDescription = data.title,
         defaultBorderWidth = 0.dp,

@@ -26,7 +26,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.data.fake.FakeDataProvider
-import com.iptvcinema.tv.core.design.components.BlockedCategoryList
+import com.iptvcinema.tv.core.design.components.CategoryChip
 import com.iptvcinema.tv.core.design.components.CinemaButton
 import com.iptvcinema.tv.core.design.components.CinemaButtonVariant
 import com.iptvcinema.tv.core.design.components.ProfileChip
@@ -264,9 +264,67 @@ private fun ParentalControlsContent(
             onUpdateControls { current -> current.copy(lockLiveCategories = !current.lockLiveCategories) }
         },
     )
-    BlockedCategoryList(
-        categories = controls.blockedCategories.ifEmpty {
-            uiState.availableCategories.take(6)
+    BlockedCategoryEditor(
+        blockedCategories = controls.blockedCategories,
+        availableCategories = uiState.availableCategories,
+        onUpdateCategories = { updated ->
+            onUpdateControls { current -> current.copy(blockedCategories = updated) }
         },
     )
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun BlockedCategoryEditor(
+    blockedCategories: List<String>,
+    availableCategories: List<String>,
+    onUpdateCategories: (List<String>) -> Unit,
+) {
+    val blocked = blockedCategories.ifEmpty { emptyList() }
+    val addableCategories = availableCategories.filter { category ->
+        blocked.none { it.equals(category, ignoreCase = true) }
+    }
+
+    Text(
+        text = stringResource(R.string.settings_blocked_categories),
+        style = MaterialTheme.typography.titleMedium.copy(
+            color = CinemaColors.White,
+            fontWeight = FontWeight.Bold,
+        ),
+    )
+    if (blocked.isEmpty()) {
+        Text(
+            text = stringResource(R.string.parental_no_blocked_categories),
+            style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
+        )
+    } else {
+        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
+            blocked.forEach { category ->
+                CategoryChip(
+                    label = category,
+                    isSelected = true,
+                    onClick = {
+                        onUpdateCategories(blocked.filterNot { it.equals(category, ignoreCase = true) })
+                    },
+                )
+            }
+        }
+    }
+    if (addableCategories.isNotEmpty()) {
+        Text(
+            text = stringResource(R.string.parental_add_blocked_category),
+            style = MaterialTheme.typography.titleSmall.copy(color = CinemaColors.TextSecondary),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
+            addableCategories.take(12).forEach { category ->
+                CategoryChip(
+                    label = category,
+                    isSelected = false,
+                    onClick = {
+                        onUpdateCategories((blocked + category).distinctBy { it.lowercase() })
+                    },
+                )
+            }
+        }
+    }
 }

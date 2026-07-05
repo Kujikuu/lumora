@@ -8,14 +8,14 @@ import com.iptvcinema.tv.core.data.repository.PlaylistSourcesRepository
 import com.iptvcinema.tv.core.data.repository.ProfilesRepository
 import com.iptvcinema.tv.core.data.repository.UserSettingsRepository
 import com.iptvcinema.tv.core.data.repository.WatchHistoryRepository
+import com.iptvcinema.tv.core.data.repository.RoutingFavoritesRepository
+import com.iptvcinema.tv.core.data.repository.RoutingParentalControlsRepository
+import com.iptvcinema.tv.core.data.repository.RoutingProfilesRepository
+import com.iptvcinema.tv.core.data.repository.RoutingUserSettingsRepository
+import com.iptvcinema.tv.core.data.repository.RoutingWatchHistoryRepository
 import com.iptvcinema.tv.core.data.repository.supabase.SupabaseAuthRepository
 import com.iptvcinema.tv.core.data.repository.supabase.SupabaseDeviceActivationRepository
-import com.iptvcinema.tv.core.data.repository.supabase.SupabaseFavoritesRepository
-import com.iptvcinema.tv.core.data.repository.supabase.SupabaseParentalControlsRepository
 import com.iptvcinema.tv.core.data.repository.supabase.SupabasePlaylistSourcesRepository
-import com.iptvcinema.tv.core.data.repository.supabase.SupabaseProfilesRepository
-import com.iptvcinema.tv.core.data.repository.supabase.SupabaseUserSettingsRepository
-import com.iptvcinema.tv.core.data.repository.supabase.SupabaseWatchHistoryRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -35,7 +35,7 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindProfilesRepository(impl: SupabaseProfilesRepository): ProfilesRepository
+    abstract fun bindProfilesRepository(impl: RoutingProfilesRepository): ProfilesRepository
 
     @Binds
     @Singleton
@@ -43,17 +43,17 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindFavoritesRepository(impl: SupabaseFavoritesRepository): FavoritesRepository
+    abstract fun bindFavoritesRepository(impl: RoutingFavoritesRepository): FavoritesRepository
 
     @Binds
     @Singleton
-    abstract fun bindWatchHistoryRepository(impl: SupabaseWatchHistoryRepository): WatchHistoryRepository
+    abstract fun bindWatchHistoryRepository(impl: RoutingWatchHistoryRepository): WatchHistoryRepository
 
     @Binds
     @Singleton
-    abstract fun bindUserSettingsRepository(impl: SupabaseUserSettingsRepository): UserSettingsRepository
+    abstract fun bindUserSettingsRepository(impl: RoutingUserSettingsRepository): UserSettingsRepository
 
     @Binds
     @Singleton
-    abstract fun bindParentalControlsRepository(impl: SupabaseParentalControlsRepository): ParentalControlsRepository
+    abstract fun bindParentalControlsRepository(impl: RoutingParentalControlsRepository): ParentalControlsRepository
 }

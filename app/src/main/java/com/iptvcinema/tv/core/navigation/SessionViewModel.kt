@@ -2,6 +2,7 @@ package com.iptvcinema.tv.core.navigation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.iptvcinema.tv.core.data.repository.CloudAccountStatus
 import com.iptvcinema.tv.core.datastore.AppSessionRepository
 import com.iptvcinema.tv.core.datastore.AppSessionState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +17,9 @@ import kotlinx.coroutines.flow.stateIn
 @HiltViewModel
 class SessionViewModel @Inject constructor(
     appSessionRepository: AppSessionRepository,
+    cloudAccountStatus: CloudAccountStatus,
 ) : ViewModel() {
+    val isCloudDegraded: StateFlow<Boolean> = cloudAccountStatus.isDegraded
     private val _isHydrated = MutableStateFlow(false)
     val isHydrated: StateFlow<Boolean> = _isHydrated.asStateFlow()
 

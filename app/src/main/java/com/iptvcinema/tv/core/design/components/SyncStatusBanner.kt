@@ -149,3 +149,29 @@ fun CatalogRefreshBanner(
         )
     }
 }
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun AccountDegradedBanner(
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(CinemaColors.Surface.copy(alpha = 0.95f))
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Default.Error,
+            contentDescription = null,
+            tint = CinemaColors.Warning,
+            modifier = Modifier.size(20.dp),
+        )
+        Text(
+            text = stringResource(R.string.account_degraded_message),
+            style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
+        )
+    }
+}
