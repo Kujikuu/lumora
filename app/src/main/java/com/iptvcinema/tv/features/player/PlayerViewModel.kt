@@ -114,6 +114,9 @@ class PlayerViewModel @Inject constructor(
     private var isEpisodeTransitionInProgress = false
     private var continueWatchingEnabled = true
     private var autoplayNextEpisode = false
+    private var pendingNextEpisode: CatalogEpisode? = null
+    private var pendingPreviousRequest: PlaybackRequest? = null
+    private var pendingTransitionSourceId: String? = null
 
     init {
         startPositionTicker()
@@ -173,6 +176,16 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun retry() {
+        val pendingEpisode = pendingNextEpisode
+        val sourceId = pendingTransitionSourceId
+        val previousRequest = pendingPreviousRequest
+        if (pendingEpisode != null && sourceId != null) {
+            _screenState.value = _screenState.value.copy(loadError = null, loadErrorCode = null)
+            viewModelScope.launch {
+                playEpisode(pendingEpisode, sourceId, previousRequest = previousRequest)
+            }
+            return
+        }
         _screenState.value = _screenState.value.copy(loadError = null, loadErrorCode = null)
         playerManager.handleCommand(PlayerCommand.Retry)
         scheduleProgressSave()
@@ -201,8 +214,7 @@ class PlayerViewModel @Inject constructor(
                 return@launch
             }
             dismissAutoplayUi()
-            markEpisodeCompleted(request)
-            playEpisode(next, sourceId)
+            playEpisode(next, sourceId, previousRequest = request)
         }
     }
 
@@ -304,10 +316,11 @@ class PlayerViewModel @Inject constructor(
                 )
                 ?: return@launch
             dismissAutoplayUi()
-            if (markCurrentCompleted) {
-                markEpisodeCompleted(request)
-            }
-            playEpisode(episode, sourceId)
+            playEpisode(
+                episode = episode,
+                sourceId = sourceId,
+                previousRequest = request.takeIf { markCurrentCompleted },
+            )
         }
     }
 
@@ -448,26 +461,29 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private suspend fun playEpisode(episode: CatalogEpisode, sourceId: String) {
+    private suspend fun playEpisode(
+        episode: CatalogEpisode,
+        sourceId: String,
+        previousRequest: PlaybackRequest? = null,
+    ) {
         if (isEpisodeTransitionInProgress) return
         isEpisodeTransitionInProgress = true
         dismissAutoplayUi()
         autoplayState = AutoplayState.TRANSITIONING
         lastSavedPositionMs = 0L
+        pendingNextEpisode = episode
+        pendingPreviousRequest = previousRequest
+        pendingTransitionSourceId = sourceId
         try {
-            val result = runCatching {
-                playbackRepository.resolve(episode.id, "episode", episode.seriesId)
-            }.getOrElse {
-                autoplaySuppressedContentId = _screenState.value.playbackRequest?.contentId
-                autoplayState = AutoplayState.SUPPRESSED
-                _screenState.value = _screenState.value.copy(
-                    loadError = appStrings.get(R.string.error_unable_load_content),
-                    loadErrorCode = appStrings.get(R.string.error_catalog_code),
-                )
-                return
-            }
+            val result = resolveEpisodeForPlayback(sourceId, episode)
             when (result) {
                 is PlaybackResolveResult.Success -> {
+                    if (previousRequest != null) {
+                        markEpisodeCompleted(previousRequest)
+                    }
+                    pendingNextEpisode = null
+                    pendingPreviousRequest = null
+                    pendingTransitionSourceId = null
                     currentEpisode = catalogRepository.getEpisode(sourceId, episode.id) ?: episode
                     autoplaySuppressedContentId = null
                     autoplayState = AutoplayState.IDLE
@@ -506,6 +522,53 @@ class PlayerViewModel @Inject constructor(
                 autoplayState = AutoplayState.IDLE
             }
         }
+    }
+
+    private suspend fun resolveEpisodeForPlayback(
+        sourceId: String,
+        episode: CatalogEpisode,
+    ): PlaybackResolveResult {
+        val firstAttempt = runCatching {
+            resolveEpisodeAttempt(sourceId, episode)
+        }.getOrElse {
+            return PlaybackResolveResult.Error(
+                message = appStrings.get(R.string.error_unable_load_content),
+                errorCode = appStrings.get(R.string.error_catalog_code),
+            )
+        }
+        if (firstAttempt is PlaybackResolveResult.Success) return firstAttempt
+
+        runCatching {
+            episodeCatalogRepository.getEpisodesForSeries(
+                sourceId = sourceId,
+                seriesId = episode.seriesId,
+                forceRefresh = true,
+            )
+        }
+        val refreshedEpisode = episodeCatalogRepository.getEpisode(
+            sourceId = sourceId,
+            episodeId = episode.id,
+            seriesId = episode.seriesId,
+        ) ?: episode
+
+        return runCatching {
+            resolveEpisodeAttempt(sourceId, refreshedEpisode)
+        }.getOrElse {
+            PlaybackResolveResult.Error(
+                message = appStrings.get(R.string.error_unable_load_content),
+                errorCode = appStrings.get(R.string.error_catalog_code),
+            )
+        }
+    }
+
+    private suspend fun resolveEpisodeAttempt(
+        sourceId: String,
+        episode: CatalogEpisode,
+    ): PlaybackResolveResult {
+        if (episode.streamUrl.isNotBlank()) {
+            return playbackRepository.resolveEpisode(sourceId, episode)
+        }
+        return playbackRepository.resolve(episode.id, "episode", episode.seriesId)
     }
 
     private fun changeChannel(direction: ChannelDirection) {
@@ -629,14 +692,14 @@ class PlayerViewModel @Inject constructor(
         if (_screenState.value.showAutoplayCountdown) return
         if (autoplayState != AutoplayState.IDLE) return
         viewModelScope.launch {
-            markEpisodeCompleted(request)
             val sourceId = request.sourceId ?: return@launch
             val episode = resolveCurrentEpisode(sourceId, request) ?: return@launch
             val next = nextEpisodeResolver.nextEpisode(sourceId, episode) ?: run {
+                markEpisodeCompleted(request)
                 showInfoBanner(appStrings.get(R.string.player_no_next_episode))
                 return@launch
             }
-            playEpisode(next, sourceId)
+            playEpisode(next, sourceId, previousRequest = request)
         }
     }
 
@@ -731,8 +794,7 @@ class PlayerViewModel @Inject constructor(
                 _screenState.value = _screenState.value.copy(autoplayCountdownSeconds = remaining)
             }
             if (isActive && request.contentId != autoplaySuppressedContentId) {
-                markEpisodeCompleted(request)
-                playEpisode(next, sourceId)
+                playEpisode(next, sourceId, previousRequest = request)
             } else {
                 dismissAutoplayUi(userCancelled = true)
             }

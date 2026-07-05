@@ -49,6 +49,17 @@ class PlaybackRepository @Inject constructor(
         return resolveLive(sourceId, channelId, headers)
     }
 
+    suspend fun resolveEpisode(sourceId: String, episode: CatalogEpisode): PlaybackResolveResult {
+        val session = appSessionRepository.sessionState.first()
+        if (session.isDemoMode) {
+            return resolveDemo(episode.id, "episode")
+        }
+        val headers = buildHeaders(sourceId, session.sourceType)
+        val posterUrl = episode.thumbnailUrl?.takeIf { it.isNotBlank() }
+            ?: catalogRepository.getSeries(sourceId, episode.seriesId)?.posterUrl
+        return episode.toPlaybackRequest(headers, posterUrl)
+    }
+
     private suspend fun resolveLive(
         sourceId: String,
         contentId: String,

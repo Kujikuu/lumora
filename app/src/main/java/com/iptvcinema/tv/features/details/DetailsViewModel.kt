@@ -19,6 +19,7 @@ import com.iptvcinema.tv.core.model.catalog.CatalogMovie
 import com.iptvcinema.tv.core.model.catalog.CatalogSeries
 import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.parental.ParentalGate
+import com.iptvcinema.tv.core.player.ContinueWatchingResolver
 import com.iptvcinema.tv.core.player.EpisodeCatalogRepository
 import com.iptvcinema.tv.core.player.WatchHistoryResumePolicy
 import com.iptvcinema.tv.core.util.AppStrings
@@ -76,6 +77,7 @@ class DetailsViewModel @Inject constructor(
     private val favoritesRepository: FavoritesRepository,
     private val catalogRepository: CatalogRepository,
     private val episodeCatalogRepository: EpisodeCatalogRepository,
+    private val continueWatchingResolver: ContinueWatchingResolver,
     private val watchHistoryRepository: WatchHistoryRepository,
     private val parentalControlsRepository: ParentalControlsRepository,
     private val parentalGate: ParentalGate,
@@ -313,21 +315,26 @@ class DetailsViewModel @Inject constructor(
         seasons: List<SeasonItem>,
     ): DetailsContinueWatching? {
         val historyItems = watchHistoryRepository.observeHistory(profileId, limit = 50).first()
-        val episodeHistory = historyItems
-            .filter { item ->
-                item.contentType == WatchHistoryContentType.EPISODE &&
-                    item.seriesId == seriesId &&
-                    WatchHistoryResumePolicy.isContinueWatching(item.positionMs, item.durationMs)
-            }
-            .maxByOrNull { it.lastWatchedAt }
-            ?: return null
-        val durationMs = episodeHistory.durationMs ?: return null
-        val resumeMs = WatchHistoryResumePolicy.resumePositionMs(episodeHistory.positionMs, durationMs)
-        if (resumeMs <= 0L) return null
-        val catalogEpisode = catalogRepository.getEpisode(sourceId, episodeHistory.contentId)
+        val resolved = continueWatchingResolver.resolve(
+            history = historyItems,
+            sourceId = sourceId,
+            limit = 10,
+        ).firstOrNull { item ->
+            item.contentType == WatchHistoryContentType.EPISODE && item.seriesId == seriesId
+        } ?: return null
+
+        val durationMs = resolved.durationMs ?: return null
+        val resumeMs = if (resolved.positionMs == 0L) {
+            0L
+        } else {
+            WatchHistoryResumePolicy.resumePositionMs(resolved.positionMs, durationMs)
+        }
+        if (resolved.positionMs > 0L && resumeMs <= 0L) return null
+
+        val catalogEpisode = catalogRepository.getEpisode(sourceId, resolved.contentId)
         val seasonMatch = if (catalogEpisode == null) {
             seasons.firstNotNullOfOrNull { season ->
-                season.episodes.find { it.id == episodeHistory.contentId }?.let {
+                season.episodes.find { it.id == resolved.contentId }?.let {
                     season.seasonNumber to it.episodeNumber
                 }
             }
@@ -335,7 +342,7 @@ class DetailsViewModel @Inject constructor(
             null
         }
         return DetailsContinueWatching(
-            contentId = episodeHistory.contentId,
+            contentId = resolved.contentId,
             resumePositionMs = resumeMs,
             seasonNumber = catalogEpisode?.seasonNumber ?: seasonMatch?.first,
             episodeNumber = catalogEpisode?.episodeNumber ?: seasonMatch?.second,

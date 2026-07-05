@@ -3,7 +3,8 @@ package com.iptvcinema.tv.core.data.repository.supabase
 import com.iptvcinema.tv.core.data.repository.WatchHistoryRepository
 import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.model.WatchHistoryItem
-import com.iptvcinema.tv.core.player.WatchHistoryResumePolicy
+import com.iptvcinema.tv.core.datastore.AppSessionRepository
+import com.iptvcinema.tv.core.player.ContinueWatchingResolver
 import com.iptvcinema.tv.core.supabase.dto.WatchHistoryDto
 import com.iptvcinema.tv.core.supabase.mapper.toDomain
 import io.github.jan.supabase.SupabaseClient
@@ -18,6 +19,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -25,6 +27,8 @@ import kotlinx.serialization.Serializable
 @Singleton
 class SupabaseWatchHistoryRepository @Inject constructor(
     private val supabaseClient: SupabaseClient,
+    private val continueWatchingResolver: ContinueWatchingResolver,
+    private val appSessionRepository: AppSessionRepository,
 ) : WatchHistoryRepository {
     private val refreshTrigger = MutableSharedFlow<Unit>(
         replay = 1,
@@ -123,11 +127,17 @@ class SupabaseWatchHistoryRepository @Inject constructor(
         refreshTrigger.emit(Unit)
     }
 
-    private suspend fun loadContinueWatching(profileId: String, limit: Int): List<WatchHistoryItem> =
-        WatchHistoryResumePolicy.selectContinueWatching(
-            items = getHistory(profileId, limit = 50),
+    private suspend fun loadContinueWatching(profileId: String, limit: Int): List<WatchHistoryItem> {
+        val history = getHistory(profileId, limit = 50)
+        val sourceId = runCatching {
+            appSessionRepository.sessionState.first().currentSourceId
+        }.getOrNull()
+        return continueWatchingResolver.resolve(
+            history = history,
+            sourceId = sourceId,
             limit = limit,
         )
+    }
 
     private suspend fun getHistory(profileId: String, limit: Int): List<WatchHistoryItem> =
         supabaseClient.from(TABLE)
