@@ -63,6 +63,24 @@ interface ChannelDao {
     @Query("SELECT * FROM channels WHERE sourceId = :sourceId ORDER BY sortOrder, channelNumber, name")
     suspend fun getAllOrdered(sourceId: String): List<LocalChannelEntity>
 
+    @Query(
+        """
+        SELECT * FROM channels
+        WHERE sourceId = :sourceId AND categoryId = :categoryId
+        ORDER BY sortOrder, channelNumber, name
+        """,
+    )
+    suspend fun getByCategory(sourceId: String, categoryId: String): List<LocalChannelEntity>
+
+    @Query(
+        """
+        SELECT * FROM channels
+        WHERE sourceId = :sourceId AND LOWER(categoryName) = LOWER(:categoryName)
+        ORDER BY sortOrder, channelNumber, name
+        """,
+    )
+    suspend fun getByCategoryName(sourceId: String, categoryName: String): List<LocalChannelEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<LocalChannelEntity>)
 

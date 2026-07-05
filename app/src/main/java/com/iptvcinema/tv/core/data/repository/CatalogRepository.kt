@@ -335,7 +335,11 @@ class CatalogRepository @Inject constructor(
         nowMs: Long = System.currentTimeMillis(),
     ): Map<String, com.iptvcinema.tv.core.model.catalog.CatalogProgram> {
         if (channelIds.isEmpty()) return emptyMap()
-        return catalogDaoFacade.programs.getCurrentProgramsForChannels(sourceId, channelIds, nowMs)
+        return channelIds
+            .chunked(CURRENT_PROGRAMS_BATCH_SIZE)
+            .flatMap { chunk ->
+                catalogDaoFacade.programs.getCurrentProgramsForChannels(sourceId, chunk, nowMs)
+            }
             .map { it.toDomain() }
             .associateBy { it.channelId }
     }
@@ -345,6 +349,19 @@ class CatalogRepository @Inject constructor(
 
     suspend fun getOrderedChannels(sourceId: String): List<CatalogChannel> =
         catalogDaoFacade.channels.getAllOrdered(sourceId).map { it.toDomain() }
+
+    suspend fun getOrderedChannelsInCategory(
+        sourceId: String,
+        categoryId: String?,
+        categoryName: String?,
+    ): List<CatalogChannel> {
+        val entities = when {
+            !categoryId.isNullOrBlank() -> catalogDaoFacade.channels.getByCategory(sourceId, categoryId)
+            !categoryName.isNullOrBlank() -> catalogDaoFacade.channels.getByCategoryName(sourceId, categoryName)
+            else -> emptyList()
+        }
+        return entities.map { it.toDomain() }
+    }
 
     suspend fun getAdjacentChannel(
         sourceId: String,
@@ -563,12 +580,11 @@ class CatalogRepository @Inject constructor(
 
     suspend fun getCurrentProgram(sourceId: String, channelId: String): com.iptvcinema.tv.core.model.catalog.CatalogProgram? {
         val nowMs = System.currentTimeMillis()
-        return catalogDaoFacade.programs.getUpcomingForChannel(sourceId, channelId, nowMs)
+        val upcoming = catalogDaoFacade.programs.getUpcomingForChannel(sourceId, channelId, nowMs)
+        return upcoming
             .firstOrNull { it.startEpochMs <= nowMs && it.endEpochMs > nowMs }
             ?.toDomain()
-            ?: catalogDaoFacade.programs.getUpcomingForChannel(sourceId, channelId, nowMs)
-                .firstOrNull()
-                ?.toDomain()
+            ?: upcoming.firstOrNull()?.toDomain()
     }
 
     private fun observeChannelBrowse(
@@ -826,5 +842,6 @@ class CatalogRepository @Inject constructor(
     private companion object {
         const val MOVIE_BROWSE_LIMIT = 100
         const val LAST_ADDED_BROWSE_LIMIT = 20
+        const val CURRENT_PROGRAMS_BATCH_SIZE = 400
     }
 }

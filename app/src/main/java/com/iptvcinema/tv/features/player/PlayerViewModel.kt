@@ -117,6 +117,7 @@ class PlayerViewModel @Inject constructor(
     private var pendingNextEpisode: CatalogEpisode? = null
     private var pendingPreviousRequest: PlaybackRequest? = null
     private var pendingTransitionSourceId: String? = null
+    private var channelPickerJob: Job? = null
 
     init {
         startPositionTicker()
@@ -257,26 +258,45 @@ class PlayerViewModel @Inject constructor(
     fun openChannelPicker() {
         val request = _screenState.value.playbackRequest ?: return
         if (!request.isLive) return
-        viewModelScope.launch {
+        channelPickerJob?.cancel()
+        channelPickerJob = viewModelScope.launch {
             val sourceId = request.sourceId ?: return@launch
             _screenState.value = _screenState.value.copy(
                 channelPickerOpen = true,
                 channelPickerLoading = true,
             )
-            val channels = catalogRepository.getOrderedChannels(sourceId)
-            val nowPlayingId = request.contentId
-            val tiles = channels.map { channel ->
-                val program = catalogRepository.getCurrentProgram(sourceId, channel.id)
-                channel.toChannelItem(
-                    currentProgram = program,
-                    noProgramInfoTitle = appStrings.get(R.string.msg_no_program_info),
+            try {
+                val currentChannel = catalogRepository.getChannel(sourceId, request.contentId)
+                val channels = if (currentChannel != null) {
+                    catalogRepository.getOrderedChannelsInCategory(
+                        sourceId = sourceId,
+                        categoryId = currentChannel.categoryId,
+                        categoryName = currentChannel.categoryName,
+                    )
+                } else {
+                    emptyList()
+                }
+                val nowMs = System.currentTimeMillis()
+                val nowPlayingId = request.contentId
+                val currentPrograms = catalogRepository.getCurrentProgramsForChannels(
+                    sourceId = sourceId,
+                    channelIds = channels.map { it.id },
+                    nowMs = nowMs,
                 )
-                    .toChannelTileData(nowPlayingChannelId = nowPlayingId)
+                val noProgramInfoTitle = appStrings.get(R.string.msg_no_program_info)
+                val tiles = channels.map { channel ->
+                    channel.toChannelItem(
+                        currentProgram = currentPrograms[channel.id],
+                        nowMs = nowMs,
+                        noProgramInfoTitle = noProgramInfoTitle,
+                    ).toChannelTileData(nowPlayingChannelId = nowPlayingId)
+                }
+                _screenState.value = _screenState.value.copy(
+                    channelPickerChannels = tiles,
+                )
+            } finally {
+                _screenState.value = _screenState.value.copy(channelPickerLoading = false)
             }
-            _screenState.value = _screenState.value.copy(
-                channelPickerChannels = tiles,
-                channelPickerLoading = false,
-            )
         }
     }
 
