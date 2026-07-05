@@ -4,10 +4,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -28,9 +29,9 @@ import com.iptvcinema.tv.core.data.repository.CatalogLoadState
 import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
-import com.iptvcinema.tv.core.design.components.CategoryListPanel
 import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
 import com.iptvcinema.tv.core.design.components.ExpandedPosterCardVariant
+import com.iptvcinema.tv.core.design.components.FilterChipRow
 import com.iptvcinema.tv.core.design.components.FocusAwareContentRail
 import com.iptvcinema.tv.core.design.components.HeroBanner
 import com.iptvcinema.tv.core.design.components.PosterGrid
@@ -85,7 +86,6 @@ fun MoviesScreen(
         focusState.hasSavedFocus,
         hasFeatured,
         uiState.continueWatchingMovies.isNotEmpty(),
-        selectedFilter,
         categories.isNotEmpty(),
         uiState.posters.isNotEmpty(),
     ) {
@@ -150,7 +150,9 @@ fun MoviesScreen(
                 modifier = Modifier.weight(1f),
             ) {
                 Column(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
                 ) {
                     uiState.featured?.let { movie ->
@@ -178,44 +180,42 @@ fun MoviesScreen(
                             onCardClick = { card -> navigateMoviesCardToPlayer(navController, card) },
                         )
                     }
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .padding(start = CinemaSpacing.ContentStart, end = 24.dp),
-                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
-                    ) {
-                        if (categories.isNotEmpty()) {
-                            CategoryListPanel(
-                                modifier = Modifier.fillMaxHeight(),
-                                items = categories,
-                                selectedIndex = selectedFilter.coerceIn(0, categories.lastIndex),
-                                onSelected = {
-                                    selectedFilter = it
-                                    focusState.saveFocusIndex(it)
-                                },
-                                listFocusRequester = categoryFocus,
-                                initialFocusedIndex = selectedFilter,
-                            )
-                        }
-                        PosterGrid(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight(),
-                            items = uiState.posters,
-                            firstItemFocusRequester = if (!hasFeatured && uiState.continueWatchingMovies.isEmpty()) {
-                                gridFocus
+                    if (categories.isNotEmpty()) {
+                        FilterChipRow(
+                            items = categories,
+                            selectedIndex = selectedFilter.coerceIn(0, categories.lastIndex),
+                            onSelected = {
+                                selectedFilter = it
+                                focusState.saveFocusIndex(it)
+                            },
+                            chipFocusRequester = if (!hasFeatured && uiState.continueWatchingMovies.isEmpty()) {
+                                categoryFocus
                             } else {
                                 null
                             },
-                            contentPadding = PaddingValues(bottom = CinemaSpacing.SectionGap),
-                            onItemClick = { poster ->
-                                poster.contentId?.let { movieId ->
-                                    navController.navigate(AppRoute.movieDetails(movieId))
-                                }
-                            },
+                            focusedChipIndex = selectedFilter,
+                            modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
                         )
                     }
+                    PosterGrid(
+                        items = uiState.posters,
+                        enableVerticalScroll = false,
+                        firstItemFocusRequester = if (
+                            !hasFeatured &&
+                            uiState.continueWatchingMovies.isEmpty() &&
+                            categories.isEmpty()
+                        ) {
+                            gridFocus
+                        } else {
+                            null
+                        },
+                        contentPadding = PaddingValues(bottom = CinemaSpacing.SectionGap),
+                        onItemClick = { poster ->
+                            poster.contentId?.let { movieId ->
+                                navController.navigate(AppRoute.movieDetails(movieId))
+                            }
+                        },
+                    )
                 }
             }
         }

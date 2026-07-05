@@ -1,6 +1,8 @@
 package com.iptvcinema.tv.core.design.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -78,6 +81,8 @@ fun HeroBanner(
     selectedThumbIndex: Int = 0,
     onThumbSelect: ((Int) -> Unit)? = null,
 ) {
+    val sectionBringIntoViewRequester = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val sideGradientColors = if (isRtl) {
         listOf(
@@ -97,7 +102,8 @@ fun HeroBanner(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = height, max = CinemaSpacing.HeroMaxHeight),
+            .heightIn(min = height, max = CinemaSpacing.HeroMaxHeight)
+            .bringIntoViewRequester(sectionBringIntoViewRequester),
     ) {
         if (backdropUrl != null) {
             CinemaAsyncImage(
@@ -196,7 +202,15 @@ fun HeroBanner(
                     variant = CinemaButtonVariant.PrimaryAccent,
                     icon = Icons.Default.PlayArrow,
                     onClick = onWatchNow,
-                    modifier = watchNowFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
+                    modifier = Modifier
+                        .then(watchNowFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
+                        .onFocusChanged { focusState ->
+                            if (focusState.isFocused) {
+                                scope.launch {
+                                    sectionBringIntoViewRequester.bringIntoView()
+                                }
+                            }
+                        },
                 )
                 if (onAddToList != null) {
                     CinemaButton(
@@ -386,16 +400,19 @@ fun PosterGrid(
     modifier: Modifier = Modifier,
     columns: Int = 5,
     firstItemFocusRequester: FocusRequester? = null,
+    enableVerticalScroll: Boolean = true,
     contentPadding: PaddingValues = PaddingValues(
         start = CinemaSpacing.NavRailWidth + 16.dp,
         end = 24.dp,
         bottom = CinemaSpacing.SectionGap,
     ),
 ) {
+    val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
+            .then(if (enableVerticalScroll) Modifier.verticalScroll(scrollState) else Modifier)
             .padding(contentPadding),
         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
     ) {
@@ -405,12 +422,30 @@ fun PosterGrid(
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
             ) {
                 rowItems.forEach { item ->
+                    val itemBringIntoViewRequester = remember(item.contentId ?: item.title) {
+                        BringIntoViewRequester()
+                    }
                     PosterCard(
                         data = item,
                         onClick = { onItemClick(item) },
                         fixedWidth = null,
                         modifier = Modifier
                             .weight(1f)
+                            .then(
+                                if (!enableVerticalScroll) {
+                                    Modifier
+                                        .bringIntoViewRequester(itemBringIntoViewRequester)
+                                        .onFocusChanged { focusState ->
+                                            if (focusState.isFocused) {
+                                                scope.launch {
+                                                    itemBringIntoViewRequester.bringIntoView()
+                                                }
+                                            }
+                                        }
+                                } else {
+                                    Modifier
+                                },
+                            )
                             .then(
                                 if (item == items.firstOrNull() && firstItemFocusRequester != null) {
                                     Modifier.focusRequester(firstItemFocusRequester)

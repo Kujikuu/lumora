@@ -8,10 +8,15 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -19,7 +24,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
-import com.iptvcinema.tv.core.design.theme.CinemaSpacing
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -31,21 +36,37 @@ fun FilterChipRow(
     chipFocusRequester: FocusRequester? = null,
     focusedChipIndex: Int = 0,
 ) {
+    val scope = rememberCoroutineScope()
+    val sectionBringIntoViewRequester = remember(items) { BringIntoViewRequester() }
+
     LazyRow(
-        modifier = modifier,
+        modifier = modifier.bringIntoViewRequester(sectionBringIntoViewRequester),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(vertical = 4.dp),
     ) {
         itemsIndexed(items) { index, label ->
+            val chipBringIntoViewRequester = remember(index, label) { BringIntoViewRequester() }
             CategoryChip(
                 label = label,
                 isSelected = index == selectedIndex,
                 onClick = { onSelected(index) },
-                modifier = if (index == focusedChipIndex && chipFocusRequester != null) {
-                    Modifier.focusRequester(chipFocusRequester)
-                } else {
-                    Modifier
-                },
+                modifier = Modifier
+                    .bringIntoViewRequester(chipBringIntoViewRequester)
+                    .onFocusChanged { focusState ->
+                        if (focusState.isFocused) {
+                            scope.launch {
+                                sectionBringIntoViewRequester.bringIntoView()
+                                chipBringIntoViewRequester.bringIntoView()
+                            }
+                        }
+                    }
+                    .then(
+                        if (index == focusedChipIndex && chipFocusRequester != null) {
+                            Modifier.focusRequester(chipFocusRequester)
+                        } else {
+                            Modifier
+                        },
+                    ),
             )
         }
     }

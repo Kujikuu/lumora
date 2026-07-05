@@ -147,6 +147,7 @@ fun MyListScreen(
                     } else {
                         PosterGrid(
                             items = filteredItems,
+                            enableVerticalScroll = false,
                             onItemClick = { poster ->
                                 poster.contentId?.let { contentId ->
                                     val favorite = state.favorites.find { it.contentId == contentId } ?: return@let
