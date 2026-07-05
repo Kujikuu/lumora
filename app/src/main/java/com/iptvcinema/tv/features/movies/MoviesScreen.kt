@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -153,38 +151,32 @@ fun MoviesScreen(
             ) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
-                    ) {
-                        uiState.featured?.let { movie ->
-                            MoviesFeaturedHero(
-                                movie = movie,
-                                watchNowFocusRequester = watchNowFocus,
-                                onWatchNow = {
-                                    navController.navigate(AppRoute.player(movie.id, "movie"))
-                                },
-                                onDetails = {
-                                    navController.navigate(AppRoute.movieDetails(movie.id))
-                                },
-                            )
-                        }
-                        if (uiState.continueWatchingMovies.isNotEmpty()) {
-                            FocusAwareContentRail(
-                                title = stringResource(R.string.home_continue_watching),
-                                items = uiState.continueWatchingMovies,
-                                variant = ExpandedPosterCardVariant.Landscape,
-                                countLabel = uiState.continueWatchingMovies.size.toString(),
-                                firstItemFocusRequester = if (!hasFeatured) continueWatchingFocus else null,
-                                onWatchNow = { card -> navigateMoviesCardToPlayer(navController, card) },
-                                onAddToList = viewModel::toggleFavorite,
-                                onFavorite = viewModel::toggleFavorite,
-                                onCardClick = { card -> navigateMoviesCardToPlayer(navController, card) },
-                            )
-                        }
+                    uiState.featured?.let { movie ->
+                        MoviesFeaturedHero(
+                            movie = movie,
+                            watchNowFocusRequester = watchNowFocus,
+                            onWatchNow = {
+                                navController.navigate(AppRoute.player(movie.id, "movie"))
+                            },
+                            onDetails = {
+                                navController.navigate(AppRoute.movieDetails(movie.id))
+                            },
+                        )
+                    }
+                    if (uiState.continueWatchingMovies.isNotEmpty()) {
+                        FocusAwareContentRail(
+                            title = stringResource(R.string.home_continue_watching),
+                            items = uiState.continueWatchingMovies,
+                            variant = ExpandedPosterCardVariant.Landscape,
+                            countLabel = uiState.continueWatchingMovies.size.toString(),
+                            firstItemFocusRequester = if (!hasFeatured) continueWatchingFocus else null,
+                            onWatchNow = { card -> navigateMoviesCardToPlayer(navController, card) },
+                            onAddToList = viewModel::toggleFavorite,
+                            onFavorite = viewModel::toggleFavorite,
+                            onCardClick = { card -> navigateMoviesCardToPlayer(navController, card) },
+                        )
                     }
                     Row(
                         modifier = Modifier
@@ -207,7 +199,9 @@ fun MoviesScreen(
                             )
                         }
                         PosterGrid(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
                             items = uiState.posters,
                             firstItemFocusRequester = if (!hasFeatured && uiState.continueWatchingMovies.isEmpty()) {
                                 gridFocus

@@ -631,17 +631,33 @@ class CatalogRepository @Inject constructor(
             val selectedCategory = categoryName?.let { name ->
                 categories.firstOrNull { it.name.equals(name, ignoreCase = true) }
             } ?: categories.firstOrNull()
+            val allMoviesFlow = catalogDaoFacade.movies.observeAllLimited(sourceId, MOVIE_BROWSE_LIMIT)
             val movieFlow = when {
-                selectedCategory == null -> catalogDaoFacade.movies.observeAllLimited(sourceId, MOVIE_BROWSE_LIMIT)
+                selectedCategory == null -> allMoviesFlow
                 isRecentlyAddedCategory(selectedCategory.name) ->
                     catalogDaoFacade.movies.observeRecentlyAdded(sourceId, LAST_ADDED_BROWSE_LIMIT)
-                else -> catalogDaoFacade.movies.observeByCategoryLimited(
-                    sourceId,
-                    selectedCategory.id,
-                    MOVIE_BROWSE_LIMIT,
-                )
+                else -> combine(
+                    catalogDaoFacade.movies.observeByCategoryLimited(
+                        sourceId,
+                        selectedCategory.id,
+                        MOVIE_BROWSE_LIMIT,
+                    ),
+                    allMoviesFlow,
+                ) { categoryMovies, allMovies ->
+                    categoryMovies.ifEmpty { allMovies }
+                }
             }
-            movieFlow.map { movies ->
+            val resolvedMovieFlow = if (
+                selectedCategory != null &&
+                isRecentlyAddedCategory(selectedCategory.name)
+            ) {
+                combine(movieFlow, allMoviesFlow) { recentMovies, allMovies ->
+                    recentMovies.ifEmpty { allMovies }
+                }
+            } else {
+                movieFlow
+            }
+            resolvedMovieFlow.map { movies ->
                 if (categories.isEmpty() && movies.isEmpty()) {
                     CatalogBrowseState(CatalogLoadState.Empty, message = appStrings.get(R.string.msg_no_movies_synced))
                 } else {
@@ -666,12 +682,19 @@ class CatalogRepository @Inject constructor(
         }
         return catalogDaoFacade.categories.observeByType(sourceId, CatalogContentType.SERIES.name).flatMapLatest { categories ->
             val categoryNames = categories.map { it.name }
-            val selectedCategory = categories.firstOrNull { it.name == categoryName }
-                ?: categories.firstOrNull()
+            val selectedCategory = categoryName?.let { name ->
+                categories.firstOrNull { it.name.equals(name, ignoreCase = true) }
+            } ?: categories.firstOrNull()
+            val allSeriesFlow = catalogDaoFacade.series.observeAll(sourceId)
             val seriesFlow = if (selectedCategory == null) {
-                catalogDaoFacade.series.observeAll(sourceId)
+                allSeriesFlow
             } else {
-                catalogDaoFacade.series.observeByCategory(sourceId, selectedCategory.id)
+                combine(
+                    catalogDaoFacade.series.observeByCategory(sourceId, selectedCategory.id),
+                    allSeriesFlow,
+                ) { categorySeries, allSeries ->
+                    categorySeries.ifEmpty { allSeries }
+                }
             }
             seriesFlow.map { seriesItems ->
                 if (categories.isEmpty() && seriesItems.isEmpty()) {

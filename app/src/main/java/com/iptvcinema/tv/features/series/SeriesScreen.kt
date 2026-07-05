@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -153,38 +151,32 @@ fun SeriesScreen(
             ) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
-                    ) {
-                        uiState.featured?.let { series ->
-                            SeriesFeaturedHero(
-                                series = series,
-                                watchNowFocusRequester = watchNowFocus,
-                                onWatchNow = {
-                                    navController.navigate(AppRoute.seriesDetails(series.id))
-                                },
-                                onDetails = {
-                                    navController.navigate(AppRoute.seriesDetails(series.id))
-                                },
-                            )
-                        }
-                        if (uiState.continueSeries.isNotEmpty()) {
-                            FocusAwareContentRail(
-                                title = stringResource(R.string.home_continue_watching),
-                                items = uiState.continueSeries,
-                                variant = ExpandedPosterCardVariant.Landscape,
-                                countLabel = uiState.continueSeries.size.toString(),
-                                firstItemFocusRequester = if (!hasFeatured) continueWatchingFocus else null,
-                                onWatchNow = { card -> navigateSeriesCardToPlayer(navController, card) },
-                                onAddToList = viewModel::toggleFavorite,
-                                onFavorite = viewModel::toggleFavorite,
-                                onCardClick = { card -> navigateSeriesCardToPlayer(navController, card) },
-                            )
-                        }
+                    uiState.featured?.let { series ->
+                        SeriesFeaturedHero(
+                            series = series,
+                            watchNowFocusRequester = watchNowFocus,
+                            onWatchNow = {
+                                navController.navigate(AppRoute.seriesDetails(series.id))
+                            },
+                            onDetails = {
+                                navController.navigate(AppRoute.seriesDetails(series.id))
+                            },
+                        )
+                    }
+                    if (uiState.continueSeries.isNotEmpty()) {
+                        FocusAwareContentRail(
+                            title = stringResource(R.string.home_continue_watching),
+                            items = uiState.continueSeries,
+                            variant = ExpandedPosterCardVariant.Landscape,
+                            countLabel = uiState.continueSeries.size.toString(),
+                            firstItemFocusRequester = if (!hasFeatured) continueWatchingFocus else null,
+                            onWatchNow = { card -> navigateSeriesCardToPlayer(navController, card) },
+                            onAddToList = viewModel::toggleFavorite,
+                            onFavorite = viewModel::toggleFavorite,
+                            onCardClick = { card -> navigateSeriesCardToPlayer(navController, card) },
+                        )
                     }
                     Row(
                         modifier = Modifier
@@ -207,7 +199,9 @@ fun SeriesScreen(
                             )
                         }
                         PosterGrid(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
                             items = uiState.posters,
                             firstItemFocusRequester = if (!hasFeatured && uiState.continueSeries.isEmpty()) {
                                 gridFocus
