@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<network-security-config>
-    <!-- Many IPTV/Xtream providers use HTTP-only endpoints configured by the user. -->
-    <base-config cleartextTrafficPermitted="true" />
-</network-security-config>

@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.iptvcinema.tv.core.util.SyncStatusFormatterTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-02T15:25:19" hostname="Apples-MacBook-Pro.local" time="0.007">
-  <properties/>
-  <testcase name="formatRelativeElapsed_formatsMinutesAndHours" classname="com.iptvcinema.tv.core.util.SyncStatusFormatterTest" time="0.005"/>
-  <testcase name="formatBanner_returnsNullWhenNoSyncData" classname="com.iptvcinema.tv.core.util.SyncStatusFormatterTest" time="0.0"/>
-  <testcase name="formatBanner_returnsSyncingWhenActive" classname="com.iptvcinema.tv.core.util.SyncStatusFormatterTest" time="0.0"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

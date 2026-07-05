@@ -21,4 +21,4 @@ captures/
 output.json
 supabase/activation-companion/config.js
 .worktrees/
-app/build/
+/app/build/

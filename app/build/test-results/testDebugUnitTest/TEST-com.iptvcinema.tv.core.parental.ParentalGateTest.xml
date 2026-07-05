@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.iptvcinema.tv.core.parental.ParentalGateTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-02T15:25:19" hostname="Apples-MacBook-Pro.local" time="0.011">
-  <properties/>
-  <testcase name="isContentBlocked_respectsCategoryAndRating" classname="com.iptvcinema.tv.core.parental.ParentalGateTest" time="0.004"/>
-  <testcase name="filterCategoryNames_hidesAdultAndBlocked" classname="com.iptvcinema.tv.core.parental.ParentalGateTest" time="0.0"/>
-  <testcase name="verifyPin_marksSessionVerified" classname="com.iptvcinema.tv.core.parental.ParentalGateTest" time="0.007"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

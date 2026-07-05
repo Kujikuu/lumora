@@ -1,1 +1,0 @@
--keep,allowobfuscation,allowshrinking class com.iptvcinema.tv.core.navigation.SessionViewModel
