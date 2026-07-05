@@ -24,8 +24,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.iptvcinema.tv.R
-import com.iptvcinema.tv.core.catalog.CatalogRefreshState
 import com.iptvcinema.tv.core.data.repository.CatalogLoadState
+import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.ChannelTile
@@ -35,7 +35,6 @@ import com.iptvcinema.tv.core.design.components.ExpandedPosterCardVariant
 import com.iptvcinema.tv.core.design.components.FocusAwareContentRail
 import com.iptvcinema.tv.core.design.components.HeroCarousel
 import com.iptvcinema.tv.core.design.components.MoodCategoryRow
-import com.iptvcinema.tv.core.design.components.SyncStatusBanner
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.model.home.MoodBrowseTarget
@@ -126,19 +125,11 @@ fun HomeScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
             ) {
-                val refreshBannerText = when (val refreshState = uiState.refreshState) {
-                    CatalogRefreshState.Idle -> uiState.syncBannerText
-                    CatalogRefreshState.Refreshing -> stringResource(R.string.refresh_in_progress)
-                    is CatalogRefreshState.Success -> refreshState.message
-                    is CatalogRefreshState.Failed -> refreshState.message
-                }
-                refreshBannerText?.let { bannerText ->
-                    SyncStatusBanner(
-                        text = bannerText,
-                        isRefreshing = uiState.refreshState == CatalogRefreshState.Refreshing,
-                        onClick = viewModel::refreshCurrentSource,
-                    )
-                }
+                CatalogRefreshBanner(
+                    syncBannerText = uiState.syncBannerText,
+                    refreshState = uiState.refreshState,
+                    onRefresh = viewModel::refreshCurrentSource,
+                )
                 if (heroMovies.isNotEmpty()) {
                     HeroCarousel(
                         movies = heroMovies,

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.iptvcinema.tv.core.catalog.CatalogRefreshController
 import com.iptvcinema.tv.core.catalog.CatalogRefreshState
 import com.iptvcinema.tv.core.catalog.CatalogRefreshSupport
+import com.iptvcinema.tv.core.catalog.CatalogSyncProgressTracker
 import com.iptvcinema.tv.core.data.fake.FakeDataProvider
 import com.iptvcinema.tv.core.data.repository.CatalogLoadState
 import com.iptvcinema.tv.core.data.repository.CatalogRepository
@@ -78,6 +79,7 @@ class LiveTvViewModel @Inject constructor(
     private val parentalGate: ParentalGate,
     private val playbackSessionTracker: PlaybackSessionTracker,
     private val catalogRefreshController: CatalogRefreshController,
+    private val catalogSyncProgressTracker: CatalogSyncProgressTracker,
 ) : ViewModel() {
     private val selectedCategory = MutableStateFlow<String?>(null)
     private val guideWindowStartMs = MutableStateFlow(GuideLayoutHelper.defaultWindowStart(System.currentTimeMillis()))
@@ -290,6 +292,8 @@ class LiveTvViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(refreshState = refreshState)
             },
             catalogRefreshController = catalogRefreshController,
+            catalogSyncProgressTracker = catalogSyncProgressTracker,
+            appSessionRepository = appSessionRepository,
         )
     }
 

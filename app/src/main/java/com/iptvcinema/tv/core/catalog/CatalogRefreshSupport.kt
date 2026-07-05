@@ -1,11 +1,15 @@
 package com.iptvcinema.tv.core.catalog
 
 import com.iptvcinema.tv.core.data.repository.CatalogRepository
+import com.iptvcinema.tv.core.datastore.AppSessionRepository
 import com.iptvcinema.tv.core.model.SourceStatus
+import com.iptvcinema.tv.core.model.SourceType
 import com.iptvcinema.tv.core.util.SyncStatusFormatter
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 object CatalogRefreshSupport {
@@ -32,10 +36,33 @@ object CatalogRefreshSupport {
         getRefreshState: () -> CatalogRefreshState,
         setRefreshState: (CatalogRefreshState) -> Unit,
         catalogRefreshController: CatalogRefreshController,
+        catalogSyncProgressTracker: CatalogSyncProgressTracker,
+        appSessionRepository: AppSessionRepository,
     ) = scope.launch {
-        if (getRefreshState() == CatalogRefreshState.Refreshing) return@launch
-        setRefreshState(CatalogRefreshState.Refreshing)
+        if (getRefreshState() is CatalogRefreshState.Refreshing) return@launch
+        val sourceType = appSessionRepository.sessionState.first().sourceType
+        val initial = catalogSyncProgressTracker.initialProgress(sourceType)
+        setRefreshState(
+            CatalogRefreshState.Refreshing(
+                progress = initial.fraction,
+                stepLabel = initial.stepLabel,
+            ),
+        )
+        var progressJob: Job? = null
+        progressJob = scope.launch {
+            catalogSyncProgressTracker.observeProgress().collect { display ->
+                if (getRefreshState() is CatalogRefreshState.Refreshing) {
+                    setRefreshState(
+                        CatalogRefreshState.Refreshing(
+                            progress = display.fraction,
+                            stepLabel = display.stepLabel,
+                        ),
+                    )
+                }
+            }
+        }
         val result = catalogRefreshController.refreshCurrentSource()
+        progressJob.cancel()
         setRefreshState(
             when (result) {
                 is CatalogRefreshResult.Success -> CatalogRefreshState.Success(result.message)

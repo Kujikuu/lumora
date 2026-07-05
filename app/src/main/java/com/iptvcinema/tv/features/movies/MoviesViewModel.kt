@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.iptvcinema.tv.core.catalog.CatalogRefreshController
 import com.iptvcinema.tv.core.catalog.CatalogRefreshState
 import com.iptvcinema.tv.core.catalog.CatalogRefreshSupport
+import com.iptvcinema.tv.core.catalog.CatalogSyncProgressTracker
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toPosterCardData
 import com.iptvcinema.tv.core.data.repository.CatalogLoadState
 import com.iptvcinema.tv.core.data.repository.CatalogRepository
@@ -60,6 +61,7 @@ class MoviesViewModel @Inject constructor(
     private val parentalControlsRepository: ParentalControlsRepository,
     private val parentalGate: ParentalGate,
     private val catalogRefreshController: CatalogRefreshController,
+    private val catalogSyncProgressTracker: CatalogSyncProgressTracker,
 ) : ViewModel() {
     private val selectedCategory = MutableStateFlow<String?>(null)
     private val _uiState = MutableStateFlow(MoviesUiState())
@@ -196,6 +198,8 @@ class MoviesViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(refreshState = refreshState)
             },
             catalogRefreshController = catalogRefreshController,
+            catalogSyncProgressTracker = catalogSyncProgressTracker,
+            appSessionRepository = appSessionRepository,
         )
     }
 

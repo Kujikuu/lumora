@@ -3,8 +3,9 @@ package com.iptvcinema.tv.features.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.iptvcinema.tv.core.catalog.CatalogRefreshController
-import com.iptvcinema.tv.core.catalog.CatalogRefreshResult
 import com.iptvcinema.tv.core.catalog.CatalogRefreshState
+import com.iptvcinema.tv.core.catalog.CatalogRefreshSupport
+import com.iptvcinema.tv.core.catalog.CatalogSyncProgressTracker
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toChannelItem
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toChannelTileData
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toMovieItem
@@ -40,7 +41,6 @@ import com.iptvcinema.tv.core.model.home.toFavoriteContentType
 import com.iptvcinema.tv.features.home.HomeUiMapper.toHomeContentCard
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -78,6 +78,7 @@ class HomeViewModel @Inject constructor(
     private val parentalGate: ParentalGate,
     private val playbackSessionTracker: PlaybackSessionTracker,
     private val catalogRefreshController: CatalogRefreshController,
+    private val catalogSyncProgressTracker: CatalogSyncProgressTracker,
     private val appStrings: AppStrings,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -271,21 +272,16 @@ class HomeViewModel @Inject constructor(
     }
 
     fun refreshCurrentSource() {
-        if (_uiState.value.refreshState == CatalogRefreshState.Refreshing) return
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(refreshState = CatalogRefreshState.Refreshing)
-            val result = catalogRefreshController.refreshCurrentSource()
-            _uiState.value = _uiState.value.copy(
-                refreshState = when (result) {
-                    is CatalogRefreshResult.Success -> CatalogRefreshState.Success(result.message)
-                    is CatalogRefreshResult.Failed -> CatalogRefreshState.Failed(result.message)
-                },
-            )
-            delay(REFRESH_MESSAGE_VISIBLE_MS)
-            if (_uiState.value.refreshState !is CatalogRefreshState.Refreshing) {
-                _uiState.value = _uiState.value.copy(refreshState = CatalogRefreshState.Idle)
-            }
-        }
+        CatalogRefreshSupport.runCatalogRefresh(
+            scope = viewModelScope,
+            getRefreshState = { _uiState.value.refreshState },
+            setRefreshState = { refreshState ->
+                _uiState.value = _uiState.value.copy(refreshState = refreshState)
+            },
+            catalogRefreshController = catalogRefreshController,
+            catalogSyncProgressTracker = catalogSyncProgressTracker,
+            appSessionRepository = appSessionRepository,
+        )
     }
 
     fun toggleFavorite(card: HomeContentCard, onResult: (Boolean) -> Unit = {}) {
@@ -377,8 +373,4 @@ class HomeViewModel @Inject constructor(
         val nowPlayingChannelId: String?,
         val favorites: List<FavoriteItem>,
     )
-
-    companion object {
-        private const val REFRESH_MESSAGE_VISIBLE_MS = 5_000L
-    }
 }

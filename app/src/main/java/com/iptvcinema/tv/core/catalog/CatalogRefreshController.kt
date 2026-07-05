@@ -22,7 +22,10 @@ sealed interface CatalogRefreshResult {
 
 sealed interface CatalogRefreshState {
     data object Idle : CatalogRefreshState
-    data object Refreshing : CatalogRefreshState
+    data class Refreshing(
+        val progress: Float = 0f,
+        val stepLabel: String = "",
+    ) : CatalogRefreshState
     data class Success(val message: String) : CatalogRefreshState
     data class Failed(val message: String) : CatalogRefreshState
 }
@@ -57,10 +60,13 @@ class CatalogRefreshController @Inject constructor(
         return when (val result = xtreamSyncRepository.syncSource(sourceId, credentials)) {
             is XtreamSyncResult.Success -> CatalogRefreshResult.Success(
                 appStrings.get(
-                    R.string.refresh_success_xtream,
-                    result.liveChannelCount,
-                    result.movieCount,
-                    result.seriesCount,
+                    R.string.refresh_success_title,
+                    appStrings.get(
+                        R.string.refresh_success_xtream,
+                        result.liveChannelCount,
+                        result.movieCount,
+                        result.seriesCount,
+                    ),
                 ),
             )
             is XtreamSyncResult.AuthFailed -> CatalogRefreshResult.Failed(result.message)
@@ -74,8 +80,11 @@ class CatalogRefreshController @Inject constructor(
         return when (val result = m3uSyncRepository.syncSource(sourceId, credentials)) {
             is M3uSyncResult.Success -> CatalogRefreshResult.Success(
                 appStrings.get(
-                    R.string.refresh_success_m3u,
-                    result.liveChannelCount,
+                    R.string.refresh_success_title,
+                    appStrings.get(
+                        R.string.refresh_success_m3u,
+                        result.liveChannelCount,
+                    ),
                 ),
             )
             is M3uSyncResult.Unreachable -> CatalogRefreshResult.Failed(result.message)

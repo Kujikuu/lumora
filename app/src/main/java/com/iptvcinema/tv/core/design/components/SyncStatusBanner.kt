@@ -2,15 +2,23 @@ package com.iptvcinema.tv.core.design.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,6 +31,8 @@ import com.iptvcinema.tv.core.catalog.CatalogRefreshState
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 
+private const val REFRESHING_CONTENT_ALPHA = 0.72f
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun SyncStatusBanner(
@@ -30,36 +40,84 @@ fun SyncStatusBanner(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     isRefreshing: Boolean = false,
+    subtitle: String? = null,
+    progress: Float? = null,
+    isSuccess: Boolean = false,
+    isFailed: Boolean = false,
 ) {
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(isRefreshing) {
+        if (isRefreshing) {
+            focusRequester.requestFocus()
+        }
+    }
+
+    val contentColor = when {
+        isFailed -> CinemaColors.Danger
+        isSuccess -> CinemaColors.Success
+        isRefreshing -> CinemaColors.GoldSoft.copy(alpha = REFRESHING_CONTENT_ALPHA)
+        else -> CinemaColors.GoldSoft
+    }
+    val icon = when {
+        isFailed -> Icons.Default.Error
+        isSuccess -> Icons.Default.CheckCircle
+        else -> Icons.Default.Refresh
+    }
+
     FocusableCinemaCard(
         modifier = modifier
-            .fillMaxWidth(),
-        enabled = !isRefreshing,
-        onClick = onClick,
+            .widthIn(min = 280.dp, max = 420.dp)
+            .focusRequester(focusRequester),
+        enabled = true,
+        onClick = {
+            if (!isRefreshing) {
+                onClick()
+            }
+        },
         shape = CinemaShapes.Medium,
         contentDescription = text,
     ) { _ ->
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(CinemaColors.SurfaceGlass, CinemaShapes.Medium)
                 .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = null,
-                tint = CinemaColors.GoldSoft,
-                modifier = Modifier.size(18.dp),
-            )
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = CinemaColors.GoldSoft,
-                    fontWeight = FontWeight.Medium,
-                ),
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(18.dp),
+                )
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = contentColor,
+                            fontWeight = FontWeight.Medium,
+                        ),
+                    )
+                    subtitle?.takeIf { it.isNotBlank() }?.let { stepText ->
+                        Text(
+                            text = stepText,
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                color = contentColor.copy(alpha = 0.85f),
+                            ),
+                        )
+                    }
+                }
+            }
+            if (isRefreshing && progress != null) {
+                CinemaProgressBar(fraction = progress)
+            }
         }
     }
 }
@@ -73,14 +131,19 @@ fun CatalogRefreshBanner(
 ) {
     val bannerText = when (refreshState) {
         CatalogRefreshState.Idle -> syncBannerText
-        CatalogRefreshState.Refreshing -> stringResource(R.string.refresh_in_progress)
+        is CatalogRefreshState.Refreshing -> stringResource(R.string.refresh_in_progress)
         is CatalogRefreshState.Success -> refreshState.message
         is CatalogRefreshState.Failed -> refreshState.message
     }
     bannerText?.let { text ->
+        val refreshing = refreshState as? CatalogRefreshState.Refreshing
         SyncStatusBanner(
             text = text,
-            isRefreshing = refreshState == CatalogRefreshState.Refreshing,
+            isRefreshing = refreshing != null,
+            subtitle = refreshing?.stepLabel,
+            progress = refreshing?.progress,
+            isSuccess = refreshState is CatalogRefreshState.Success,
+            isFailed = refreshState is CatalogRefreshState.Failed,
             onClick = onRefresh,
             modifier = modifier,
         )

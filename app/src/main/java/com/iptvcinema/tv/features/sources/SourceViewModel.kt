@@ -18,7 +18,7 @@ import com.iptvcinema.tv.core.xtream.XtreamSyncProgress
 import com.iptvcinema.tv.core.xtream.XtreamSyncRepository
 import com.iptvcinema.tv.core.xtream.XtreamSyncResult
 import com.iptvcinema.tv.core.xtream.XtreamSyncStep
-import com.iptvcinema.tv.core.m3u.M3uSyncProgress
+import com.iptvcinema.tv.core.catalog.CatalogSyncProgressMapper
 import com.iptvcinema.tv.core.m3u.M3uSyncRepository
 import com.iptvcinema.tv.core.m3u.M3uSyncResult
 import com.iptvcinema.tv.core.m3u.M3uSyncStep
@@ -427,7 +427,7 @@ class SourceViewModel @Inject constructor(
     private fun updateChecklistFromSync(result: XtreamSyncResult) {
         val progress = xtreamSyncRepository.progress.value
         val checklist = progress.map { item ->
-            stepLabel(item) to item.isSuccess
+            CatalogSyncProgressMapper.xtreamChecklistLabel(item) to item.isSuccess
         }
         _xtreamConnectState.value = _xtreamConnectState.value.copy(checklist = checklist)
     }
@@ -446,7 +446,7 @@ class SourceViewModel @Inject constructor(
     private fun updateChecklistFromM3uSync(result: M3uSyncResult) {
         val progress = m3uSyncRepository.progress.value
         val checklist = progress.map { item ->
-            m3uStepLabel(item) to item.isSuccess
+            CatalogSyncProgressMapper.m3uChecklistLabel(item) to item.isSuccess
         }
         _m3uConnectState.value = _m3uConnectState.value.copy(checklist = checklist)
     }
@@ -459,25 +459,5 @@ class SourceViewModel @Inject constructor(
             "EPG" to result.epgAvailable,
             "Sync complete" to true,
         )
-    }
-
-    private fun m3uStepLabel(progress: M3uSyncProgress): String = when (progress.step) {
-        M3uSyncStep.VALIDATING_URL -> "Playlist URL valid"
-        M3uSyncStep.DOWNLOADING -> "Playlist downloaded"
-        M3uSyncStep.PARSING -> "Channels parsed"
-        M3uSyncStep.NORMALIZING -> "Channels saved"
-        M3uSyncStep.EPG -> "EPG"
-        M3uSyncStep.COMPLETE -> "Sync complete"
-    }
-
-    private fun stepLabel(progress: XtreamSyncProgress): String = when (progress.step) {
-        XtreamSyncStep.VALIDATING_URL -> "Server reachable"
-        XtreamSyncStep.AUTHENTICATING -> "Authentication"
-        XtreamSyncStep.LIVE_CATEGORIES, XtreamSyncStep.LIVE_STREAMS -> "Live channels"
-        XtreamSyncStep.VOD_CATEGORIES, XtreamSyncStep.VOD_STREAMS -> "Movies"
-        XtreamSyncStep.SERIES_CATEGORIES, XtreamSyncStep.SERIES -> "Series"
-        XtreamSyncStep.WATCHED_SERIES_EPISODES -> "Watched series episodes"
-        XtreamSyncStep.EPG -> "EPG"
-        XtreamSyncStep.COMPLETE -> "Sync complete"
     }
 }

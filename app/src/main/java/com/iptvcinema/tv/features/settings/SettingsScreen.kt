@@ -79,7 +79,13 @@ fun SettingsScreen(
     val incorrectPinMessage = stringResource(R.string.error_incorrect_pin)
     val refreshTrailing = when (val state = refreshState) {
         CatalogRefreshState.Idle -> null
-        CatalogRefreshState.Refreshing -> stringResource(R.string.refresh_in_progress)
+        is CatalogRefreshState.Refreshing -> {
+            if (state.stepLabel.isNotBlank()) {
+                "${stringResource(R.string.refresh_in_progress)} ${state.stepLabel}"
+            } else {
+                stringResource(R.string.refresh_in_progress)
+            }
+        }
         is CatalogRefreshState.Success -> state.message
         is CatalogRefreshState.Failed -> state.message
     }
@@ -180,7 +186,7 @@ fun SettingsScreen(
                                     label = stringResource(R.string.btn_refresh_catalog),
                                     isSelected = false,
                                     onClick = {
-                                        if (refreshState != CatalogRefreshState.Refreshing) {
+                                        if (refreshState !is CatalogRefreshState.Refreshing) {
                                             runProtected { viewModel.refreshCurrentSource() }
                                         }
                                     },

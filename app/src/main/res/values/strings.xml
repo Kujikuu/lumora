@@ -125,6 +125,15 @@
     <string name="sync_last_update">Last update: %1$s</string>
     <string name="refresh_in_progress">Refreshing catalog…</string>
     <string name="refresh_success">Catalog refreshed</string>
+    <string name="refresh_success_title">IPTV synced — %1$s</string>
+    <string name="sync_step_connecting">Connecting to server…</string>
+    <string name="sync_step_authenticating">Authenticating…</string>
+    <string name="sync_step_live">Syncing live TV…</string>
+    <string name="sync_step_movies">Syncing movies…</string>
+    <string name="sync_step_series">Syncing series…</string>
+    <string name="sync_step_complete">Finishing up…</string>
+    <string name="sync_step_m3u_downloading">Downloading playlist…</string>
+    <string name="sync_step_m3u_parsing">Parsing channels…</string>
     <string name="refresh_failed">Refresh failed</string>
     <string name="refresh_demo_unavailable">Demo mode — refresh not available</string>
     <string name="refresh_credentials_missing">Credentials not found for this source</string>

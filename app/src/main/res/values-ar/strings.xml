@@ -119,6 +119,15 @@
     <string name="sync_last_update">آخر تحديث: %1$s</string>
     <string name="refresh_in_progress">جارٍ تحديث الفهرس…</string>
     <string name="refresh_success">تم تحديث الفهرس</string>
+    <string name="refresh_success_title">تمت مزامنة IPTV — %1$s</string>
+    <string name="sync_step_connecting">جارٍ الاتصال بالخادم…</string>
+    <string name="sync_step_authenticating">جارٍ المصادقة…</string>
+    <string name="sync_step_live">جارٍ مزامنة البث المباشر…</string>
+    <string name="sync_step_movies">جارٍ مزامنة الأفلام…</string>
+    <string name="sync_step_series">جارٍ مزامنة المسلسلات…</string>
+    <string name="sync_step_complete">جارٍ الإنهاء…</string>
+    <string name="sync_step_m3u_downloading">جارٍ تنزيل قائمة التشغيل…</string>
+    <string name="sync_step_m3u_parsing">جارٍ تحليل القنوات…</string>
     <string name="refresh_failed">فشل التحديث</string>
     <string name="refresh_demo_unavailable">الوضع التجريبي — التحديث غير متاح</string>
     <string name="refresh_credentials_missing">لم يتم العثور على بيانات هذا المصدر</string>
