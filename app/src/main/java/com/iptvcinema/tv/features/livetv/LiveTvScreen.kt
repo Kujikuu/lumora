@@ -236,7 +236,7 @@ fun LiveTvScreen(
                             },
                             onChannelClick = { channel ->
                                 viewModel.onChannelSelected(channel)
-                                navController.navigate(AppRoute.channelDetails(channel.id))
+                                playChannel(channel)
                             },
                             listFocusRequester = channelListFocus,
                             initialFocusedIndex = focusedChannelIndex.coerceIn(0, uiState.channels.lastIndex),
@@ -277,7 +277,7 @@ fun LiveTvScreen(
                                 },
                                 onChannelClick = { channel ->
                                     viewModel.onChannelSelected(channel)
-                                    navController.navigate(AppRoute.channelDetails(channel.id))
+                                    playChannel(channel)
                                 },
                             )
                             if (showFullGuide) {
