@@ -154,6 +154,7 @@ class CatalogRepository @Inject constructor(
                                     FeaturedCatalogContent(
                                         heroMovies = domainHeroMovies,
                                         continueWatchingMovies = domainMovies.take(6),
+                                        popularMovies = domainMovies.take(8),
                                         trendingMovies = domainMovies.drop(1).take(8).ifEmpty { domainMovies },
                                         liveChannels = domainChannels,
                                         newReleaseMovies = domainMovies.takeLast(6).ifEmpty { domainMovies },
@@ -232,6 +233,24 @@ class CatalogRepository @Inject constructor(
                     catalogDaoFacade.movies.observeFeatured(sourceId, limit = 1).map { movies ->
                         movies.firstOrNull()?.let { movie ->
                             with(CatalogUiMapper) { movie.toDomain().toMovieItem() }
+                        }
+                    }
+                }
+            }
+        }
+
+    fun observeFeaturedSeries(): Flow<SeriesItem?> =
+        appSessionRepository.sessionState.flatMapLatest { session ->
+            if (session.isDemoMode) {
+                flowOf(FakeDataProvider.seriesList.firstOrNull())
+            } else {
+                val sourceId = session.currentSourceId
+                if (sourceId == null) {
+                    flowOf(null)
+                } else {
+                    catalogDaoFacade.series.observeFeatured(sourceId, limit = 1).map { series ->
+                        series.firstOrNull()?.let { item ->
+                            with(CatalogUiMapper) { item.toDomain().toSeriesItem() }
                         }
                     }
                 }
@@ -701,7 +720,7 @@ class CatalogRepository @Inject constructor(
             val selectedCategory = categoryName?.let { name ->
                 categories.firstOrNull { it.name.equals(name, ignoreCase = true) }
             } ?: categories.firstOrNull()
-            val allSeriesFlow = catalogDaoFacade.series.observeAll(sourceId)
+            val allSeriesFlow = catalogDaoFacade.series.observeAllLimited(sourceId, SERIES_BROWSE_LIMIT)
             val seriesFlow = if (selectedCategory == null) {
                 allSeriesFlow
             } else {
@@ -747,6 +766,23 @@ class CatalogRepository @Inject constructor(
             )
         },
         continueWatchingMovies = FakeDataProvider.continueWatchingMovies().map { movie ->
+            CatalogMovie(
+                id = movie.id,
+                sourceId = "demo",
+                title = movie.title,
+                streamUrl = "",
+                posterUrl = movie.imageUrl,
+                backdropUrl = movie.backdropUrl,
+                categoryId = null,
+                categoryName = null,
+                year = movie.year,
+                durationMinutes = movie.runtimeMinutes,
+                rating = movie.rating,
+                plot = movie.plot,
+                genres = movie.genres,
+            )
+        },
+        popularMovies = FakeDataProvider.movies.take(8).map { movie ->
             CatalogMovie(
                 id = movie.id,
                 sourceId = "demo",
@@ -841,6 +877,7 @@ class CatalogRepository @Inject constructor(
 
     private companion object {
         const val MOVIE_BROWSE_LIMIT = 100
+        const val SERIES_BROWSE_LIMIT = 100
         const val LAST_ADDED_BROWSE_LIMIT = 20
         const val CURRENT_PROGRAMS_BATCH_SIZE = 400
     }

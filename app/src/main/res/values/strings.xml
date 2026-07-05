@@ -185,6 +185,10 @@
     <string name="home_continue_watching">Continue Watching</string>
     <string name="home_trending">Trending Now</string>
     <string name="home_live_channels">Live Channels</string>
+    <string name="home_live_now">Live Now</string>
+    <string name="home_popular_movies">Popular Movies</string>
+    <string name="home_recently_added">Recently Added</string>
+    <string name="home_favorites">Favorites</string>
     <string name="home_new_releases">New Releases</string>
     <string name="home_popular_series">Popular Series</string>
     <string name="home_mood_row_title">Browse by Mood</string>
@@ -213,6 +217,8 @@
     <string name="sort_year">Sort: Year</string>
     <string name="filter_label">Filter</string>
     <string name="badge_4k">4K</string>
+    <string name="badge_new_episode">New Episode</string>
+    <string name="badge_seasons">S%d</string>
     <string name="badge_live">LIVE</string>
     <string name="badge_now">NOW</string>
     <string name="badge_saved">SAVED</string>

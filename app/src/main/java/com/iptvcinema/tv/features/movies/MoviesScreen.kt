@@ -2,13 +2,10 @@ package com.iptvcinema.tv.features.movies
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -30,12 +27,7 @@ import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
-import com.iptvcinema.tv.core.design.components.ExpandedPosterCardVariant
-import com.iptvcinema.tv.core.catalog.CatalogSortOption
-import com.iptvcinema.tv.core.design.components.FilterChipRow
-import com.iptvcinema.tv.core.design.components.FocusAwareContentRail
 import com.iptvcinema.tv.core.design.components.HeroBanner
-import com.iptvcinema.tv.core.design.components.PosterGrid
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.MovieItem
 import com.iptvcinema.tv.core.model.home.HomeContentCard
@@ -43,8 +35,14 @@ import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
 import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
+import com.iptvcinema.tv.core.navigation.rememberCatalogScrollState
 import com.iptvcinema.tv.core.navigation.rememberCatalogStateCallbacks
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
+import com.iptvcinema.tv.features.catalog.CatalogBrowseContent
+import com.iptvcinema.tv.features.catalog.CatalogBrowseSections
+import com.iptvcinema.tv.features.catalog.catalogSortFromIndex
+import com.iptvcinema.tv.features.catalog.catalogSortIndex
+import com.iptvcinema.tv.features.catalog.rememberCatalogSortOptions
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -59,8 +57,11 @@ fun MoviesScreen(
     val categoryFocus = remember { FocusRequester() }
     val gridFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("movies")
+    val scrollState = rememberCatalogScrollState(focusState)
     val categories = uiState.categories
     val hasFeatured = uiState.featured != null
+    val sortOptions = rememberCatalogSortOptions()
+    val selectedSortIndex = catalogSortIndex(uiState.sortOption)
 
     MainShellBackHandler(navController = navController, isHomeTab = false)
 
@@ -82,22 +83,18 @@ fun MoviesScreen(
         viewModel.selectCategory(categories.getOrNull(selectedFilter))
     }
 
-    LaunchedEffect(
-        uiState.loadState,
-        focusState.hasSavedFocus,
-        hasFeatured,
-        uiState.continueWatchingMovies.isNotEmpty(),
-        categories.isNotEmpty(),
-        uiState.posters.isNotEmpty(),
-    ) {
-        if (uiState.loadState != CatalogLoadState.Ready) return@LaunchedEffect
+    LaunchedEffect(uiState.loadState) {
+        if (uiState.loadState != CatalogLoadState.Ready || focusState.initialFocusHandled) return@LaunchedEffect
         val target = when {
+            focusState.sectionId == CatalogBrowseSections.GRID && focusState.focusedContentId.isNotBlank() -> gridFocus
+            focusState.sectionId == CatalogBrowseSections.CONTINUE -> continueWatchingFocus
             hasFeatured -> watchNowFocus
             uiState.continueWatchingMovies.isNotEmpty() -> continueWatchingFocus
             categories.isNotEmpty() -> categoryFocus
             else -> gridFocus
         }
         if (focusState.hasSavedFocus) {
+            scrollState.scrollTo(focusState.scrollOffset)
             focusState.restoreFocus(target)
         } else {
             focusState.requestInitialFocus(target)
@@ -111,14 +108,6 @@ fun MoviesScreen(
         navController = navController,
         onRetry = viewModel::refreshCurrentSource,
     )
-    val sortOptions = listOf(
-        stringResource(R.string.sort_title_az),
-        stringResource(R.string.sort_year),
-    )
-    val selectedSortIndex = when (uiState.sortOption) {
-        CatalogSortOption.TITLE_AZ -> 0
-        CatalogSortOption.YEAR -> 1
-    }
 
     MainShellScaffold(
         navController = navController,
@@ -157,85 +146,56 @@ fun MoviesScreen(
                 onRefreshCatalog = viewModel::refreshCurrentSource,
                 modifier = Modifier.weight(1f),
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
-                ) {
-                    uiState.featured?.let { movie ->
-                        MoviesFeaturedHero(
-                            movie = movie,
-                            watchNowFocusRequester = watchNowFocus,
-                            onWatchNow = {
-                                navController.navigate(AppRoute.player(movie.id, "movie"))
-                            },
-                            onDetails = {
-                                navController.navigate(AppRoute.movieDetails(movie.id))
-                            },
-                        )
-                    }
-                    if (uiState.continueWatchingMovies.isNotEmpty()) {
-                        FocusAwareContentRail(
-                            title = stringResource(R.string.home_continue_watching),
-                            items = uiState.continueWatchingMovies,
-                            variant = ExpandedPosterCardVariant.Landscape,
-                            countLabel = uiState.continueWatchingMovies.size.toString(),
-                            firstItemFocusRequester = if (!hasFeatured) continueWatchingFocus else null,
-                            onWatchNow = { card -> navigateMoviesCardToPlayer(navController, card) },
-                            onAddToList = viewModel::toggleFavorite,
-                            onFavorite = viewModel::toggleFavorite,
-                            onCardClick = { card -> navigateMoviesCardToPlayer(navController, card) },
-                        )
-                    }
-                    if (categories.isNotEmpty()) {
-                        FilterChipRow(
-                            items = categories,
-                            selectedIndex = selectedFilter.coerceIn(0, categories.lastIndex),
-                            onSelected = {
-                                selectedFilter = it
-                                focusState.saveFocusIndex(it)
-                            },
-                            chipFocusRequester = if (!hasFeatured && uiState.continueWatchingMovies.isEmpty()) {
-                                categoryFocus
-                            } else {
-                                null
-                            },
-                            focusedChipIndex = selectedFilter,
-                            modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
-                        )
-                    }
-                    FilterChipRow(
-                        items = sortOptions,
-                        selectedIndex = selectedSortIndex,
-                        onSelected = { index ->
-                            viewModel.selectSort(
-                                if (index == 0) CatalogSortOption.TITLE_AZ else CatalogSortOption.YEAR,
+                CatalogBrowseContent(
+                    scrollState = scrollState,
+                    focusState = focusState,
+                    hasFeatured = hasFeatured,
+                    continueWatchingItems = uiState.continueWatchingMovies,
+                    categories = categories,
+                    selectedFilter = selectedFilter,
+                    onCategorySelected = {
+                        selectedFilter = it
+                        focusState.saveFocusIndex(it)
+                    },
+                    sortOptions = sortOptions,
+                    selectedSortIndex = selectedSortIndex,
+                    onSortSelected = { index ->
+                        viewModel.selectSort(catalogSortFromIndex(index))
+                    },
+                    posters = uiState.posters,
+                    onPosterClick = { poster ->
+                        poster.contentId?.let { movieId ->
+                            navController.navigate(AppRoute.movieDetails(movieId))
+                        }
+                    },
+                    onPosterLongClick = { poster ->
+                        poster.contentId?.let { movieId ->
+                            viewModel.togglePosterFavorite(movieId)
+                        }
+                    },
+                    onContinueWatchNow = { card -> navigateMoviesCardToPlayer(navController, card) },
+                    onContinueCardClick = { card -> navigateMoviesCardToPlayer(navController, card) },
+                    onContinueAddToList = viewModel::toggleFavorite,
+                    onContinueFavorite = viewModel::toggleFavorite,
+                    watchNowFocus = watchNowFocus,
+                    continueWatchingFocus = continueWatchingFocus,
+                    categoryFocus = categoryFocus,
+                    gridFocus = gridFocus,
+                    featuredContent = {
+                        uiState.featured?.let { movie ->
+                            MoviesFeaturedHero(
+                                movie = movie,
+                                watchNowFocusRequester = watchNowFocus,
+                                onWatchNow = {
+                                    navController.navigate(AppRoute.player(movie.id, "movie"))
+                                },
+                                onDetails = {
+                                    navController.navigate(AppRoute.movieDetails(movie.id))
+                                },
                             )
-                        },
-                        focusedChipIndex = selectedSortIndex,
-                        modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
-                    )
-                    PosterGrid(
-                        items = uiState.posters,
-                        enableVerticalScroll = false,
-                        firstItemFocusRequester = if (
-                            !hasFeatured &&
-                            uiState.continueWatchingMovies.isEmpty() &&
-                            categories.isEmpty()
-                        ) {
-                            gridFocus
-                        } else {
-                            null
-                        },
-                        contentPadding = PaddingValues(bottom = CinemaSpacing.SectionGap),
-                        onItemClick = { poster ->
-                            poster.contentId?.let { movieId ->
-                                navController.navigate(AppRoute.movieDetails(movieId))
-                            }
-                        },
-                    )
-                }
+                        }
+                    },
+                )
             }
         }
     }
@@ -256,6 +216,10 @@ private fun MoviesFeaturedHero(
             movie.genres.joinToString(" ").takeIf { it.isNotBlank() },
             movie.runtimeMinutes.takeIf { it > 0 }?.let { "${it}m" },
         ),
+        qualityBadges = buildList {
+            if (movie.is4K) add("4K")
+            movie.rating.takeIf { it.isNotBlank() }?.let { add("★ $it") }
+        },
         description = movie.plot,
         onWatchNow = onWatchNow,
         onDetails = onDetails,

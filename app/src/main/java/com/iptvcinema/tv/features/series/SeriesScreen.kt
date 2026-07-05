@@ -2,13 +2,10 @@ package com.iptvcinema.tv.features.series
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -31,12 +28,7 @@ import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
-import com.iptvcinema.tv.core.design.components.ExpandedPosterCardVariant
-import com.iptvcinema.tv.core.catalog.CatalogSortOption
-import com.iptvcinema.tv.core.design.components.FilterChipRow
-import com.iptvcinema.tv.core.design.components.FocusAwareContentRail
 import com.iptvcinema.tv.core.design.components.HeroBanner
-import com.iptvcinema.tv.core.design.components.PosterGrid
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.SeriesItem
 import com.iptvcinema.tv.core.model.home.HomeContentCard
@@ -44,8 +36,14 @@ import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
 import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
+import com.iptvcinema.tv.core.navigation.rememberCatalogScrollState
 import com.iptvcinema.tv.core.navigation.rememberCatalogStateCallbacks
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
+import com.iptvcinema.tv.features.catalog.CatalogBrowseContent
+import com.iptvcinema.tv.features.catalog.CatalogBrowseSections
+import com.iptvcinema.tv.features.catalog.catalogSortFromIndex
+import com.iptvcinema.tv.features.catalog.catalogSortIndex
+import com.iptvcinema.tv.features.catalog.rememberCatalogSortOptions
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -60,20 +58,11 @@ fun SeriesScreen(
     val categoryFocus = remember { FocusRequester() }
     val gridFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("series")
+    val scrollState = rememberCatalogScrollState(focusState)
     val categories = uiState.categories
     val hasFeatured = uiState.featured != null
-    val catalogCallbacks = rememberCatalogStateCallbacks(
-        navController = navController,
-        onRetry = viewModel::refreshCurrentSource,
-    )
-    val sortOptions = listOf(
-        stringResource(R.string.sort_title_az),
-        stringResource(R.string.sort_year),
-    )
-    val selectedSortIndex = when (uiState.sortOption) {
-        CatalogSortOption.TITLE_AZ -> 0
-        CatalogSortOption.YEAR -> 1
-    }
+    val sortOptions = rememberCatalogSortOptions()
+    val selectedSortIndex = catalogSortIndex(uiState.sortOption)
 
     var selectedFilter by remember(initialFilter, focusState.focusIndex, categories) {
         mutableIntStateOf(
@@ -95,22 +84,18 @@ fun SeriesScreen(
 
     MainShellBackHandler(navController = navController, isHomeTab = false)
 
-    LaunchedEffect(
-        uiState.loadState,
-        focusState.hasSavedFocus,
-        hasFeatured,
-        uiState.continueSeries.isNotEmpty(),
-        categories.isNotEmpty(),
-        uiState.posters.isNotEmpty(),
-    ) {
-        if (uiState.loadState != CatalogLoadState.Ready) return@LaunchedEffect
+    LaunchedEffect(uiState.loadState) {
+        if (uiState.loadState != CatalogLoadState.Ready || focusState.initialFocusHandled) return@LaunchedEffect
         val target = when {
+            focusState.sectionId == CatalogBrowseSections.GRID && focusState.focusedContentId.isNotBlank() -> gridFocus
+            focusState.sectionId == CatalogBrowseSections.CONTINUE -> continueWatchingFocus
             hasFeatured -> watchNowFocus
             uiState.continueSeries.isNotEmpty() -> continueWatchingFocus
             categories.isNotEmpty() -> categoryFocus
             else -> gridFocus
         }
         if (focusState.hasSavedFocus) {
+            scrollState.scrollTo(focusState.scrollOffset)
             focusState.restoreFocus(target)
         } else {
             focusState.requestInitialFocus(target)
@@ -119,6 +104,11 @@ fun SeriesScreen(
             }
         }
     }
+
+    val catalogCallbacks = rememberCatalogStateCallbacks(
+        navController = navController,
+        onRetry = viewModel::refreshCurrentSource,
+    )
 
     MainShellScaffold(
         navController = navController,
@@ -157,85 +147,63 @@ fun SeriesScreen(
                 onRefreshCatalog = viewModel::refreshCurrentSource,
                 modifier = Modifier.weight(1f),
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
-                ) {
-                    uiState.featured?.let { series ->
-                        SeriesFeaturedHero(
-                            series = series,
-                            watchNowFocusRequester = watchNowFocus,
-                            onWatchNow = {
-                                navController.navigate(AppRoute.seriesDetails(series.id))
-                            },
-                            onDetails = {
-                                navController.navigate(AppRoute.seriesDetails(series.id))
-                            },
-                        )
-                    }
-                    if (uiState.continueSeries.isNotEmpty()) {
-                        FocusAwareContentRail(
-                            title = stringResource(R.string.home_continue_watching),
-                            items = uiState.continueSeries,
-                            variant = ExpandedPosterCardVariant.Landscape,
-                            countLabel = uiState.continueSeries.size.toString(),
-                            firstItemFocusRequester = if (!hasFeatured) continueWatchingFocus else null,
-                            onWatchNow = { card -> navigateSeriesCardToPlayer(navController, card) },
-                            onAddToList = viewModel::toggleFavorite,
-                            onFavorite = viewModel::toggleFavorite,
-                            onCardClick = { card -> navigateSeriesCardToPlayer(navController, card) },
-                        )
-                    }
-                    if (categories.isNotEmpty()) {
-                        FilterChipRow(
-                            items = categories,
-                            selectedIndex = selectedFilter.coerceIn(0, categories.lastIndex),
-                            onSelected = {
-                                selectedFilter = it
-                                focusState.saveFocusIndex(it)
-                            },
-                            chipFocusRequester = if (!hasFeatured && uiState.continueSeries.isEmpty()) {
-                                categoryFocus
-                            } else {
-                                null
-                            },
-                            focusedChipIndex = selectedFilter,
-                            modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
-                        )
-                    }
-                    FilterChipRow(
-                        items = sortOptions,
-                        selectedIndex = selectedSortIndex,
-                        onSelected = { index ->
-                            viewModel.selectSort(
-                                if (index == 0) CatalogSortOption.TITLE_AZ else CatalogSortOption.YEAR,
+                CatalogBrowseContent(
+                    scrollState = scrollState,
+                    focusState = focusState,
+                    hasFeatured = hasFeatured,
+                    continueWatchingItems = uiState.continueSeries,
+                    categories = categories,
+                    selectedFilter = selectedFilter,
+                    onCategorySelected = {
+                        selectedFilter = it
+                        focusState.saveFocusIndex(it)
+                    },
+                    sortOptions = sortOptions,
+                    selectedSortIndex = selectedSortIndex,
+                    onSortSelected = { index ->
+                        viewModel.selectSort(catalogSortFromIndex(index))
+                    },
+                    posters = uiState.posters,
+                    onPosterClick = { poster ->
+                        poster.contentId?.let { seriesId ->
+                            navController.navigate(AppRoute.seriesDetails(seriesId))
+                        }
+                    },
+                    onPosterLongClick = { poster ->
+                        poster.contentId?.let { seriesId ->
+                            viewModel.togglePosterFavorite(seriesId)
+                        }
+                    },
+                    onContinueWatchNow = { card -> navigateSeriesCardToPlayer(navController, card) },
+                    onContinueCardClick = { card -> navigateSeriesCardToPlayer(navController, card) },
+                    onContinueAddToList = viewModel::toggleFavorite,
+                    onContinueFavorite = viewModel::toggleFavorite,
+                    watchNowFocus = watchNowFocus,
+                    continueWatchingFocus = continueWatchingFocus,
+                    categoryFocus = categoryFocus,
+                    gridFocus = gridFocus,
+                    featuredContent = {
+                        uiState.featured?.let { series ->
+                            SeriesFeaturedHero(
+                                series = series,
+                                watchNowFocusRequester = watchNowFocus,
+                                onWatchNow = {
+                                    val resume = uiState.featuredResumeEpisode
+                                    if (resume != null) {
+                                        navController.navigate(
+                                            AppRoute.player(resume.episodeId, "episode", resume.seriesId),
+                                        )
+                                    } else {
+                                        navController.navigate(AppRoute.seriesDetails(series.id))
+                                    }
+                                },
+                                onDetails = {
+                                    navController.navigate(AppRoute.seriesDetails(series.id))
+                                },
                             )
-                        },
-                        focusedChipIndex = selectedSortIndex,
-                        modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
-                    )
-                    PosterGrid(
-                        items = uiState.posters,
-                        enableVerticalScroll = false,
-                        firstItemFocusRequester = if (
-                            !hasFeatured &&
-                            uiState.continueSeries.isEmpty() &&
-                            categories.isEmpty()
-                        ) {
-                            gridFocus
-                        } else {
-                            null
-                        },
-                        contentPadding = PaddingValues(bottom = CinemaSpacing.SectionGap),
-                        onItemClick = { poster ->
-                            poster.contentId?.let { seriesId ->
-                                navController.navigate(AppRoute.seriesDetails(seriesId))
-                            }
-                        },
-                    )
-                }
+                        }
+                    },
+                )
             }
         }
     }
@@ -258,6 +226,11 @@ private fun SeriesFeaturedHero(
                 pluralStringResource(R.plurals.details_season_count, count, count)
             },
         ),
+        qualityBadges = buildList {
+            if (series.is4K) add("4K")
+            series.rating.takeIf { it.isNotBlank() }?.let { add("★ $it") }
+            if (series.hasNewEpisode) add(stringResource(R.string.badge_new_episode))
+        },
         description = series.plot,
         onWatchNow = onWatchNow,
         onDetails = onDetails,

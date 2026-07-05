@@ -39,6 +39,7 @@ import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.model.home.MoodCategory
 import com.iptvcinema.tv.core.model.home.toFavoriteContentType
 import com.iptvcinema.tv.features.home.HomeUiMapper.toHomeContentCard
+import com.iptvcinema.tv.features.home.HomeUiMapper.toHomeContentCardFromFavorite
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,10 +56,12 @@ data class HomeUiState(
     val featured: FeaturedCatalogContent? = null,
     val heroMovies: List<MovieItem> = emptyList(),
     val continueWatching: List<HomeContentCard> = emptyList(),
+    val liveNow: List<ChannelTileData> = emptyList(),
+    val popularMovies: List<HomeContentCard> = emptyList(),
     val trending: List<HomeContentCard> = emptyList(),
     val featuredSeries: List<HomeContentCard> = emptyList(),
-    val liveChannels: List<ChannelTileData> = emptyList(),
-    val newReleases: List<HomeContentCard> = emptyList(),
+    val recentlyAdded: List<HomeContentCard> = emptyList(),
+    val favorites: List<HomeContentCard> = emptyList(),
     val moodCategories: List<MoodCategory> = HomeMoodCategories.defaults,
     val message: String? = null,
     val sourceStatus: SourceStatus? = null,
@@ -201,6 +204,7 @@ class HomeViewModel @Inject constructor(
                     }
                     else -> {
                         val trendingMovies = filterMovies(featured.trendingMovies, controls)
+                        val popularMoviesFiltered = filterMovies(featured.popularMovies, controls)
                         val liveChannelItems = if (controls != null) {
                             featured.liveChannels.filter { channel ->
                                 !parentalGate.isCategoryBlocked(channel.categoryName.orEmpty(), controls)
@@ -229,11 +233,22 @@ class HomeViewModel @Inject constructor(
                             }
                         }
                         val featuredSeries = filterSeries(featured.featuredSeries, controls)
+                        val favoriteCards = favorites.mapNotNull { it.toHomeContentCardFromFavorite() }
+                        val liveNowTiles = liveChannelItems.map {
+                            it.toChannelItem(noProgramInfoTitle = appStrings.get(R.string.msg_no_program_info))
+                                .toChannelTileData(nowPlayingChannelId = nowPlayingChannelId)
+                        }.sortedByDescending { it.isNowPlaying }
                         HomeUiState(
                             loadState = CatalogLoadState.Ready,
                             featured = featured,
                             heroMovies = heroMovies,
                             continueWatching = continueWatching,
+                            liveNow = liveNowTiles,
+                            popularMovies = popularMoviesFiltered.map { movie ->
+                                movie.toHomeContentCard(
+                                    isFavorite = favorites.isFavorite(movie.id, FavoriteContentType.MOVIE),
+                                )
+                            },
                             trending = trendingMovies.mapIndexed { index, movie ->
                                 movie.toHomeContentCard(
                                     isFavorite = favorites.isFavorite(movie.id, FavoriteContentType.MOVIE),
@@ -245,15 +260,12 @@ class HomeViewModel @Inject constructor(
                                     isFavorite = favorites.isFavorite(series.id, FavoriteContentType.SERIES),
                                 )
                             },
-                            liveChannels = liveChannelItems.map {
-                                it.toChannelItem(noProgramInfoTitle = appStrings.get(R.string.msg_no_program_info))
-                                    .toChannelTileData(nowPlayingChannelId = nowPlayingChannelId)
-                            },
-                            newReleases = newReleaseMovies.map { movie ->
+                            recentlyAdded = newReleaseMovies.map { movie ->
                                 movie.toHomeContentCard(
                                     isFavorite = favorites.isFavorite(movie.id, FavoriteContentType.MOVIE),
                                 )
                             },
+                            favorites = favoriteCards,
                             sourceStatus = state.sourceStatus,
                             sourceType = state.sourceType,
                         )
@@ -327,6 +339,12 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun addHeroToList(movie: MovieItem) {
+        if (!movie.isFavorite) {
+            toggleHeroFavorite(movie)
+        }
+    }
+
     private fun updateCardFavoriteState(contentId: String, contentType: FavoriteContentType, isFavorite: Boolean) {
         fun List<HomeContentCard>.update() = map { card ->
             if (card.contentId == contentId && card.toFavoriteContentType() == contentType) {
@@ -339,8 +357,15 @@ class HomeViewModel @Inject constructor(
         _uiState.value = state.copy(
             continueWatching = state.continueWatching.update(),
             trending = state.trending.update(),
+            popularMovies = state.popularMovies.update(),
             featuredSeries = state.featuredSeries.update(),
-            newReleases = state.newReleases.update(),
+            recentlyAdded = state.recentlyAdded.update(),
+            favorites = if (isFavorite && contentType in setOf(FavoriteContentType.MOVIE, FavoriteContentType.SERIES)) {
+                val existing = state.favorites.any { it.contentId == contentId && it.toFavoriteContentType() == contentType }
+                if (existing) state.favorites.update() else state.favorites
+            } else {
+                state.favorites.filterNot { it.contentId == contentId && it.toFavoriteContentType() == contentType }
+            },
         )
     }
 

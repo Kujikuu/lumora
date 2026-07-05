@@ -33,4 +33,7 @@ object CinemaSpacing {
     val ExpandedLandscapeCardHeight = 252.dp
     val MoodTileSize = 120.dp
     val HeroThumbSize = 56.dp
+
+    /** Vertical padding so focus-scaled cards do not clip inside fixed-height rails. */
+    val FocusScaleOverflow = 16.dp
 }

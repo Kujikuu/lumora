@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -96,6 +97,7 @@ fun ExpandedPosterCard(
             reserveSubtitleSlot = reserveSubtitleSlot,
             onCardClick = onCardClick,
             onWatchNow = onWatchNow,
+            onFavorite = onFavorite,
             onFocusChanged = onFocusChanged,
         )
     }
@@ -113,6 +115,7 @@ private fun VerticalHomeCard(
     reserveSubtitleSlot: Boolean,
     onCardClick: () -> Unit,
     onWatchNow: () -> Unit,
+    onFavorite: () -> Unit,
     onFocusChanged: (Boolean) -> Unit,
 ) {
     FocusableCinemaCard(
@@ -120,6 +123,7 @@ private fun VerticalHomeCard(
             .fillMaxSize()
             .onFocusChanged { onFocusChanged(it.isFocused) },
         onClick = onCardClick,
+        onLongClick = onFavorite,
         shape = CinemaShapes.Medium,
         defaultBorderWidth = 0.dp,
         contentDescription = data.title,
@@ -136,6 +140,7 @@ private fun VerticalHomeCard(
                     .fillMaxWidth()
                     .height(posterHeight),
                 showTop10Badge = showTop10Badge,
+                showFavoriteBadge = data.isFavorite,
             )
             Column(
                 modifier = Modifier
@@ -160,6 +165,7 @@ private fun PosterImageBox(
     data: HomeContentCard,
     modifier: Modifier,
     showTop10Badge: Boolean = false,
+    showFavoriteBadge: Boolean = false,
 ) {
     Box(
         modifier = modifier
@@ -191,6 +197,17 @@ private fun PosterImageBox(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(6.dp),
+            )
+        }
+        if (showFavoriteBadge) {
+            Icon(
+                imageVector = Icons.Default.Favorite,
+                contentDescription = stringResource(R.string.content_desc_favorite),
+                tint = CinemaColors.Accent,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .size(18.dp),
             )
         }
         if (data.progress != null && data.progress > 0f) {

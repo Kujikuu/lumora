@@ -24,7 +24,6 @@ import com.iptvcinema.tv.core.model.MovieItem
 import com.iptvcinema.tv.core.model.SourceStatus
 import com.iptvcinema.tv.core.model.SourceType
 import com.iptvcinema.tv.core.model.WatchHistoryContentType
-import com.iptvcinema.tv.core.model.catalog.CatalogMovie
 import com.iptvcinema.tv.core.model.home.HomeCardAction
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.model.home.toFavoriteContentType
@@ -148,10 +147,12 @@ class MoviesViewModel @Inject constructor(
                     movies
                 } else {
                     movies.filter { it.id != featured.id }
-                }).sortedByCatalogOption(
+                }                ).sortedByCatalogOption(
                     option = bundle.sortOption,
                     titleSelector = { it.title },
                     yearSelector = { it.year },
+                    sortOrderSelector = { it.sortOrder },
+                    addedAtSelector = { it.addedAt },
                 )
                 val continueWatchingMovies = if (bundle.continueWatchingEnabled) {
                     bundle.history.mapNotNull { item ->
@@ -185,7 +186,7 @@ class MoviesViewModel @Inject constructor(
                     movies = movies,
                     featured = featured,
                     continueWatchingMovies = continueWatchingMovies,
-                    posters = gridMovies.map { movie -> movie.toPosterCardData() },
+                    posters = gridMovies.map { it.toPosterCardData() },
                     message = state.message,
                     sourceStatus = state.sourceStatus,
                     sourceType = state.sourceType,
@@ -216,6 +217,24 @@ class MoviesViewModel @Inject constructor(
             catalogSyncProgressTracker = catalogSyncProgressTracker,
             appSessionRepository = appSessionRepository,
         )
+    }
+
+    fun togglePosterFavorite(movieId: String) {
+        viewModelScope.launch {
+            val profileId = appSessionRepository.sessionState.first().currentProfileId ?: return@launch
+            val session = appSessionRepository.sessionState.first()
+            val movie = _uiState.value.movies.firstOrNull { it.id == movieId } ?: return@launch
+            runCatching {
+                favoritesRepository.toggleFavorite(
+                    profileId = profileId,
+                    contentId = movieId,
+                    contentType = FavoriteContentType.MOVIE,
+                    title = movie.title,
+                    posterUrl = movie.imageUrl,
+                    sourceId = session.currentSourceId,
+                )
+            }
+        }
     }
 
     fun toggleFavorite(card: HomeContentCard) {
@@ -255,23 +274,6 @@ class MoviesViewModel @Inject constructor(
 
     private fun List<FavoriteItem>.isFavorite(contentId: String, contentType: FavoriteContentType): Boolean =
         any { it.contentId == contentId && it.contentType == contentType }
-
-    private fun MovieItem.toPosterCardData(): PosterCardData =
-        CatalogMovie(
-            id = id,
-            sourceId = "",
-            title = title,
-            streamUrl = "",
-            posterUrl = imageUrl,
-            backdropUrl = backdropUrl,
-            categoryId = null,
-            categoryName = genres.firstOrNull(),
-            year = year,
-            durationMinutes = runtimeMinutes,
-            rating = rating.toString(),
-            plot = plot,
-            genres = genres,
-        ).toPosterCardData()
 
     private data class MoviesFlowBundle(
         val session: com.iptvcinema.tv.core.datastore.AppSessionState,

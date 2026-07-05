@@ -153,22 +153,34 @@ object CatalogUiMapper {
         rating = rating.orEmpty(),
         plot = plot.orEmpty(),
         genres = genres,
+        is4K = title.contains("4k", ignoreCase = true) ||
+            streamUrl.contains("4k", ignoreCase = true),
         isFavorite = isFavorite,
         imageUrl = posterUrl,
         backdropUrl = backdropUrl,
+        sortOrder = sortOrder,
+        addedAt = addedAt,
     )
 
-    fun CatalogSeries.toSeriesItem(isFavorite: Boolean = false): SeriesItem = SeriesItem(
+    fun CatalogSeries.toSeriesItem(
+        isFavorite: Boolean = false,
+        seasonCount: Int = 1,
+        hasNewEpisode: Boolean = false,
+        is4K: Boolean = false,
+    ): SeriesItem = SeriesItem(
         id = id,
         title = title,
         year = year ?: 0,
         rating = rating.orEmpty(),
         plot = plot.orEmpty(),
         genres = listOfNotNull(categoryName?.takeIf { it.isNotBlank() }),
-        seasonCount = 1,
+        seasonCount = seasonCount,
+        is4K = is4K || title.contains("4k", ignoreCase = true),
+        hasNewEpisode = hasNewEpisode,
         isFavorite = isFavorite,
         imageUrl = posterUrl,
         backdropUrl = backdropUrl,
+        sortOrder = sortOrder,
     )
 
     fun CatalogMovie.toPosterCardData(): PosterCardData = PosterCardData(
@@ -177,13 +189,44 @@ object CatalogUiMapper {
         runtime = durationMinutes?.takeIf { it > 0 }?.let { "${it}m" },
         imageUrl = posterUrl,
         contentId = id,
+        is4K = title.contains("4k", ignoreCase = true) ||
+            streamUrl.contains("4k", ignoreCase = true),
     )
 
-    fun CatalogSeries.toPosterCardData(): PosterCardData = PosterCardData(
+    fun CatalogSeries.toPosterCardData(
+        seasonCount: Int? = null,
+        hasNewEpisode: Boolean = false,
+    ): PosterCardData = PosterCardData(
         title = title,
         year = year?.takeIf { it > 0 }?.toString(),
         imageUrl = posterUrl,
         contentId = id,
+        is4K = title.contains("4k", ignoreCase = true),
+        seasonCount = seasonCount,
+        hasNewEpisode = hasNewEpisode,
+    )
+
+    fun MovieItem.toPosterCardData(): PosterCardData = PosterCardData(
+        title = title,
+        year = year.takeIf { it > 0 }?.toString(),
+        runtime = runtimeMinutes.takeIf { it > 0 }?.let { "${it}m" },
+        imageUrl = imageUrl,
+        contentId = id,
+        is4K = is4K,
+        progress = progress,
+        isFavorite = isFavorite,
+    )
+
+    fun SeriesItem.toPosterCardData(): PosterCardData = PosterCardData(
+        title = title,
+        year = year.takeIf { it > 0 }?.toString(),
+        imageUrl = imageUrl,
+        contentId = id,
+        is4K = is4K,
+        seasonCount = seasonCount.takeIf { it > 0 },
+        hasNewEpisode = hasNewEpisode,
+        progress = progress,
+        isFavorite = isFavorite,
     )
 
     fun List<CatalogProgram>.toEpgPrograms(nowMs: Long = System.currentTimeMillis()): List<EpgProgram> {

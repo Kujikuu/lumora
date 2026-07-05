@@ -27,8 +27,11 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -80,6 +83,7 @@ fun HeroBanner(
     carouselThumbs: List<Pair<String?, String>> = emptyList(),
     selectedThumbIndex: Int = 0,
     onThumbSelect: ((Int) -> Unit)? = null,
+    qualityBadges: List<String> = emptyList(),
 ) {
     val sectionBringIntoViewRequester = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
@@ -189,6 +193,20 @@ fun HeroBanner(
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                 )
+            }
+            if (qualityBadges.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    qualityBadges.forEach { badge ->
+                        BadgeChip(
+                            text = badge,
+                            backgroundColor = if (badge == stringResource(R.string.badge_4k)) {
+                                CinemaColors.AccentDeep
+                            } else {
+                                CinemaColors.SurfaceGlass
+                            },
+                        )
+                    }
+                }
             }
             if (metadata.isNotEmpty()) {
                 MetadataRow(items = metadata)
@@ -315,6 +333,7 @@ fun HeroCarousel(
         HeroBanner(
             title = movie.title,
             metadata = heroMovieMetadata(movie),
+            qualityBadges = heroMovieQualityBadges(movie),
             description = movie.plot,
             onWatchNow = { onWatchNow(movie) },
             onDetails = { onDetails(movie) },
@@ -367,6 +386,7 @@ fun HeroCarousel(
             HeroBanner(
                 title = movie.title,
                 metadata = heroMovieMetadata(movie),
+                qualityBadges = heroMovieQualityBadges(movie),
                 description = movie.plot,
                 onWatchNow = { onWatchNow(movie) },
                 onDetails = { onDetails(movie) },
@@ -392,6 +412,11 @@ private fun heroMovieMetadata(movie: MovieItem): List<String> = listOfNotNull(
     movie.runtimeMinutes.takeIf { it > 0 }?.let { "${it}m" },
 )
 
+private fun heroMovieQualityBadges(movie: MovieItem): List<String> = buildList {
+    if (movie.is4K) add("4K")
+    movie.rating.takeIf { it.isNotBlank() }?.let { add("★ $it") }
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun PosterGrid(
@@ -400,16 +425,20 @@ fun PosterGrid(
     modifier: Modifier = Modifier,
     columns: Int = 5,
     firstItemFocusRequester: FocusRequester? = null,
+    focusedContentId: String? = null,
     enableVerticalScroll: Boolean = true,
     onItemLongClick: ((PosterCardData) -> Unit)? = null,
+    onItemFocused: (PosterCardData) -> Unit = {},
     contentPadding: PaddingValues = PaddingValues(
         start = CinemaSpacing.NavRailWidth + 16.dp,
         end = 24.dp,
         bottom = CinemaSpacing.SectionGap,
     ),
+    gridFocusScale: Float = 1.04f,
 ) {
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
+    var hadFocusInGrid by remember(items.size) { mutableStateOf(false) }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -426,11 +455,19 @@ fun PosterGrid(
                     val itemBringIntoViewRequester = remember(item.contentId ?: item.title) {
                         BringIntoViewRequester()
                     }
+                    val restoreFocusRequester = remember(item.contentId) {
+                        if (focusedContentId != null && item.contentId == focusedContentId) {
+                            FocusRequester()
+                        } else {
+                            null
+                        }
+                    }
                     PosterCard(
                         data = item,
                         onClick = { onItemClick(item) },
                         onLongClick = onItemLongClick?.let { callback -> { callback(item) } },
                         fixedWidth = null,
+                        focusScale = gridFocusScale,
                         modifier = Modifier
                             .weight(1f)
                             .then(
@@ -439,8 +476,13 @@ fun PosterGrid(
                                         .bringIntoViewRequester(itemBringIntoViewRequester)
                                         .onFocusChanged { focusState ->
                                             if (focusState.isFocused) {
+                                                onItemFocused(item)
                                                 scope.launch {
-                                                    itemBringIntoViewRequester.bringIntoView()
+                                                    val enteringGrid = !hadFocusInGrid
+                                                    hadFocusInGrid = true
+                                                    if (enteringGrid) {
+                                                        itemBringIntoViewRequester.bringIntoView()
+                                                    }
                                                 }
                                             }
                                         }
@@ -449,10 +491,12 @@ fun PosterGrid(
                                 },
                             )
                             .then(
-                                if (item == items.firstOrNull() && firstItemFocusRequester != null) {
-                                    Modifier.focusRequester(firstItemFocusRequester)
-                                } else {
-                                    Modifier
+                                when {
+                                    item == items.firstOrNull() && firstItemFocusRequester != null ->
+                                        Modifier.focusRequester(firstItemFocusRequester)
+                                    restoreFocusRequester != null ->
+                                        Modifier.focusRequester(restoreFocusRequester)
+                                    else -> Modifier
                                 },
                             ),
                     )

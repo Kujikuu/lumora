@@ -21,9 +21,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -39,7 +39,7 @@ import androidx.compose.ui.zIndex
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 
-private const val FOCUSED_SCALE = 1.05f
+private const val FOCUSED_SCALE = 1.04f
 private const val PRESSED_SCALE = 0.97f
 private const val DISABLED_ALPHA = 0.4f
 
@@ -83,7 +83,10 @@ fun FocusableCinemaCard(
     Box(
         modifier = modifier
             .zIndex(if (isFocused && enabled) 1f else 0f)
-            .scale(scale)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .clip(shape)
             .then(
                 if (borderWidth > 0.dp) {

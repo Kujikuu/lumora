@@ -100,6 +100,7 @@ data class CatalogSyncState(
 data class FeaturedCatalogContent(
     val heroMovies: List<CatalogMovie>,
     val continueWatchingMovies: List<CatalogMovie>,
+    val popularMovies: List<CatalogMovie>,
     val trendingMovies: List<CatalogMovie>,
     val liveChannels: List<CatalogChannel>,
     val newReleaseMovies: List<CatalogMovie>,

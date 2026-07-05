@@ -217,6 +217,9 @@ interface SeriesDao {
     )
     fun observeByCategoryName(sourceId: String, categoryName: String): Flow<List<LocalSeriesEntity>>
 
+    @Query("SELECT * FROM series WHERE sourceId = :sourceId ORDER BY sortOrder, title LIMIT :limit")
+    fun observeAllLimited(sourceId: String, limit: Int): Flow<List<LocalSeriesEntity>>
+
     @Query("SELECT * FROM series WHERE sourceId = :sourceId ORDER BY sortOrder LIMIT :limit")
     fun observeFeatured(sourceId: String, limit: Int): Flow<List<LocalSeriesEntity>>
 

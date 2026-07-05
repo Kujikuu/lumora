@@ -44,10 +44,11 @@ fun SyncStatusBanner(
     progress: Float? = null,
     isSuccess: Boolean = false,
     isFailed: Boolean = false,
+    requestFocusOnRefresh: Boolean = false,
 ) {
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(isRefreshing) {
-        if (isRefreshing) {
+    LaunchedEffect(isRefreshing, requestFocusOnRefresh) {
+        if (isRefreshing && requestFocusOnRefresh) {
             focusRequester.requestFocus()
         }
     }

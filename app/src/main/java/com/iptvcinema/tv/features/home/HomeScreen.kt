@@ -3,19 +3,15 @@ package com.iptvcinema.tv.features.home
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -28,10 +24,9 @@ import com.iptvcinema.tv.core.data.repository.CatalogLoadState
 import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
-import com.iptvcinema.tv.core.design.components.ChannelTile
-import com.iptvcinema.tv.core.design.components.ContentRail
 import com.iptvcinema.tv.core.design.components.EmptyState
 import com.iptvcinema.tv.core.design.components.ExpandedPosterCardVariant
+import com.iptvcinema.tv.core.design.components.FocusAwareChannelRail
 import com.iptvcinema.tv.core.design.components.FocusAwareContentRail
 import com.iptvcinema.tv.core.design.components.HeroCarousel
 import com.iptvcinema.tv.core.design.components.MoodCategoryRow
@@ -43,8 +38,18 @@ import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
 import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
+import com.iptvcinema.tv.core.navigation.rememberCatalogScrollState
 import com.iptvcinema.tv.core.navigation.rememberCatalogStateCallbacks
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
+
+private object HomeSections {
+    const val CONTINUE = "home_continue"
+    const val LIVE_NOW = "home_live_now"
+    const val POPULAR = "home_popular"
+    const val SERIES = "home_series"
+    const val RECENT = "home_recent"
+    const val FAVORITES = "home_favorites"
+}
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -56,15 +61,14 @@ fun HomeScreen(
     val watchNowFocus = remember { FocusRequester() }
     val fallbackContentFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("home")
+    val scrollState = rememberCatalogScrollState(focusState)
     val catalogCallbacks = rememberCatalogStateCallbacks(navController)
     val lifecycleOwner = LocalLifecycleOwner.current
-    var homeResumeToken by remember { mutableIntStateOf(0) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.refreshContinueWatching()
-                homeResumeToken++
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -77,27 +81,32 @@ fun HomeScreen(
 
     val hasHeroFocusTarget = uiState.heroMovies.isNotEmpty()
     val hasFallbackFocusTarget = uiState.continueWatching.isNotEmpty() ||
-        uiState.trending.isNotEmpty() ||
+        uiState.liveNow.isNotEmpty() ||
+        uiState.popularMovies.isNotEmpty() ||
         uiState.featuredSeries.isNotEmpty() ||
-        uiState.liveChannels.isNotEmpty() ||
-        uiState.newReleases.isNotEmpty()
+        uiState.recentlyAdded.isNotEmpty() ||
+        uiState.favorites.isNotEmpty()
 
-    LaunchedEffect(
-        uiState.loadState,
-        focusState.hasSavedFocus,
-        hasHeroFocusTarget,
-        hasFallbackFocusTarget,
-        homeResumeToken,
-    ) {
-        if (uiState.loadState != CatalogLoadState.Ready) return@LaunchedEffect
+    LaunchedEffect(uiState.loadState) {
+        if (uiState.loadState != CatalogLoadState.Ready || focusState.initialFocusHandled) return@LaunchedEffect
         val target = if (hasHeroFocusTarget) watchNowFocus else fallbackContentFocus
         if (focusState.hasSavedFocus) {
+            scrollState.scrollTo(focusState.scrollOffset)
             focusState.restoreFocus(target)
         } else {
             if (focusState.requestInitialFocus(target)) {
                 focusState.saveFocusIndex(0)
             }
         }
+    }
+
+    LaunchedEffect(scrollState.value) {
+        focusState.saveBrowseFocus(
+            sectionId = focusState.sectionId,
+            itemIndex = focusState.itemIndex,
+            scrollOffset = scrollState.value,
+            categoryIndex = focusState.focusIndex,
+        )
     }
 
     MainShellScaffold(
@@ -121,7 +130,7 @@ fun HomeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(scrollState),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
             ) {
                 CatalogRefreshBanner(
@@ -139,7 +148,7 @@ fun HomeScreen(
                             navController.navigate(AppRoute.movieDetails(movie.id))
                         },
                         onAddToList = { movie ->
-                            viewModel.toggleHeroFavorite(movie)
+                            viewModel.addHeroToList(movie)
                         },
                         onFavorite = { movie ->
                             viewModel.toggleHeroFavorite(movie)
@@ -154,6 +163,7 @@ fun HomeScreen(
                         items = uiState.continueWatching,
                         variant = ExpandedPosterCardVariant.Landscape,
                         countLabel = uiState.continueWatching.size.toString(),
+                        sectionId = HomeSections.CONTINUE,
                         firstItemFocusRequester = if (!hasHeroFocusTarget) fallbackContentFocus else null,
                         onWatchNow = { card -> navigateToPlayer(navController, card) },
                         onAddToList = { card -> viewModel.toggleFavorite(card) },
@@ -162,19 +172,36 @@ fun HomeScreen(
                     )
                 }
 
-                MoodCategoryRow(
-                    title = stringResource(R.string.home_mood_row_title),
-                    categories = uiState.moodCategories,
-                    onCategoryClick = { category -> navigateMoodCategory(navController, category) },
-                )
-
-                if (uiState.trending.isNotEmpty()) {
-                    FocusAwareContentRail(
-                        title = stringResource(R.string.home_trending),
-                        items = uiState.trending,
-                        countLabel = uiState.trending.size.toString(),
+                if (uiState.liveNow.isNotEmpty()) {
+                    FocusAwareChannelRail(
+                        title = stringResource(R.string.home_live_now),
+                        items = uiState.liveNow,
+                        countLabel = uiState.liveNow.size.toString(),
                         firstItemFocusRequester = if (
                             !hasHeroFocusTarget && uiState.continueWatching.isEmpty()
+                        ) {
+                            fallbackContentFocus
+                        } else {
+                            null
+                        },
+                        onChannelClick = { channel ->
+                            channel.id?.let { channelId ->
+                                navController.navigate(AppRoute.player(channelId, "live"))
+                            } ?: navController.navigate(AppRoute.liveTv())
+                        },
+                    )
+                }
+
+                if (uiState.popularMovies.isNotEmpty()) {
+                    FocusAwareContentRail(
+                        title = stringResource(R.string.home_popular_movies),
+                        items = uiState.popularMovies,
+                        countLabel = uiState.popularMovies.size.toString(),
+                        sectionId = HomeSections.POPULAR,
+                        firstItemFocusRequester = if (
+                            !hasHeroFocusTarget &&
+                            uiState.continueWatching.isEmpty() &&
+                            uiState.liveNow.isEmpty()
                         ) {
                             fallbackContentFocus
                         } else {
@@ -192,10 +219,12 @@ fun HomeScreen(
                         title = stringResource(R.string.home_popular_series),
                         items = uiState.featuredSeries,
                         countLabel = uiState.featuredSeries.size.toString(),
+                        sectionId = HomeSections.SERIES,
                         firstItemFocusRequester = if (
                             !hasHeroFocusTarget &&
                             uiState.continueWatching.isEmpty() &&
-                            uiState.trending.isEmpty()
+                            uiState.liveNow.isEmpty() &&
+                            uiState.popularMovies.isEmpty()
                         ) {
                             fallbackContentFocus
                         } else {
@@ -208,45 +237,18 @@ fun HomeScreen(
                     )
                 }
 
-                if (uiState.liveChannels.isNotEmpty()) {
-                    ContentRail(
-                        title = stringResource(R.string.home_live_channels),
-                        items = uiState.liveChannels,
-                        countLabel = uiState.liveChannels.size.toString(),
-                    ) { channel ->
-                        ChannelTile(
-                            data = channel,
-                            modifier = if (
-                                !hasHeroFocusTarget &&
-                                uiState.continueWatching.isEmpty() &&
-                                uiState.trending.isEmpty() &&
-                                uiState.featuredSeries.isEmpty() &&
-                                channel == uiState.liveChannels.firstOrNull()
-                            ) {
-                                Modifier.focusRequester(fallbackContentFocus)
-                            } else {
-                                Modifier
-                            },
-                            onClick = {
-                                channel.id?.let { channelId ->
-                                    navController.navigate(AppRoute.player(channelId, "live"))
-                                } ?: navController.navigate(AppRoute.liveTv())
-                            },
-                        )
-                    }
-                }
-
-                if (uiState.newReleases.isNotEmpty()) {
+                if (uiState.recentlyAdded.isNotEmpty()) {
                     FocusAwareContentRail(
-                        title = stringResource(R.string.home_new_releases),
-                        items = uiState.newReleases,
-                        countLabel = uiState.newReleases.size.toString(),
+                        title = stringResource(R.string.home_recently_added),
+                        items = uiState.recentlyAdded,
+                        countLabel = uiState.recentlyAdded.size.toString(),
+                        sectionId = HomeSections.RECENT,
                         firstItemFocusRequester = if (
                             !hasHeroFocusTarget &&
                             uiState.continueWatching.isEmpty() &&
-                            uiState.trending.isEmpty() &&
-                            uiState.featuredSeries.isEmpty() &&
-                            uiState.liveChannels.isEmpty()
+                            uiState.liveNow.isEmpty() &&
+                            uiState.popularMovies.isEmpty() &&
+                            uiState.featuredSeries.isEmpty()
                         ) {
                             fallbackContentFocus
                         } else {
@@ -258,15 +260,47 @@ fun HomeScreen(
                         onCardClick = { card -> navigateToDetails(navController, card) },
                     )
                 }
+
+                if (uiState.favorites.isNotEmpty()) {
+                    FocusAwareContentRail(
+                        title = stringResource(R.string.home_favorites),
+                        items = uiState.favorites,
+                        countLabel = uiState.favorites.size.toString(),
+                        sectionId = HomeSections.FAVORITES,
+                        firstItemFocusRequester = if (
+                            !hasHeroFocusTarget &&
+                            uiState.continueWatching.isEmpty() &&
+                            uiState.liveNow.isEmpty() &&
+                            uiState.popularMovies.isEmpty() &&
+                            uiState.featuredSeries.isEmpty() &&
+                            uiState.recentlyAdded.isEmpty()
+                        ) {
+                            fallbackContentFocus
+                        } else {
+                            null
+                        },
+                        onWatchNow = { card -> navigateToPlayer(navController, card) },
+                        onAddToList = { card -> viewModel.toggleFavorite(card) },
+                        onFavorite = { card -> viewModel.toggleFavorite(card) },
+                        onCardClick = { card -> navigateToDetails(navController, card) },
+                    )
+                }
+
+                MoodCategoryRow(
+                    title = stringResource(R.string.home_mood_row_title),
+                    categories = uiState.moodCategories,
+                    onCategoryClick = { category -> navigateMoodCategory(navController, category) },
+                )
 
                 if (
                     uiState.loadState == CatalogLoadState.Ready &&
                     heroMovies.isEmpty() &&
                     uiState.continueWatching.isEmpty() &&
-                    uiState.trending.isEmpty() &&
+                    uiState.liveNow.isEmpty() &&
+                    uiState.popularMovies.isEmpty() &&
                     uiState.featuredSeries.isEmpty() &&
-                    uiState.liveChannels.isEmpty() &&
-                    uiState.newReleases.isEmpty()
+                    uiState.recentlyAdded.isEmpty() &&
+                    uiState.favorites.isEmpty()
                 ) {
                     EmptyState(
                         title = stringResource(R.string.home_empty_title),

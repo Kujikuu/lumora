@@ -26,6 +26,8 @@ data class MovieItem(
     val isFavorite: Boolean = false,
     val imageUrl: String? = null,
     val backdropUrl: String? = null,
+    val sortOrder: Int = 0,
+    val addedAt: Long? = null,
 )
 
 data class EpisodeItem(
@@ -58,6 +60,8 @@ data class SeriesItem(
     val imageUrl: String? = null,
     val backdropUrl: String? = null,
     val seasons: List<SeasonItem> = emptyList(),
+    val sortOrder: Int = 0,
+    val addedAt: Long? = null,
 )
 
 data class ChannelItem(

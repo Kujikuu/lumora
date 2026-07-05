@@ -46,6 +46,8 @@ data class PosterCardData(
     val subtitle: String? = null,
     val imageUrl: String? = null,
     val is4K: Boolean = false,
+    val seasonCount: Int? = null,
+    val hasNewEpisode: Boolean = false,
     val progress: Float? = null,
     val isFavorite: Boolean = false,
     val contentId: String? = null,
@@ -60,6 +62,7 @@ fun PosterCard(
     modifier: Modifier = Modifier,
     fixedWidth: Dp? = CinemaSpacing.PosterCardWidth,
     onLongClick: (() -> Unit)? = null,
+    focusScale: Float = 1.04f,
 ) {
     val imageAspectRatio = when (variant) {
         PosterCardVariant.PortraitPoster -> 2f / 3f
@@ -79,6 +82,7 @@ fun PosterCard(
         shape = CinemaShapes.Medium,
         contentDescription = data.title,
         defaultBorderWidth = 0.dp,
+        focusScale = focusScale,
     ) { focused ->
         Column(
             modifier = Modifier
@@ -112,6 +116,33 @@ fun PosterCard(
                             ),
                         ),
                 )
+
+                if (data.is4K) {
+                    BadgeChip(
+                        text = stringResource(R.string.badge_4k),
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(6.dp),
+                        backgroundColor = CinemaColors.AccentDeep,
+                    )
+                }
+                if (data.hasNewEpisode) {
+                    BadgeChip(
+                        text = stringResource(R.string.badge_new_episode),
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(6.dp),
+                        backgroundColor = CinemaColors.Accent,
+                    )
+                } else if (data.seasonCount != null && data.seasonCount > 0) {
+                    BadgeChip(
+                        text = stringResource(R.string.badge_seasons, data.seasonCount),
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(6.dp),
+                        backgroundColor = CinemaColors.SurfaceGlass,
+                    )
+                }
 
                 if (data.progress != null && data.progress > 0f) {
                     Box(

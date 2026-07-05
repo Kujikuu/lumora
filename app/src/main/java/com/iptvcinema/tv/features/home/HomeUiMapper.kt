@@ -1,5 +1,7 @@
 package com.iptvcinema.tv.features.home
 
+import com.iptvcinema.tv.core.model.FavoriteItem
+import com.iptvcinema.tv.core.model.FavoriteContentType
 import com.iptvcinema.tv.core.model.catalog.CatalogMovie
 import com.iptvcinema.tv.core.model.catalog.CatalogSeries
 import com.iptvcinema.tv.core.model.home.HomeCardAction
@@ -45,4 +47,22 @@ object HomeUiMapper {
         showTop10Badge = showTop10Badge,
         primaryAction = primaryAction,
     )
+
+    fun FavoriteItem.toHomeContentCardFromFavorite(): HomeContentCard? = when (contentType) {
+        FavoriteContentType.MOVIE -> HomeContentCard(
+            contentId = contentId,
+            contentType = "movie",
+            title = title,
+            imageUrl = posterUrl,
+            isFavorite = true,
+        )
+        FavoriteContentType.SERIES -> HomeContentCard(
+            contentId = contentId,
+            contentType = "series",
+            title = title,
+            imageUrl = posterUrl,
+            isFavorite = true,
+        )
+        else -> null
+    }
 }

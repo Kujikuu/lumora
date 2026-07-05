@@ -11,12 +11,17 @@ import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -41,11 +46,23 @@ fun FocusAwareContentRail(
     countLabel: String? = null,
     firstItemFocusRequester: FocusRequester? = null,
     onItemFocused: (HomeContentCard?) -> Unit = {},
+    sectionId: String? = null,
+    focusedItemIndex: Int = -1,
+    onFocusedItemIndexChange: (Int) -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
     val sectionBringIntoViewRequester = remember(title) { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
     val railHeight = variant.railHeight()
+    val focusOverflow = CinemaSpacing.FocusScaleOverflow
+    var hadFocusInRail by remember(title) { mutableStateOf(false) }
+
+    val cardStridePx = remember(density, variant) {
+        with(density) {
+            (CinemaSpacing.ExpandedPosterCardWidth + CinemaSpacing.RailGap).roundToPx()
+        }
+    }
 
     Column(
         modifier = modifier
@@ -81,8 +98,10 @@ fun FocusAwareContentRail(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(railHeight)
+                .height(railHeight + focusOverflow)
+                .padding(vertical = focusOverflow / 2)
                 .horizontalScroll(scrollState)
+                .onFocusChanged { if (!it.hasFocus) hadFocusInRail = false }
                 .padding(
                     start = CinemaSpacing.NavRailWidth + 16.dp,
                     end = CinemaSpacing.ScreenPadding,
@@ -92,6 +111,9 @@ fun FocusAwareContentRail(
         ) {
             items.forEachIndexed { index, item ->
                 val itemBringIntoViewRequester = remember(item.contentId) { BringIntoViewRequester() }
+                val itemFocusRequester = remember(item.contentId, sectionId) {
+                    if (sectionId != null && index == focusedItemIndex) FocusRequester() else null
+                }
                 ExpandedPosterCard(
                     data = item,
                     variant = variant,
@@ -102,9 +124,15 @@ fun FocusAwareContentRail(
                     onFocusChanged = { focused ->
                         if (focused) {
                             onItemFocused(item)
+                            onFocusedItemIndexChange(index)
                             scope.launch {
-                                sectionBringIntoViewRequester.bringIntoView()
-                                itemBringIntoViewRequester.bringIntoView()
+                                val enteringRail = !hadFocusInRail
+                                hadFocusInRail = true
+                                if (enteringRail) {
+                                    sectionBringIntoViewRequester.bringIntoView()
+                                }
+                                val targetScroll = (index * cardStridePx).coerceAtLeast(0)
+                                scrollState.scrollTo(targetScroll)
                             }
                         }
                     },
@@ -113,6 +141,8 @@ fun FocusAwareContentRail(
                         .then(
                             if (index == 0 && firstItemFocusRequester != null) {
                                 Modifier.focusRequester(firstItemFocusRequester)
+                            } else if (itemFocusRequester != null) {
+                                Modifier.focusRequester(itemFocusRequester)
                             } else {
                                 Modifier
                             },

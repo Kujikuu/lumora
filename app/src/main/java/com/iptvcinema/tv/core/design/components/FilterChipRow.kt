@@ -8,11 +8,13 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -37,26 +39,26 @@ fun FilterChipRow(
     focusedChipIndex: Int = 0,
 ) {
     val scope = rememberCoroutineScope()
-    val sectionBringIntoViewRequester = remember(items) { BringIntoViewRequester() }
+    val listState = rememberLazyListState()
+    var hadFocusInRow by remember(items) { mutableStateOf(false) }
 
     LazyRow(
-        modifier = modifier.bringIntoViewRequester(sectionBringIntoViewRequester),
+        modifier = modifier.onFocusChanged { if (!it.hasFocus) hadFocusInRow = false },
+        state = listState,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(vertical = 4.dp),
     ) {
         itemsIndexed(items) { index, label ->
-            val chipBringIntoViewRequester = remember(index, label) { BringIntoViewRequester() }
             CategoryChip(
                 label = label,
                 isSelected = index == selectedIndex,
                 onClick = { onSelected(index) },
                 modifier = Modifier
-                    .bringIntoViewRequester(chipBringIntoViewRequester)
                     .onFocusChanged { focusState ->
                         if (focusState.isFocused) {
                             scope.launch {
-                                sectionBringIntoViewRequester.bringIntoView()
-                                chipBringIntoViewRequester.bringIntoView()
+                                hadFocusInRow = true
+                                listState.animateScrollToItem(index)
                             }
                         }
                     }

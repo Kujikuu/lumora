@@ -24,7 +24,6 @@ import com.iptvcinema.tv.core.model.SeriesItem
 import com.iptvcinema.tv.core.model.SourceStatus
 import com.iptvcinema.tv.core.model.SourceType
 import com.iptvcinema.tv.core.model.WatchHistoryContentType
-import com.iptvcinema.tv.core.model.catalog.CatalogSeries
 import com.iptvcinema.tv.core.model.home.HomeCardAction
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.model.home.toFavoriteContentType
@@ -39,11 +38,17 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
+data class FeaturedSeriesResume(
+    val seriesId: String,
+    val episodeId: String,
+)
+
 data class SeriesUiState(
     val loadState: CatalogLoadState = CatalogLoadState.Loading,
     val categories: List<String> = emptyList(),
     val series: List<SeriesItem> = emptyList(),
     val featured: SeriesItem? = null,
+    val featuredResumeEpisode: FeaturedSeriesResume? = null,
     val continueSeries: List<HomeContentCard> = emptyList(),
     val posters: List<PosterCardData> = emptyList(),
     val message: String? = null,
@@ -101,13 +106,15 @@ class SeriesViewModel @Inject constructor(
                 }
                 combine(
                     catalogRepository.observeSeries(categoryName),
+                    catalogRepository.observeFeaturedSeries(),
                     controlsFlow,
                     historyFlow,
                     favoritesFlow,
-                ) { browseState, controls, history, favorites ->
+                ) { browseState, featuredSeries, controls, history, favorites ->
                     SeriesFlowBundle(
                         session = session,
                         browseState = browseState,
+                        featuredSeries = featuredSeries,
                         controls = controls,
                         history = history,
                         favorites = favorites,
@@ -134,7 +141,14 @@ class SeriesViewModel @Inject constructor(
                 } else {
                     state.items
                 }
-                val featured = seriesItems.firstOrNull()
+                val featured = bundle.featuredSeries?.takeUnless { series ->
+                    controls != null &&
+                        parentalGate.isContentBlocked(
+                            series.genres.firstOrNull(),
+                            series.rating,
+                            controls,
+                        )
+                }
                 val gridSeries = (if (featured == null) {
                     seriesItems
                 } else {
@@ -143,6 +157,8 @@ class SeriesViewModel @Inject constructor(
                     option = bundle.sortOption,
                     titleSelector = { it.title },
                     yearSelector = { it.year },
+                    sortOrderSelector = { it.sortOrder },
+                    addedAtSelector = { it.addedAt },
                 )
                 val continueSeries = if (bundle.continueWatchingEnabled) {
                     bundle.history.mapNotNull { item ->
@@ -170,27 +186,23 @@ class SeriesViewModel @Inject constructor(
                 } else {
                     emptyList()
                 }
+                val featuredResume = featured?.let { series ->
+                    bundle.history
+                        .filter { it.contentType == WatchHistoryContentType.EPISODE && it.seriesId == series.id }
+                        .maxByOrNull { it.lastWatchedAt }
+                        ?.let { item ->
+                            FeaturedSeriesResume(seriesId = series.id, episodeId = item.contentId)
+                        }
+                }
                 val current = _uiState.value
                 _uiState.value = SeriesUiState(
                     loadState = state.loadState,
                     categories = filteredCategories,
                     series = seriesItems,
                     featured = featured,
+                    featuredResumeEpisode = featuredResume,
                     continueSeries = continueSeries,
-                    posters = gridSeries.map { series ->
-                        CatalogSeries(
-                            id = series.id,
-                            sourceId = "",
-                            title = series.title,
-                            posterUrl = series.imageUrl,
-                            backdropUrl = series.backdropUrl,
-                            categoryId = null,
-                            categoryName = series.genres.firstOrNull(),
-                            plot = series.plot,
-                            rating = series.rating,
-                            year = series.year,
-                        ).toPosterCardData()
-                    },
+                    posters = gridSeries.map { it.toPosterCardData() },
                     message = state.message,
                     sourceStatus = state.sourceStatus,
                     sourceType = state.sourceType,
@@ -221,6 +233,24 @@ class SeriesViewModel @Inject constructor(
             catalogSyncProgressTracker = catalogSyncProgressTracker,
             appSessionRepository = appSessionRepository,
         )
+    }
+
+    fun togglePosterFavorite(seriesId: String) {
+        viewModelScope.launch {
+            val profileId = appSessionRepository.sessionState.first().currentProfileId ?: return@launch
+            val session = appSessionRepository.sessionState.first()
+            val series = _uiState.value.series.firstOrNull { it.id == seriesId } ?: return@launch
+            runCatching {
+                favoritesRepository.toggleFavorite(
+                    profileId = profileId,
+                    contentId = seriesId,
+                    contentType = FavoriteContentType.SERIES,
+                    title = series.title,
+                    posterUrl = series.imageUrl,
+                    sourceId = session.currentSourceId,
+                )
+            }
+        }
     }
 
     fun toggleFavorite(card: HomeContentCard) {
@@ -264,6 +294,7 @@ class SeriesViewModel @Inject constructor(
     private data class SeriesFlowBundle(
         val session: com.iptvcinema.tv.core.datastore.AppSessionState,
         val browseState: com.iptvcinema.tv.core.data.repository.CatalogBrowseState<SeriesItem>,
+        val featuredSeries: SeriesItem?,
         val controls: com.iptvcinema.tv.core.model.ParentalControls?,
         val history: List<com.iptvcinema.tv.core.model.WatchHistoryItem>,
         val favorites: List<FavoriteItem>,

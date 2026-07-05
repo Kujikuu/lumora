@@ -175,6 +175,10 @@
     <string name="home_continue_watching">متابعة المشاهدة</string>
     <string name="home_trending">الرائج الآن</string>
     <string name="home_live_channels">القنوات المباشرة</string>
+    <string name="home_live_now">مباشر الآن</string>
+    <string name="home_popular_movies">أفلام شائعة</string>
+    <string name="home_recently_added">أضيف مؤخراً</string>
+    <string name="home_favorites">المفضلة</string>
     <string name="home_new_releases">الإصدارات الجديدة</string>
     <string name="home_popular_series">مسلسلات شائعة</string>
     <string name="home_mood_row_title">تصفح حسب المزاج</string>
@@ -203,6 +207,8 @@
     <string name="sort_year">الترتيب: السنة</string>
     <string name="filter_label">تصفية</string>
     <string name="badge_4k">4K</string>
+    <string name="badge_new_episode">حلقة جديدة</string>
+    <string name="badge_seasons">S%d</string>
     <string name="badge_live">مباشر</string>
     <string name="badge_now">الآن</string>
     <string name="badge_saved">محفوظ</string>
