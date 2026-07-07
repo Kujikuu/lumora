@@ -625,12 +625,6 @@ class CatalogRepository @Inject constructor(
             }
             channelFlow.flatMapLatest { channels ->
                 flow {
-                    val nowMs = System.currentTimeMillis()
-                    val currentPrograms = if (channels.isNotEmpty()) {
-                        getCurrentProgramsForChannels(sourceId, channels.map { it.id }, nowMs)
-                    } else {
-                        emptyMap()
-                    }
                     val state = if (categories.isEmpty() && channels.isEmpty()) {
                         CatalogBrowseState(CatalogLoadState.Empty, message = appStrings.get(R.string.msg_no_live_channels))
                     } else {
@@ -640,8 +634,6 @@ class CatalogRepository @Inject constructor(
                             items = channels.map { channel ->
                                 with(CatalogUiMapper) {
                                     channel.toDomain().toChannelItem(
-                                        currentProgram = currentPrograms[channel.id],
-                                        nowMs = nowMs,
                                         noProgramInfoTitle = appStrings.get(R.string.msg_no_program_info),
                                     )
                                 }

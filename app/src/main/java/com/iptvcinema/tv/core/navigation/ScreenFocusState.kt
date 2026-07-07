@@ -94,9 +94,31 @@ class ScreenFocusState(
         const val NO_SAVED_FOCUS = -1
         private const val FOCUS_RESTORE_DELAY_MS = 150L
 
-        val Saver: Saver<ScreenFocusState, ScreenFocusSnapshot> = Saver(
-            save = { it.snapshot },
-            restore = { ScreenFocusState(it) },
+        @Suppress("UNCHECKED_CAST")
+        val Saver: Saver<ScreenFocusState, Any> = Saver(
+            save = { state ->
+                arrayListOf<Any>(
+                    state.focusIndex,
+                    state.sectionId,
+                    state.itemIndex,
+                    state.scrollOffset,
+                    state.focusedContentId,
+                    state.initialFocusHandled,
+                )
+            },
+            restore = { saved ->
+                val values = saved as List<*>
+                ScreenFocusState(
+                    ScreenFocusSnapshot(
+                        focusIndex = values[0] as Int,
+                        sectionId = values[1] as String,
+                        itemIndex = values[2] as Int,
+                        scrollOffset = values[3] as Int,
+                        focusedContentId = values[4] as String,
+                        initialFocusHandled = values[5] as Boolean,
+                    ),
+                )
+            },
         )
     }
 }

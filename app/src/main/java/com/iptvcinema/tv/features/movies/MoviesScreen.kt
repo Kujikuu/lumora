@@ -35,7 +35,6 @@ import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
 import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
-import com.iptvcinema.tv.core.navigation.rememberCatalogScrollState
 import com.iptvcinema.tv.core.navigation.rememberCatalogStateCallbacks
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
 import com.iptvcinema.tv.features.catalog.CatalogBrowseContent
@@ -57,7 +56,6 @@ fun MoviesScreen(
     val categoryFocus = remember { FocusRequester() }
     val gridFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("movies")
-    val scrollState = rememberCatalogScrollState(focusState)
     val categories = uiState.categories
     val hasFeatured = uiState.featured != null
     val sortOptions = rememberCatalogSortOptions()
@@ -94,7 +92,6 @@ fun MoviesScreen(
             else -> gridFocus
         }
         if (focusState.hasSavedFocus) {
-            scrollState.scrollTo(focusState.scrollOffset)
             focusState.restoreFocus(target)
         } else {
             focusState.requestInitialFocus(target)
@@ -147,7 +144,6 @@ fun MoviesScreen(
                 modifier = Modifier.weight(1f),
             ) {
                 CatalogBrowseContent(
-                    scrollState = scrollState,
                     focusState = focusState,
                     hasFeatured = hasFeatured,
                     continueWatchingItems = uiState.continueWatchingMovies,

@@ -121,6 +121,10 @@ fun LiveTvScreen(
         viewModel.selectCategory(categories.getOrNull(selectedCategory))
     }
 
+    LaunchedEffect(initialOpenGuide) {
+        viewModel.setFullGuideOpen(initialOpenGuide)
+    }
+
     LaunchedEffect(initialChannelId, uiState.channels) {
         if (!initialChannelId.isNullOrBlank() && uiState.channels.isNotEmpty()) {
             viewModel.selectChannelById(initialChannelId)
@@ -273,6 +277,7 @@ fun LiveTvScreen(
                                 channels = uiState.channels,
                                 onViewAllGuide = {
                                     showFullGuide = true
+                                    viewModel.setFullGuideOpen(true)
                                     viewModel.jumpGuideToNow()
                                 },
                                 onChannelClick = { channel ->

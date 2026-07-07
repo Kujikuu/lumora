@@ -1,27 +1,35 @@
 package com.iptvcinema.tv.features.catalog
 
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.catalog.CatalogSortOption
 import com.iptvcinema.tv.core.design.components.ExpandedPosterCardVariant
 import com.iptvcinema.tv.core.design.components.FilterChipRow
 import com.iptvcinema.tv.core.design.components.FocusAwareContentRail
+import com.iptvcinema.tv.core.design.components.PosterCard
 import com.iptvcinema.tv.core.design.components.PosterCardData
-import com.iptvcinema.tv.core.design.components.PosterGrid
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.navigation.ScreenFocusState
+import kotlinx.coroutines.launch
 
 object CatalogBrowseSections {
     const val FEATURED = "featured"
@@ -50,7 +58,6 @@ fun catalogSortFromIndex(index: Int): CatalogSortOption = when (index) {
 
 @Composable
 fun CatalogBrowseContent(
-    scrollState: ScrollState,
     focusState: ScreenFocusState,
     hasFeatured: Boolean,
     continueWatchingItems: List<HomeContentCard>,
@@ -74,103 +81,152 @@ fun CatalogBrowseContent(
     featuredContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LaunchedEffect(scrollState.value) {
+    val posterRows = remember(posters) { posters.chunked(CATALOG_GRID_COLUMNS) }
+    val gridStartListIndex = 1 +
+        (if (continueWatchingItems.isNotEmpty()) 1 else 0) +
+        (if (categories.isNotEmpty()) 1 else 0) +
+        1
+    val maxInitialListIndex = (gridStartListIndex + posterRows.lastIndex).coerceAtLeast(0)
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = focusState.scrollOffset.coerceIn(0, maxInitialListIndex),
+    )
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(listState.firstVisibleItemIndex) {
         focusState.saveBrowseFocus(
             sectionId = focusState.sectionId,
             itemIndex = focusState.itemIndex,
-            scrollOffset = scrollState.value,
+            scrollOffset = listState.firstVisibleItemIndex,
             focusedContentId = focusState.focusedContentId,
             categoryIndex = focusState.focusIndex,
         )
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState),
+    LazyColumn(
+        state = listState,
+        modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
     ) {
-        featuredContent()
+        item(key = CatalogBrowseSections.FEATURED) {
+            featuredContent()
+        }
 
         if (continueWatchingItems.isNotEmpty()) {
-            FocusAwareContentRail(
-                title = stringResource(R.string.home_continue_watching),
-                items = continueWatchingItems,
-                variant = ExpandedPosterCardVariant.Landscape,
-                countLabel = continueWatchingItems.size.toString(),
-                sectionId = CatalogBrowseSections.CONTINUE,
-                focusedItemIndex = if (focusState.sectionId == CatalogBrowseSections.CONTINUE) {
-                    focusState.itemIndex
-                } else {
-                    -1
-                },
-                onFocusedItemIndexChange = { index ->
-                    focusState.saveBrowseFocus(
-                        sectionId = CatalogBrowseSections.CONTINUE,
-                        itemIndex = index,
-                        scrollOffset = scrollState.value,
-                        categoryIndex = selectedFilter,
-                    )
-                },
-                firstItemFocusRequester = if (!hasFeatured) continueWatchingFocus else null,
-                onWatchNow = onContinueWatchNow,
-                onAddToList = onContinueAddToList,
-                onFavorite = onContinueFavorite,
-                onCardClick = onContinueCardClick,
-            )
+            item(key = CatalogBrowseSections.CONTINUE) {
+                FocusAwareContentRail(
+                    title = stringResource(R.string.home_continue_watching),
+                    items = continueWatchingItems,
+                    variant = ExpandedPosterCardVariant.Landscape,
+                    countLabel = continueWatchingItems.size.toString(),
+                    sectionId = CatalogBrowseSections.CONTINUE,
+                    focusedItemIndex = if (focusState.sectionId == CatalogBrowseSections.CONTINUE) {
+                        focusState.itemIndex
+                    } else {
+                        -1
+                    },
+                    onFocusedItemIndexChange = { index ->
+                        focusState.saveBrowseFocus(
+                            sectionId = CatalogBrowseSections.CONTINUE,
+                            itemIndex = index,
+                            scrollOffset = listState.firstVisibleItemIndex,
+                            categoryIndex = selectedFilter,
+                        )
+                    },
+                    firstItemFocusRequester = if (!hasFeatured) continueWatchingFocus else null,
+                    onWatchNow = onContinueWatchNow,
+                    onAddToList = onContinueAddToList,
+                    onFavorite = onContinueFavorite,
+                    onCardClick = onContinueCardClick,
+                )
+            }
         }
 
         if (categories.isNotEmpty()) {
+            item(key = "categories") {
+                FilterChipRow(
+                    items = categories,
+                    selectedIndex = selectedFilter.coerceIn(0, categories.lastIndex),
+                    onSelected = onCategorySelected,
+                    chipFocusRequester = if (!hasFeatured && continueWatchingItems.isEmpty()) {
+                        categoryFocus
+                    } else {
+                        null
+                    },
+                    focusedChipIndex = selectedFilter,
+                    modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
+                )
+            }
+        }
+
+        item(key = "sort") {
             FilterChipRow(
-                items = categories,
-                selectedIndex = selectedFilter.coerceIn(0, categories.lastIndex),
-                onSelected = onCategorySelected,
-                chipFocusRequester = if (!hasFeatured && continueWatchingItems.isEmpty()) {
-                    categoryFocus
-                } else {
-                    null
-                },
-                focusedChipIndex = selectedFilter,
+                items = sortOptions,
+                selectedIndex = selectedSortIndex,
+                onSelected = onSortSelected,
+                focusedChipIndex = selectedSortIndex,
                 modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
             )
         }
 
-        FilterChipRow(
-            items = sortOptions,
-            selectedIndex = selectedSortIndex,
-            onSelected = onSortSelected,
-            focusedChipIndex = selectedSortIndex,
-            modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
-        )
-
-        PosterGrid(
-            items = posters,
-            enableVerticalScroll = false,
-            focusedContentId = focusState.focusedContentId.takeIf {
-                focusState.sectionId == CatalogBrowseSections.GRID
-            },
-            firstItemFocusRequester = if (
-                !hasFeatured &&
-                continueWatchingItems.isEmpty() &&
-                categories.isEmpty()
+        itemsIndexed(
+            posterRows,
+            key = { rowIndex, row -> "poster-row-${row.firstOrNull()?.contentId ?: rowIndex}" },
+        ) { rowIndex, rowItems ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        start = CinemaSpacing.NavRailWidth + 16.dp,
+                        end = 24.dp,
+                    ),
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
             ) {
-                gridFocus
-            } else {
-                null
-            },
-            contentPadding = PaddingValues(bottom = CinemaSpacing.SectionGap),
-            onItemClick = onPosterClick,
-            onItemLongClick = onPosterLongClick,
-            onItemFocused = { poster ->
-                poster.contentId?.let { contentId ->
-                    focusState.saveBrowseFocus(
-                        sectionId = CatalogBrowseSections.GRID,
-                        scrollOffset = scrollState.value,
-                        focusedContentId = contentId,
-                        categoryIndex = selectedFilter,
+                rowItems.forEachIndexed { columnIndex, poster ->
+                    val itemIndex = rowIndex * CATALOG_GRID_COLUMNS + columnIndex
+                    val isRestoreTarget = focusState.sectionId == CatalogBrowseSections.GRID &&
+                        poster.contentId == focusState.focusedContentId
+                    val isInitialGridTarget = itemIndex == 0 &&
+                        !hasFeatured &&
+                        continueWatchingItems.isEmpty() &&
+                        categories.isEmpty()
+                    PosterCard(
+                        data = poster,
+                        onClick = { onPosterClick(poster) },
+                        onLongClick = onPosterLongClick?.let { callback -> { callback(poster) } },
+                        fixedWidth = null,
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { focus ->
+                                if (focus.isFocused) {
+                                    poster.contentId?.let { contentId ->
+                                        focusState.saveBrowseFocus(
+                                            sectionId = CatalogBrowseSections.GRID,
+                                            itemIndex = itemIndex,
+                                            scrollOffset = listState.firstVisibleItemIndex,
+                                            focusedContentId = contentId,
+                                            categoryIndex = selectedFilter,
+                                        )
+                                    }
+                                    scope.launch {
+                                        listState.scrollToItem(gridStartListIndex + rowIndex)
+                                    }
+                                }
+                            }
+                            .then(
+                                if (isRestoreTarget || isInitialGridTarget) {
+                                    Modifier.focusRequester(gridFocus)
+                                } else {
+                                    Modifier
+                                },
+                            ),
                     )
                 }
-            },
-        )
+                repeat(CATALOG_GRID_COLUMNS - rowItems.size) {
+                    Spacer(Modifier.weight(1f))
+                }
+            }
+        }
     }
 }
+
+private const val CATALOG_GRID_COLUMNS = 5

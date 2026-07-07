@@ -1,14 +1,16 @@
 package com.iptvcinema.tv.core.design.components
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -40,14 +41,10 @@ fun FocusAwareChannelRail(
     firstItemFocusRequester: FocusRequester? = null,
     onChannelClick: (ChannelTileData) -> Unit,
 ) {
-    val scrollState = rememberScrollState()
+    val listState = rememberLazyListState()
     val sectionBringIntoViewRequester = remember(title) { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
-    val density = LocalDensity.current
     var hadFocusInRail by remember(title) { mutableStateOf(false) }
-    val tileStridePx = remember(density) {
-        with(density) { (140.dp + CinemaSpacing.RailGap).roundToPx() }
-    }
 
     Column(
         modifier = modifier
@@ -80,18 +77,19 @@ fun FocusAwareChannelRail(
             }
         }
 
-        Row(
+        LazyRow(
+            state = listState,
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(scrollState)
-                .onFocusChanged { if (!it.hasFocus) hadFocusInRail = false }
-                .padding(
-                    start = CinemaSpacing.NavRailWidth + 16.dp,
-                    end = CinemaSpacing.ScreenPadding,
-                ),
+                .onFocusChanged { if (!it.hasFocus) hadFocusInRail = false },
+            contentPadding = PaddingValues(
+                start = CinemaSpacing.NavRailWidth + 16.dp,
+                end = CinemaSpacing.ScreenPadding,
+            ),
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            items.forEachIndexed { index, channel ->
+            itemsIndexed(items, key = { _, channel -> channel.id ?: channel.channelName }) { index, channel ->
                 ChannelTile(
                     data = channel,
                     onClick = { onChannelClick(channel) },
@@ -111,7 +109,7 @@ fun FocusAwareChannelRail(
                                     if (enteringRail) {
                                         sectionBringIntoViewRequester.bringIntoView()
                                     }
-                                    scrollState.scrollTo((index * tileStridePx).coerceAtLeast(0))
+                                    listState.scrollToItem(index)
                                 }
                             }
                         },

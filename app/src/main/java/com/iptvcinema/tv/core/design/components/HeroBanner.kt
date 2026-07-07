@@ -116,6 +116,7 @@ fun HeroBanner(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
                 fallbackLabel = title,
+                showLoadingSkeleton = true,
             )
         } else {
             Box(

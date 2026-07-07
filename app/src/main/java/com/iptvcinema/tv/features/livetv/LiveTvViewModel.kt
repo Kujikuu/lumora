@@ -88,6 +88,7 @@ class LiveTvViewModel @Inject constructor(
     private val nowMs = MutableStateFlow(System.currentTimeMillis())
     private val epgPrograms = MutableStateFlow<List<EpgProgram>>(emptyList())
     private val favoriteChannelIds = MutableStateFlow<Set<String>>(emptySet())
+    private val fullGuideOpen = MutableStateFlow(false)
     private var currentParentalControls: com.iptvcinema.tv.core.model.ParentalControls? = null
     private val browseState = MutableStateFlow(
         LiveTvBrowseSlice(
@@ -185,7 +186,20 @@ class LiveTvViewModel @Inject constructor(
                 val epg = right.epg
                 val nowPlayingId = right.nowPlayingId
                 val windowEnd = GuideLayoutHelper.windowEndFromStart(left.windowStart)
-                val channelPrograms = left.channel?.let { channel ->
+                val currentProgramsByChannel = epg
+                    .filter { program -> program.startEpochMs <= clock && program.endEpochMs > clock }
+                    .associateBy { program -> program.channelId }
+                val channels = left.browse.channels.map { channel ->
+                    currentProgramsByChannel[channel.id]?.let { program ->
+                        GuideLayoutHelper.channelItemWithProgram(channel, program, clock)
+                    } ?: channel
+                }
+                val selectedChannel = left.channel?.let { channel ->
+                    currentProgramsByChannel[channel.id]?.let { program ->
+                        GuideLayoutHelper.channelItemWithProgram(channel, program, clock)
+                    } ?: channel
+                }
+                val channelPrograms = selectedChannel?.let { channel ->
                     GuideLayoutHelper.programsForSelectedChannel(
                         programs = epg,
                         channel = channel,
@@ -196,13 +210,13 @@ class LiveTvViewModel @Inject constructor(
                 LiveTvUiState(
                     loadState = left.browse.loadState,
                     categories = left.browse.categories,
-                    channels = left.browse.channels,
+                    channels = channels,
                     epgPrograms = epg,
                     selectedChannelPrograms = channelPrograms,
                     guideWindowStartMs = left.windowStart,
                     guideWindowEndMs = windowEnd,
                     focusedProgram = left.program,
-                    selectedChannel = left.channel,
+                    selectedChannel = selectedChannel,
                     nowMs = clock,
                     message = left.browse.message,
                     sourceStatus = left.browse.sourceStatus,
@@ -223,6 +237,12 @@ class LiveTvViewModel @Inject constructor(
     fun selectCategory(categoryName: String?) {
         selectedCategory.value = categoryName
         focusedProgram.value = null
+    }
+
+    fun setFullGuideOpen(open: Boolean) {
+        if (fullGuideOpen.value == open) return
+        fullGuideOpen.value = open
+        refreshEpg()
     }
 
     fun requiresCategoryPin(): Boolean {
@@ -251,8 +271,12 @@ class LiveTvViewModel @Inject constructor(
     }
 
     fun onChannelSelected(channel: ChannelItem) {
+        val previousChannelId = selectedChannel.value?.id
         selectedChannel.value = channel
         focusedProgram.value = null
+        if (previousChannelId != channel.id && !fullGuideOpen.value) {
+            refreshEpg()
+        }
     }
 
     fun selectChannelById(channelId: String?) {
@@ -306,12 +330,20 @@ class LiveTvViewModel @Inject constructor(
         }
         val windowStart = guideWindowStartMs.value
         val windowEnd = GuideLayoutHelper.windowEndFromStart(windowStart)
-        val channelIds = browse.channels.map { it.id }
+        val channelIds = if (fullGuideOpen.value) {
+            LiveTvGuideLoadPolicy.fullGuideChannelIds(browse.channels)
+        } else {
+            LiveTvGuideLoadPolicy.defaultProgramChannelIds(
+                channels = browse.channels,
+                selectedChannelId = selectedChannel.value?.id,
+            )
+        }
+        val channelsForPrograms = browse.channels.filter { channel -> channel.id in channelIds }
         epgLoadJob = viewModelScope.launch {
             val session = appSessionRepository.sessionState.first()
             val sourceId = session.currentSourceId
             val programs = if (session.isDemoMode || sourceId == null) {
-                FakeDataProvider.epgForChannels(browse.channels, windowStart, windowEnd)
+                FakeDataProvider.epgForChannels(channelsForPrograms, windowStart, windowEnd)
             } else {
                 catalogRepository.getEpgForChannels(sourceId, channelIds, windowStart, windowEnd)
             }

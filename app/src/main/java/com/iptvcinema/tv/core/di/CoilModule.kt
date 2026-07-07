@@ -36,7 +36,7 @@ object CoilModule {
                     .maxSizeBytes(50L * 1024L * 1024L)
                     .build()
             }
-            .crossfade(true)
+            .crossfade(false)
             .allowHardware(true)
             .memoryCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(CachePolicy.ENABLED)

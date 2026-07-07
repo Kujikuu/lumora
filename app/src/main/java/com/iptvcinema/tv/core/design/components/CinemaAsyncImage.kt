@@ -29,7 +29,7 @@ fun CinemaAsyncImage(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
     fallbackLabel: String = contentDescription.orEmpty(),
-    showLoadingSkeleton: Boolean = true,
+    showLoadingSkeleton: Boolean = false,
 ) {
     if (imageUrl.isNullOrBlank()) {
         ImageFallback(label = fallbackLabel, modifier = modifier)

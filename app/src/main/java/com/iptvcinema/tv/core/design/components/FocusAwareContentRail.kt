@@ -1,15 +1,17 @@
 package com.iptvcinema.tv.core.design.components
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -50,19 +51,12 @@ fun FocusAwareContentRail(
     focusedItemIndex: Int = -1,
     onFocusedItemIndexChange: (Int) -> Unit = {},
 ) {
-    val scrollState = rememberScrollState()
+    val listState = rememberLazyListState()
     val sectionBringIntoViewRequester = remember(title) { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
-    val density = LocalDensity.current
     val railHeight = variant.railHeight()
     val focusOverflow = CinemaSpacing.FocusScaleOverflow
     var hadFocusInRail by remember(title) { mutableStateOf(false) }
-
-    val cardStridePx = remember(density, variant) {
-        with(density) {
-            (CinemaSpacing.ExpandedPosterCardWidth + CinemaSpacing.RailGap).roundToPx()
-        }
-    }
 
     Column(
         modifier = modifier
@@ -95,22 +89,21 @@ fun FocusAwareContentRail(
             }
         }
 
-        Row(
+        LazyRow(
+            state = listState,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(railHeight + focusOverflow)
                 .padding(vertical = focusOverflow / 2)
-                .horizontalScroll(scrollState)
-                .onFocusChanged { if (!it.hasFocus) hadFocusInRail = false }
-                .padding(
-                    start = CinemaSpacing.NavRailWidth + 16.dp,
-                    end = CinemaSpacing.ScreenPadding,
-                ),
+                .onFocusChanged { if (!it.hasFocus) hadFocusInRail = false },
+            contentPadding = PaddingValues(
+                start = CinemaSpacing.NavRailWidth + 16.dp,
+                end = CinemaSpacing.ScreenPadding,
+            ),
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            items.forEachIndexed { index, item ->
-                val itemBringIntoViewRequester = remember(item.contentId) { BringIntoViewRequester() }
+            itemsIndexed(items, key = { _, item -> item.contentId }) { index, item ->
                 val itemFocusRequester = remember(item.contentId, sectionId) {
                     if (sectionId != null && index == focusedItemIndex) FocusRequester() else null
                 }
@@ -131,13 +124,11 @@ fun FocusAwareContentRail(
                                 if (enteringRail) {
                                     sectionBringIntoViewRequester.bringIntoView()
                                 }
-                                val targetScroll = (index * cardStridePx).coerceAtLeast(0)
-                                scrollState.scrollTo(targetScroll)
+                                listState.scrollToItem(index)
                             }
                         }
                     },
                     modifier = Modifier
-                        .bringIntoViewRequester(itemBringIntoViewRequester)
                         .then(
                             if (index == 0 && firstItemFocusRequester != null) {
                                 Modifier.focusRequester(firstItemFocusRequester)
