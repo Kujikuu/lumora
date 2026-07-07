@@ -299,8 +299,7 @@ fun QrActivationPanel(
         modifier = modifier
             .size(size)
             .clip(CinemaShapes.Large)
-            .background(CinemaColors.SurfaceGlass)
-            .border(1.dp, CinemaColors.Gold, CinemaShapes.Large)
+            .background(CinemaColors.White)
             .padding(size * 0.06f),
         contentAlignment = Alignment.Center,
     ) {
@@ -316,7 +315,7 @@ fun QrActivationPanel(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(CinemaColors.TextPrimary.copy(alpha = 0.08f), CinemaShapes.Small),
+                    .background(CinemaColors.Background.copy(alpha = 0.08f), CinemaShapes.Small),
             )
         }
     }

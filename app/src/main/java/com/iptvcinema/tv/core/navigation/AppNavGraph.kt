@@ -48,6 +48,7 @@ import com.iptvcinema.tv.features.states.EmptyStateScreen
 import com.iptvcinema.tv.features.states.ErrorStateScreen
 import com.iptvcinema.tv.features.states.ExpiredAccountScreen
 import com.iptvcinema.tv.features.states.InvalidPlaylistScreen
+import com.iptvcinema.tv.features.welcome.WelcomeScreen
 
 @Composable
 fun AppNavGraph(
@@ -68,6 +69,14 @@ fun AppNavGraph(
                 startupDestination = destination,
                 onNavigate = { startupDestination ->
                     navController.navigateOnboardingClearingStack(startupDestination.route())
+                },
+            )
+        }
+
+        composable(AppRoute.WELCOME) {
+            WelcomeScreen(
+                onGetStarted = {
+                    navController.navigate(AppRoute.ACTIVATION)
                 },
             )
         }

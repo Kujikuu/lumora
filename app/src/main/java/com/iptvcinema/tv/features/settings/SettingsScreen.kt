@@ -1,9 +1,12 @@
 package com.iptvcinema.tv.features.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.verticalScroll
@@ -19,8 +22,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -31,7 +36,10 @@ import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.catalog.CatalogRefreshState
 import com.iptvcinema.tv.core.data.fake.FakeDataProvider
+import com.iptvcinema.tv.core.design.components.AccountAvatar
 import com.iptvcinema.tv.core.design.components.AccountSummaryCard
+import com.iptvcinema.tv.core.design.components.CinemaButton
+import com.iptvcinema.tv.core.design.components.CinemaButtonVariant
 import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
 import com.iptvcinema.tv.core.design.components.SettingsMenu
 import com.iptvcinema.tv.core.design.components.SettingsRow
@@ -133,181 +141,301 @@ fun SettingsScreen(
         navController = navController,
         selectedNavItem = NavItem.Settings,
     ) {
+        val displayAccount = account ?: FakeDataProvider.accountSummary
+        val currentSection = sections[selectedSection]
+
+        if (currentSection == SettingsSection.Account) {
+            AccountOverviewSettingsContent(
+                accountName = displayAccount.name,
+                firstItemFocusRequester = menuFocus,
+                onOpenSettings = {
+                    selectedSection = sections.indexOf(SettingsSection.Playback).coerceAtLeast(0)
+                    focusState.saveFocusIndex(selectedSection)
+                },
+                onSupport = {
+                    selectedSection = sections.indexOf(SettingsSection.About).coerceAtLeast(0)
+                    focusState.saveFocusIndex(selectedSection)
+                },
+                onAgreement = {
+                    selectedSection = sections.indexOf(SettingsSection.Subscription).coerceAtLeast(0)
+                    focusState.saveFocusIndex(selectedSection)
+                },
+                onSignOut = {
+                    viewModel.signOut {
+                        navController.navigateOnboardingClearingStack(AppRoute.WELCOME)
+                    }
+                },
+            )
+        } else {
+            DetailSettingsContent(
+                currentSection = currentSection,
+                firstItemFocusRequester = menuFocus,
+                connectedSource = connectedSource,
+                refreshTrailing = refreshTrailing,
+                refreshEnabled = refreshState !is CatalogRefreshState.Refreshing,
+                showDevPreviews = showDevPreviews,
+                autoplayNext = autoplayNext,
+                continueWatching = continueWatching,
+                skipIntro = skipIntro,
+                onOpenLanguage = {
+                    selectedSection = sections.indexOf(SettingsSection.Language).coerceAtLeast(0)
+                    focusState.saveFocusIndex(selectedSection)
+                },
+                onRefreshCatalog = {
+                    if (refreshState !is CatalogRefreshState.Refreshing) {
+                        runProtected { viewModel.refreshCurrentSource() }
+                    }
+                },
+                onOpenPlaylistSources = { runProtected { navController.navigate(AppRoute.PLAYLIST_MANAGEMENT) } },
+                onOpenTvGuide = { navController.navigate(AppRoute.liveTv(openGuide = true)) },
+                onOpenParentalControls = { navController.navigate(AppRoute.PARENTAL_CONTROLS) },
+                onToggleDevPreviews = { showDevPreviews = !showDevPreviews },
+                onOpenEmptyPreview = { navController.navigate(AppRoute.EMPTY_STATE) },
+                onOpenErrorPreview = { navController.navigate(AppRoute.ERROR_STATE) },
+                onToggleAutoplay = { viewModel.updateAutoplayNextEpisode(!autoplayNext) },
+                onToggleContinueWatching = { viewModel.updateContinueWatching(!continueWatching) },
+                onToggleSkipIntro = { viewModel.updateSkipIntro(!skipIntro) },
+                onSignOut = {
+                    viewModel.signOut {
+                        navController.navigateOnboardingClearingStack(AppRoute.WELCOME)
+                    }
+                },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun AccountOverviewSettingsContent(
+    accountName: String,
+    firstItemFocusRequester: FocusRequester,
+    onOpenSettings: () -> Unit,
+    onSupport: () -> Unit,
+    onAgreement: () -> Unit,
+    onSignOut: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(start = CinemaSpacing.ContentStart, end = 90.dp, top = 128.dp, bottom = 70.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(30.dp),
+    ) {
+        AccountAvatar(size = 240.dp)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = accountName,
+                style = MaterialTheme.typography.displaySmall.copy(
+                    color = CinemaColors.White,
+                    fontWeight = FontWeight.Black,
+                ),
+            )
+            Text(
+                text = stringResource(R.string.settings_active),
+                style = MaterialTheme.typography.titleLarge.copy(
+                    color = CinemaColors.Success,
+                    fontWeight = FontWeight.Black,
+                ),
+            )
+        }
+
         Column(
             modifier = Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(top = CinemaSpacing.ScreenPaddingVertical),
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                .width(930.dp)
+                .padding(top = 34.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            CinemaSerifTitle(text = stringResource(R.string.settings_title))
-            Text(
-                text = stringResource(R.string.settings_subtitle),
-                style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
-                modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
+            SettingsRow(
+                label = stringResource(R.string.settings_title),
+                isSelected = true,
+                onClick = onOpenSettings,
+                modifier = Modifier.focusRequester(firstItemFocusRequester),
             )
-            Row(
-                modifier = Modifier.padding(start = CinemaSpacing.ContentStart, end = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
-            ) {
-                SettingsMenu(
-                    items = sectionLabels,
-                    selectedIndex = selectedSection,
-                    onSelected = { index ->
-                        selectedSection = index
-                        focusState.saveFocusIndex(index)
-                        if (sections[index] == SettingsSection.ParentalControls) {
-                            navController.navigate(AppRoute.PARENTAL_CONTROLS)
-                        }
-                    },
-                    firstItemFocusRequester = menuFocus,
+            SettingsRow(
+                label = stringResource(R.string.settings_support),
+                isSelected = false,
+                onClick = onSupport,
+            )
+            SettingsRow(
+                label = stringResource(R.string.settings_user_agreement),
+                isSelected = false,
+                onClick = onAgreement,
+            )
+        }
+
+        CinemaButton(
+            text = stringResource(R.string.btn_sign_out),
+            variant = CinemaButtonVariant.SecondaryDark,
+            onClick = onSignOut,
+            modifier = Modifier.padding(top = 30.dp),
+        )
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun DetailSettingsContent(
+    currentSection: SettingsSection,
+    firstItemFocusRequester: FocusRequester,
+    connectedSource: String?,
+    refreshTrailing: String?,
+    refreshEnabled: Boolean,
+    showDevPreviews: Boolean,
+    autoplayNext: Boolean,
+    continueWatching: Boolean,
+    skipIntro: Boolean,
+    onOpenLanguage: () -> Unit,
+    onRefreshCatalog: () -> Unit,
+    onOpenPlaylistSources: () -> Unit,
+    onOpenTvGuide: () -> Unit,
+    onOpenParentalControls: () -> Unit,
+    onToggleDevPreviews: () -> Unit,
+    onOpenEmptyPreview: () -> Unit,
+    onOpenErrorPreview: () -> Unit,
+    onToggleAutoplay: () -> Unit,
+    onToggleContinueWatching: () -> Unit,
+    onToggleSkipIntro: () -> Unit,
+    onSignOut: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(start = CinemaSpacing.ContentStart, end = 90.dp, top = 92.dp, bottom = 72.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(42.dp),
+    ) {
+        Text(
+            text = if (currentSection == SettingsSection.Language) {
+                stringResource(R.string.settings_audio_language)
+            } else {
+                stringResource(R.string.settings_title)
+            },
+            style = MaterialTheme.typography.displaySmall.copy(
+                color = CinemaColors.White,
+                fontWeight = FontWeight.Black,
+            ),
+        )
+
+        Column(
+            modifier = Modifier.width(930.dp),
+            verticalArrangement = Arrangement.spacedBy(30.dp),
+        ) {
+            if (currentSection == SettingsSection.Language) {
+                LanguageSettingsSection()
+            } else {
+                SettingsGroupTitle(text = stringResource(R.string.settings_devices))
+                SettingsRow(
+                    label = stringResource(R.string.settings_my_devices),
+                    isSelected = true,
+                    onClick = onOpenPlaylistSources,
+                    modifier = Modifier.focusRequester(firstItemFocusRequester),
+                    trailing = stringResource(R.string.settings_devices_count, 2, 5),
                 )
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
-                ) {
-                    when (sections[selectedSection]) {
-                        SettingsSection.Account -> {
-                            AccountSummaryCard(
-                                account = account ?: FakeDataProvider.accountSummary,
-                                onManageAccount = {},
-                            )
-                            if (connectedSource != null) {
-                                SettingsRow(
-                                    label = stringResource(R.string.settings_connected_source),
-                                    isSelected = false,
-                                    onClick = { runProtected { navController.navigate(AppRoute.PLAYLIST_MANAGEMENT) } },
-                                    trailing = connectedSource,
-                                )
-                                SettingsRow(
-                                    label = stringResource(R.string.btn_refresh_catalog),
-                                    isSelected = false,
-                                    onClick = {
-                                        if (refreshState !is CatalogRefreshState.Refreshing) {
-                                            runProtected { viewModel.refreshCurrentSource() }
-                                        }
-                                    },
-                                    trailing = refreshTrailing,
-                                )
-                            }
-                            SettingsRow(
-                                label = stringResource(R.string.btn_sign_out),
-                                isSelected = false,
-                                onClick = {
-                                    viewModel.signOut {
-                                        navController.navigateOnboardingClearingStack(AppRoute.ACTIVATION)
-                                    }
-                                },
-                            )
-                        }
-                        SettingsSection.Subscription -> SettingsPlaceholder(
-                            title = stringResource(R.string.settings_subscription),
-                            description = stringResource(R.string.settings_subscription_desc),
-                        )
-                        SettingsSection.Playback -> {
-                            Text(
-                                text = stringResource(R.string.settings_playback),
-                                style = MaterialTheme.typography.titleLarge.copy(color = CinemaColors.White, fontWeight = FontWeight.Bold),
-                            )
-                            SettingsRow(
-                                label = stringResource(R.string.settings_streaming_quality),
-                                isSelected = false,
-                                enabled = false,
-                                onClick = {},
-                                trailing = inPlayerLabel,
-                            )
-                            SettingsRow(
-                                label = stringResource(R.string.settings_default_audio),
-                                isSelected = false,
-                                enabled = false,
-                                onClick = {},
-                                trailing = inPlayerLabel,
-                            )
-                            SettingsRow(
-                                label = stringResource(R.string.settings_subtitles),
-                                isSelected = false,
-                                enabled = false,
-                                onClick = {},
-                                trailing = inPlayerLabel,
-                            )
-                            SettingsToggle(
-                                label = stringResource(R.string.settings_autoplay_next),
-                                isOn = autoplayNext,
-                                onToggle = { viewModel.updateAutoplayNextEpisode(!autoplayNext) },
-                            )
-                            SettingsToggle(
-                                label = stringResource(R.string.settings_continue_watching),
-                                isOn = continueWatching,
-                                onToggle = { viewModel.updateContinueWatching(!continueWatching) },
-                            )
-                            SettingsToggle(
-                                label = stringResource(R.string.settings_skip_intro),
-                                isOn = skipIntro,
-                                onToggle = { viewModel.updateSkipIntro(!skipIntro) },
-                            )
-                            SettingsRow(
-                                label = stringResource(R.string.settings_theme),
-                                isSelected = false,
-                                enabled = false,
-                                onClick = {},
-                                trailing = inPlayerLabel,
-                            )
-                        }
-                        SettingsSection.Language -> LanguageSettingsSection()
-                        SettingsSection.Notifications -> SettingsPlaceholder(
-                            title = stringResource(R.string.settings_notifications),
-                            description = stringResource(R.string.settings_notifications_desc),
-                        )
-                        SettingsSection.DevicePreferences -> SettingsPlaceholder(
-                            title = stringResource(R.string.settings_device_preferences),
-                            description = stringResource(R.string.settings_device_desc),
-                        )
-                        SettingsSection.About -> SettingsPlaceholder(
-                            title = stringResource(R.string.settings_about),
-                            description = stringResource(R.string.settings_about_desc),
-                        )
-                        SettingsSection.ParentalControls -> Unit
-                    }
+
+                SettingsGroupTitle(text = stringResource(R.string.settings_watching))
+                SettingsRow(
+                    label = stringResource(R.string.settings_audio_language),
+                    isSelected = false,
+                    onClick = onOpenLanguage,
+                )
+                SettingsToggle(
+                    label = stringResource(R.string.settings_autoplay_next),
+                    isOn = autoplayNext,
+                    onToggle = onToggleAutoplay,
+                )
+                SettingsToggle(
+                    label = stringResource(R.string.settings_continue_watching),
+                    isOn = continueWatching,
+                    onToggle = onToggleContinueWatching,
+                )
+                SettingsToggle(
+                    label = stringResource(R.string.settings_skip_intro),
+                    isOn = skipIntro,
+                    onToggle = onToggleSkipIntro,
+                )
+
+                SettingsGroupTitle(text = stringResource(R.string.settings_general))
+                if (connectedSource != null) {
                     SettingsRow(
-                        label = stringResource(R.string.livetv_tv_guide),
+                        label = stringResource(R.string.settings_connected_source),
                         isSelected = false,
-                        onClick = { navController.navigate(AppRoute.liveTv(openGuide = true)) },
+                        onClick = onOpenPlaylistSources,
+                        trailing = connectedSource,
                     )
                     SettingsRow(
-                        label = stringResource(R.string.settings_playlist_sources),
+                        label = stringResource(R.string.btn_refresh_catalog),
                         isSelected = false,
-                        onClick = { runProtected { navController.navigate(AppRoute.PLAYLIST_MANAGEMENT) } },
+                        enabled = refreshEnabled,
+                        onClick = onRefreshCatalog,
+                        trailing = refreshTrailing,
                     )
-                    SettingsRow(
-                        label = stringResource(R.string.settings_parental_controls),
-                        isSelected = false,
-                        onClick = { navController.navigate(AppRoute.PARENTAL_CONTROLS) },
-                    )
-                    SettingsRow(
-                        label = stringResource(R.string.settings_developer_previews),
-                        isSelected = false,
-                        onClick = { showDevPreviews = !showDevPreviews },
-                        trailingIcon = if (showDevPreviews) {
-                            Icons.Default.KeyboardArrowUp
-                        } else {
-                            Icons.Default.KeyboardArrowDown
-                        },
-                    )
-                    if (showDevPreviews) {
-                        SettingsRow(
-                            label = stringResource(R.string.settings_preview_empty),
-                            isSelected = false,
-                            onClick = { navController.navigate(AppRoute.EMPTY_STATE) },
-                        )
-                        SettingsRow(
-                            label = stringResource(R.string.settings_preview_error),
-                            isSelected = false,
-                            onClick = { navController.navigate(AppRoute.ERROR_STATE) },
-                        )
-                    }
                 }
+                SettingsRow(
+                    label = stringResource(R.string.settings_manage_data),
+                    isSelected = false,
+                    onClick = onOpenPlaylistSources,
+                )
+                SettingsRow(
+                    label = stringResource(R.string.settings_playlist_sources),
+                    isSelected = false,
+                    onClick = onOpenPlaylistSources,
+                )
+                SettingsRow(
+                    label = stringResource(R.string.livetv_tv_guide),
+                    isSelected = false,
+                    onClick = onOpenTvGuide,
+                )
+                SettingsRow(
+                    label = stringResource(R.string.settings_parental_controls),
+                    isSelected = false,
+                    onClick = onOpenParentalControls,
+                )
+                SettingsRow(
+                    label = stringResource(R.string.settings_developer_previews),
+                    isSelected = false,
+                    onClick = onToggleDevPreviews,
+                    trailingIcon = if (showDevPreviews) {
+                        Icons.Default.KeyboardArrowUp
+                    } else {
+                        Icons.Default.KeyboardArrowDown
+                    },
+                )
+                if (showDevPreviews) {
+                    SettingsRow(
+                        label = stringResource(R.string.settings_preview_empty),
+                        isSelected = false,
+                        onClick = onOpenEmptyPreview,
+                    )
+                    SettingsRow(
+                        label = stringResource(R.string.settings_preview_error),
+                        isSelected = false,
+                        onClick = onOpenErrorPreview,
+                    )
+                }
+                SettingsRow(
+                    label = stringResource(R.string.settings_delete_account),
+                    isSelected = false,
+                    onClick = onSignOut,
+                )
             }
         }
     }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun SettingsGroupTitle(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier.fillMaxWidth(),
+        style = MaterialTheme.typography.headlineMedium.copy(
+            color = CinemaColors.White,
+            fontWeight = FontWeight.Black,
+        ),
+    )
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)

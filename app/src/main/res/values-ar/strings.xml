@@ -1,25 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">IPTV Cinema</string>
+    <string name="app_name">Yango Play</string>
     <string name="phase1_subtitle">المرحلة 1 — الأساس جاهز</string>
 
-    <string name="nav_home">الرئيسية</string>
+    <string name="nav_home">Watch</string>
     <string name="nav_live_tv">البث المباشر</string>
-    <string name="nav_movies">الأفلام</string>
-    <string name="nav_series">المسلسلات</string>
+    <string name="nav_movies">Crunchyroll</string>
+    <string name="nav_series">Music</string>
     <string name="nav_sports">الرياضة</string>
     <string name="nav_kids">الأطفال</string>
     <string name="nav_my_list">قائمتي</string>
-    <string name="nav_favorites">المفضلة</string>
+    <string name="nav_favorites">My Collection</string>
     <string name="nav_search">بحث</string>
-    <string name="nav_settings">الإعدادات</string>
+    <string name="nav_settings">Mobile App</string>
     <string name="nav_profile">الملف الشخصي</string>
+    <string name="nav_profile_name">AHMED AFIFI</string>
+    <string name="nav_switch_accounts">تبديل الحسابات</string>
 
     <string name="footer_favorites">المفضلة</string>
     <string name="footer_recently_added">أُضيف حديثًا</string>
     <string name="footer_top_rated">الأعلى تقييمًا</string>
 
-    <string name="btn_watch_now">شاهد الآن</string>
+    <string name="btn_watch_now">Play</string>
+    <string name="btn_watch_later">Watch later</string>
     <string name="btn_details">التفاصيل</string>
     <string name="btn_remove">إزالة</string>
     <string name="btn_cancel">إلغاء</string>
@@ -56,15 +59,23 @@
     <string name="toggle_on">تشغيل</string>
     <string name="toggle_off">إيقاف</string>
 
-    <string name="splash_tagline">مركزك الترفيهي المميز</string>
-    <string name="splash_loading">جارٍ تجهيز تجربتك</string>
+    <string name="splash_tagline">Movies, series and playlists. All in one</string>
+    <string name="splash_loading">Loading Yango Play</string>
 
-    <string name="activation_title">فعّل تلفازك</string>
-    <string name="activation_step1">1. على هاتفك أو حاسوبك، انتقل إلى iptv.afifistudio.com</string>
-    <string name="activation_step2">2. أدخل رمز التفعيل الظاهر أدناه.</string>
+    <string name="welcome_eyebrow">Movies and series</string>
+    <string name="welcome_title">Movies, series &amp; playlists. All in one</string>
+    <string name="welcome_title_alt">High quality and ad-free</string>
+    <string name="welcome_get_started">Get started</string>
+    <string name="welcome_explore">Explore Yango Play</string>
+    <string name="welcome_more">More about Yango Play</string>
+    <string name="welcome_go_up">Go up</string>
+
+    <string name="activation_title">There are two ways to log in to Yango app</string>
+    <string name="activation_step1">Scan the QR code with your phone\'s camera</string>
+    <string name="activation_step2">Open a browser on another device and go to:</string>
     <string name="activation_enter_account">تسجيل الدخول لحساب موجود</string>
     <string name="activation_create_account">إنشاء حساب</string>
-    <string name="activation_scan">امسح للتسجيل</string>
+    <string name="activation_scan">Enter code:</string>
     <string name="activation_scan_hint">استخدم كاميرا هاتفك لفتح صفحة التفعيل بسرعة.</string>
     <string name="activation_continue_hint">استخدم جهاز التحكم: حدّد أحد الأزرار أدناه ثم اضغط OK للمتابعة.</string>
     <string name="activation_generating">جارٍ إنشاء رمز التفعيل…</string>
@@ -79,7 +90,7 @@
 
     <string name="source_title">أضف مصدر IPTV</string>
     <string name="source_subtitle">اربط مزودك لبدء مشاهدة البث المباشر والأفلام والمسلسلات.</string>
-    <string name="source_footer">IPTV Cinema لا يوفر قنوات أو بثوث. استخدم مزودك القانوني الخاص.</string>
+    <string name="source_footer">Yango Play لا يوفر قنوات أو بثوث. استخدم مزودك القانوني الخاص.</string>
     <string name="source_xtream_title">Xtream Codes</string>
     <string name="source_xtream_desc">استخدم عنوان الخادم واسم المستخدم وكلمة المرور.</string>
     <string name="source_m3u_title">قائمة M3U</string>
@@ -131,10 +142,12 @@
     <string name="refresh_success_xtream">تمت مزامنة %1$d قناة و%2$d فيلم و%3$d مسلسل</string>
     <string name="refresh_success_m3u">تمت مزامنة %1$d قناة</string>
 
-    <string name="profile_title">اختر ملفًا شخصيًا</string>
+    <string name="profile_title">اختر حسابًا</string>
     <string name="profile_subtitle">من يشاهد؟</string>
     <string name="profile_manage">إدارة الملفات الشخصية</string>
-    <string name="profile_switch">تبديل الملف الشخصي</string>
+    <string name="profile_switch">اختر حسابًا</string>
+    <string name="profile_role_administrator">مسؤول</string>
+    <string name="profile_other_accounts">حسابات أخرى</string>
     <string name="profile_none_found">لم يُعثر على ملفات شخصية.</string>
     <string name="profile_load_error">تعذر تحميل الملفات الشخصية</string>
 
@@ -159,6 +172,12 @@
     <string name="error_series_not_found">المسلسل غير موجود</string>
     <string name="error_load_list">تعذر تحميل قائمتك</string>
     <string name="error_incorrect_pin">رمز PIN غير صحيح</string>
+    <string name="error_server_not_responding">الخادم لا يستجيب</string>
+    <string name="error_reload_page">يرجى محاولة إعادة تحميل الصفحة</string>
+    <string name="error_session_id">Session ID: 52A725</string>
+    <string name="reload_title">MOVIES, SERIES AND MUSIC, ALL IN ONE</string>
+    <string name="btn_reload">Reload</string>
+    <string name="btn_change_account">Change account</string>
 
     <string name="msg_no_source_connected">لا يوجد مصدر متصل</string>
     <string name="msg_no_content_synced">لم تتم مزامنة أي محتوى بعد</string>
@@ -174,6 +193,7 @@
 
     <string name="home_continue_watching">متابعة المشاهدة</string>
     <string name="home_trending">الرائج الآن</string>
+    <string name="home_top_10_egypt">Top 10 in Egypt</string>
     <string name="home_live_channels">القنوات المباشرة</string>
     <string name="home_live_now">مباشر الآن</string>
     <string name="home_popular_movies">أفلام شائعة</string>
@@ -182,7 +202,8 @@
     <string name="home_new_releases">الإصدارات الجديدة</string>
     <string name="home_popular_series">مسلسلات شائعة</string>
     <string name="home_mood_row_title">تصفح حسب المزاج</string>
-    <string name="home_spotlight">واجهة العرض</string>
+    <string name="home_spotlight">YANGO MOVIES</string>
+    <string name="yango_movies_label">YANGO MOVIES</string>
     <string name="btn_continue_watching">متابعة المشاهدة</string>
     <string name="home_continue_progress">تمت مشاهدة %1$d%%</string>
     <string name="badge_top_label">TOP</string>
@@ -223,6 +244,7 @@
     <string name="filter_live_tv">البث المباشر</string>
 
     <string name="search_title">بحث</string>
+    <string name="search_people_hint">ابحث عن الأفلام والأشخاص</string>
     <string name="search_subtitle">اعثر على أفلامك ومسلسلاتك وقنواتك المباشرة المفضلة.</string>
     <string name="search_recent">عمليات البحث الأخيرة</string>
     <string name="search_recent_empty">ستظهر عمليات البحث الأخيرة هنا.</string>
@@ -234,8 +256,9 @@
     <string name="search_hint">ابحث عن أفلام ومسلسلات وقنوات…</string>
     <string name="search_device_keyboard">لوحة مفاتيح الجهاز</string>
 
-    <string name="mylist_title">قائمتي</string>
+    <string name="mylist_title">My Collection</string>
     <string name="mylist_subtitle">كل أفلامك ومسلسلاتك وقنواتك المحفوظة في مكان واحد.</string>
+    <string name="mylist_all_added">All added</string>
     <string name="mylist_nothing_saved">لا يوجد شيء محفوظ بعد</string>
     <string name="mylist_nothing_saved_desc">تصفح الأفلام والمسلسلات لإضافتها إلى قائمتك.</string>
     <string name="mylist_remove_tip">نصيحة: اضغط مطولًا على عنصر لإزالته من قائمتك.</string>
@@ -264,6 +287,7 @@
     <string name="livetv_no_program_guide">دليل البرامج غير متوفر</string>
     <string name="livetv_on_now">يُعرض الآن</string>
     <string name="livetv_view_guide">عرض الدليل الكامل ›</string>
+    <string name="livetv_next_at">Next at %1$s</string>
     <string name="livetv_tv_guide">دليل التلفاز</string>
     <string name="livetv_program_time">%1$s – %2$s  ·  %3$s</string>
     <string name="livetv_pin_category">أدخل PIN لتغيير الفئة</string>
@@ -303,6 +327,17 @@
 
     <string name="settings_title">الإعدادات</string>
     <string name="settings_subtitle">إدارة حسابك وتفضيلاتك وإعدادات الجهاز.</string>
+    <string name="settings_active">Yango Play نشط ✓</string>
+    <string name="settings_support">الدعم</string>
+    <string name="settings_user_agreement">اتفاقية المستخدم</string>
+    <string name="settings_devices">الأجهزة</string>
+    <string name="settings_my_devices">أجهزتي</string>
+    <string name="settings_devices_count">%1$d من %2$d</string>
+    <string name="settings_watching">المشاهدة</string>
+    <string name="settings_general">عام</string>
+    <string name="settings_manage_data">إدارة البيانات</string>
+    <string name="settings_delete_account">حذف حسابك</string>
+    <string name="settings_audio_language">لغة الصوت</string>
     <string name="settings_account">الحساب</string>
     <string name="settings_subscription">الاشتراك</string>
     <string name="settings_playback">التشغيل</string>
@@ -326,7 +361,7 @@
     <string name="settings_quality_auto">تلقائي — أفضل جودة متاحة</string>
     <string name="settings_audio_english">English</string>
     <string name="settings_subtitles_off">إيقاف</string>
-    <string name="settings_theme_dark">سينما داكن</string>
+    <string name="settings_theme_dark">Yango Dark</string>
     <string name="settings_renews">يتجدد %1$s</string>
     <string name="settings_subscription_desc">الخطة المميزة نشطة حتى 15 يوليو 2026.</string>
     <string name="settings_language_desc">تتبع لغة التطبيق لغة نظام Android TV. غيّرها من إعدادات الجهاز ← اللغة.</string>
@@ -337,7 +372,7 @@
     <string name="settings_in_player">في المشغّل</string>
     <string name="settings_notifications_desc">تنبيهات الحلقات الجديدة وإشعارات المزامنة مفعّلة.</string>
     <string name="settings_device_desc">البدء على البث المباشر، بدء آخر ملف شخصي تلقائيًا، وخيارات HDMI-CEC.</string>
-    <string name="settings_about_desc">IPTV Cinema v1.0.0 — المرحلة 5 تكامل Supabase</string>
+    <string name="settings_about_desc">Yango Play v1.0.0</string>
     <string name="settings_expand_collapse">توسيع أو طي</string>
     <string name="settings_blocked_categories">الفئات المحظورة</string>
     <string name="settings_category_bullet">• %1$s</string>
@@ -345,7 +380,7 @@
     <string name="feedback_quality_soon">محدّد الجودة قريبًا</string>
     <string name="feedback_audio_soon">محدّد الصوت قريبًا</string>
     <string name="feedback_subtitle_soon">محدّد الترجمة قريبًا</string>
-    <string name="feedback_theme_locked">المظهر مقفل على سينما داكن</string>
+    <string name="feedback_theme_locked">المظهر مقفل على Yango Dark</string>
 
     <string name="parental_title">الرقابة الأبوية</string>
     <string name="parental_remove_pin">إزالة PIN</string>

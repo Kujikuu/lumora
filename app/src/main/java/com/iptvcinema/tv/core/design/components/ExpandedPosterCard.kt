@@ -76,10 +76,6 @@ fun ExpandedPosterCard(
         CinemaSpacing.CompactPosterCardHeight
     }
     val panelHeight = (cardHeight - posterHeight).coerceAtLeast(CinemaSpacing.ExpandedPosterPanelMinHeight)
-    val primaryLabel = when (data.primaryAction) {
-        HomeCardAction.WatchNow -> stringResource(R.string.btn_watch_now)
-        HomeCardAction.ContinueWatching -> stringResource(R.string.btn_continue_watching)
-    }
     val reserveSubtitleSlot = isLandscape || data.subtitle?.isNotBlank() == true
 
     Box(
@@ -87,19 +83,122 @@ fun ExpandedPosterCard(
             .width(cardWidth)
             .height(cardHeight),
     ) {
-        VerticalHomeCard(
-            data = data,
-            primaryLabel = primaryLabel,
-            posterHeight = posterHeight,
-            panelHeight = panelHeight,
-            showTop10Badge = data.showTop10Badge && !isLandscape,
-            titleMaxLines = if (isLandscape) 1 else 2,
-            reserveSubtitleSlot = reserveSubtitleSlot,
-            onCardClick = onCardClick,
-            onWatchNow = onWatchNow,
-            onFavorite = onFavorite,
-            onFocusChanged = onFocusChanged,
-        )
+        if (isLandscape) {
+            LandscapeHomeCard(
+                data = data,
+                onCardClick = onCardClick,
+                onWatchNow = onWatchNow,
+                onFavorite = onFavorite,
+                onFocusChanged = onFocusChanged,
+            )
+        } else {
+            VerticalHomeCard(
+                data = data,
+                posterHeight = posterHeight,
+                panelHeight = panelHeight,
+                showTop10Badge = data.showTop10Badge,
+                titleMaxLines = 2,
+                reserveSubtitleSlot = reserveSubtitleSlot,
+                onCardClick = onCardClick,
+                onFavorite = onFavorite,
+                onFocusChanged = onFocusChanged,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun LandscapeHomeCard(
+    data: HomeContentCard,
+    onCardClick: () -> Unit,
+    onWatchNow: () -> Unit,
+    onFavorite: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
+) {
+    FocusableCinemaCard(
+        modifier = Modifier
+            .fillMaxSize()
+            .onFocusChanged { onFocusChanged(it.isFocused) },
+        onClick = onCardClick,
+        onLongClick = onFavorite,
+        shape = CinemaShapes.Small,
+        defaultBorderWidth = 0.dp,
+        contentDescription = data.title,
+        focusScale = 1.02f,
+    ) { focused ->
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(138.dp)
+                    .clip(CinemaShapes.Small)
+                    .background(CinemaColors.Surface),
+            ) {
+                CinemaAsyncImage(
+                    imageUrl = data.backdropUrl ?: data.imageUrl,
+                    contentDescription = data.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    fallbackLabel = data.title,
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.Transparent,
+                                    Color.Transparent,
+                                    CinemaColors.Background.copy(alpha = 0.62f),
+                                ),
+                            ),
+                        ),
+                )
+                if (data.showTop10Badge) {
+                    Top10Badge(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(6.dp),
+                    )
+                }
+                if (data.progress != null && data.progress > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .background(CinemaColors.SurfaceSoft),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(data.progress.coerceIn(0f, 1f))
+                                .background(CinemaColors.Accent),
+                        )
+                    }
+                }
+            }
+            Text(
+                text = data.title,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = CinemaColors.White,
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 7.dp),
+            )
+            Text(
+                text = data.subtitle ?: data.runtimeOrEpisodes.orEmpty(),
+                style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
@@ -107,14 +206,12 @@ fun ExpandedPosterCard(
 @Composable
 private fun VerticalHomeCard(
     data: HomeContentCard,
-    primaryLabel: String,
     posterHeight: Dp,
     panelHeight: Dp,
     showTop10Badge: Boolean,
     titleMaxLines: Int,
     reserveSubtitleSlot: Boolean,
     onCardClick: () -> Unit,
-    onWatchNow: () -> Unit,
     onFavorite: () -> Unit,
     onFocusChanged: (Boolean) -> Unit,
 ) {
@@ -132,7 +229,7 @@ private fun VerticalHomeCard(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(CinemaShapes.Medium)
-                .background(if (focused) CinemaColors.SurfaceSoft else CinemaColors.BackgroundSoft),
+                .background(Color.Transparent),
         ) {
             PosterImageBox(
                 data = data,
@@ -150,10 +247,8 @@ private fun VerticalHomeCard(
             ) {
                 HomeCardInfo(
                     data = data,
-                    primaryLabel = primaryLabel,
                     titleMaxLines = titleMaxLines,
                     reserveSubtitleSlot = reserveSubtitleSlot,
-                    onWatchNow = onWatchNow,
                 )
             }
         }
@@ -233,10 +328,8 @@ private fun PosterImageBox(
 @Composable
 private fun HomeCardInfo(
     data: HomeContentCard,
-    primaryLabel: String,
     titleMaxLines: Int,
     reserveSubtitleSlot: Boolean,
-    onWatchNow: () -> Unit,
 ) {
     val metadata = buildList {
         data.year?.let { add(it) }
@@ -329,11 +422,6 @@ private fun HomeCardInfo(
                     )
                 }
         }
-        PrimaryActionChip(
-            text = primaryLabel,
-            onClick = onWatchNow,
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }
 

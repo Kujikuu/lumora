@@ -12,7 +12,7 @@ data class AppSessionState(
     val isDemoMode: Boolean = false,
 ) {
     fun resolveStartupDestination(): StartupDestination = when {
-        !isAuthenticated -> StartupDestination.Activation
+        !isAuthenticated -> StartupDestination.Welcome
         !hasSource -> StartupDestination.AddSource
         currentProfileId == null -> StartupDestination.ProfileSelection
         else -> StartupDestination.Home
@@ -48,6 +48,7 @@ fun AppSessionState.connectedSourceLabel(): String? = when {
 }
 
 sealed class StartupDestination {
+    data object Welcome : StartupDestination()
     data object Activation : StartupDestination()
     data object AddSource : StartupDestination()
     data object ProfileSelection : StartupDestination()
@@ -55,6 +56,7 @@ sealed class StartupDestination {
 }
 
 fun StartupDestination.route(): String = when (this) {
+    StartupDestination.Welcome -> com.iptvcinema.tv.core.navigation.AppRoute.WELCOME
     StartupDestination.Activation -> com.iptvcinema.tv.core.navigation.AppRoute.ACTIVATION
     StartupDestination.AddSource -> com.iptvcinema.tv.core.navigation.AppRoute.ADD_SOURCE
     StartupDestination.ProfileSelection -> com.iptvcinema.tv.core.navigation.AppRoute.PROFILE_SELECTION

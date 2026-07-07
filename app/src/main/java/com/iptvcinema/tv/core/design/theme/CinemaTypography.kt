@@ -21,7 +21,7 @@ fun rememberCinemaTypography(): Typography {
         } else {
             FontFamily.SansSerif
         }
-        val displayFont = if (isArabic) bodyFont else FontFamily.Serif
+        val displayFont = bodyFont
 
         Typography(
             displayLarge = textStyle(displayFont, FontWeight.Bold, 72, 80),

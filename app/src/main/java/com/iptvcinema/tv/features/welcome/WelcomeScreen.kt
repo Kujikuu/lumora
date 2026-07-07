@@ -1,11 +1,11 @@
-package com.iptvcinema.tv.features.states
+package com.iptvcinema.tv.features.welcome
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -13,10 +13,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -24,13 +27,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.data.fake.FakeDataProvider
-import com.iptvcinema.tv.core.design.components.AccountAvatar
 import com.iptvcinema.tv.core.design.components.CinemaAsyncImage
 import com.iptvcinema.tv.core.design.components.CinemaButton
 import com.iptvcinema.tv.core.design.components.CinemaButtonVariant
@@ -38,14 +39,20 @@ import com.iptvcinema.tv.core.design.components.CinemaLogo
 import com.iptvcinema.tv.core.design.components.CinemaScreen
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
-import com.iptvcinema.tv.core.navigation.AppRoute
+import com.iptvcinema.tv.core.navigation.BlockBackHandler
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun EmptyStateScreen(
-    navController: NavController,
+fun WelcomeScreen(
+    onGetStarted: () -> Unit,
 ) {
-    BackHandler { navController.popBackStack() }
+    val buttonFocus = remember { FocusRequester() }
+
+    BlockBackHandler()
+
+    LaunchedEffect(Unit) {
+        buttonFocus.requestFocus()
+    }
 
     CinemaScreen(showTopNav = false) {
         Box(
@@ -53,11 +60,11 @@ fun EmptyStateScreen(
                 .fillMaxSize()
                 .background(CinemaColors.Background),
         ) {
-            ReloadPosterWall(
+            PosterWall(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .offset(x = 120.dp)
-                    .graphicsLayer(rotationZ = -5f),
+                    .offset(x = 170.dp)
+                    .graphicsLayer(rotationZ = -8f),
             )
             Box(
                 modifier = Modifier
@@ -66,119 +73,89 @@ fun EmptyStateScreen(
                         Brush.horizontalGradient(
                             listOf(
                                 CinemaColors.Background,
-                                CinemaColors.Background.copy(alpha = 0.78f),
-                                CinemaColors.Background.copy(alpha = 0.20f),
+                                CinemaColors.Background.copy(alpha = 0.92f),
+                                CinemaColors.Background.copy(alpha = 0.52f),
                                 Color.Transparent,
                             ),
                         ),
                     ),
             )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                CinemaColors.Background.copy(alpha = 0.20f),
+                                Color.Transparent,
+                                CinemaColors.Background.copy(alpha = 0.40f),
+                            ),
+                        ),
+                    ),
+            )
+
             Column(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .padding(start = 154.dp),
-                verticalArrangement = Arrangement.spacedBy(40.dp),
+                    .padding(start = 168.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
             ) {
                 CinemaLogo()
+                Spacer(Modifier.height(140.dp))
                 Text(
-                    text = stringResource(R.string.reload_title),
-                    modifier = Modifier.width(960.dp),
-                    style = MaterialTheme.typography.displayLarge.copy(
+                    text = stringResource(R.string.welcome_title).uppercase(),
+                    modifier = Modifier.width(820.dp),
+                    style = MaterialTheme.typography.displayMedium.copy(
                         color = CinemaColors.White,
                         fontWeight = FontWeight.Black,
                     ),
+                    maxLines = 2,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CinemaButton(
-                        text = stringResource(R.string.btn_reload),
-                        variant = CinemaButtonVariant.PrimaryAccent,
-                        onClick = { navController.navigate(AppRoute.ADD_SOURCE) },
-                    )
-                    CinemaButton(
-                        text = stringResource(R.string.btn_change_account),
-                        variant = CinemaButtonVariant.SecondaryDark,
-                        icon = null,
-                        onClick = { navController.navigate(AppRoute.WELCOME) },
-                    )
-                }
+                CinemaButton(
+                    text = stringResource(R.string.welcome_get_started),
+                    variant = CinemaButtonVariant.PrimaryAccent,
+                    onClick = onGetStarted,
+                    modifier = Modifier.focusRequester(buttonFocus),
+                )
             }
-            AccountAvatar(
+
+            Text(
+                text = stringResource(R.string.welcome_explore),
                 modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 376.dp, top = 232.dp),
-                size = 56.dp,
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 56.dp),
+                style = MaterialTheme.typography.titleSmall.copy(
+                    color = CinemaColors.White,
+                    fontWeight = FontWeight.Bold,
+                ),
             )
         }
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun ErrorStateScreen(
-    navController: NavController,
-) {
-    BackHandler { navController.popBackStack() }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CinemaColors.Background),
-    ) {
-        Column(
-            modifier = Modifier.align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(28.dp),
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = stringResource(R.string.error_server_not_responding),
-                    style = MaterialTheme.typography.titleLarge.copy(color = CinemaColors.TextSecondary),
-                )
-                Text(
-                    text = stringResource(R.string.error_reload_page),
-                    style = MaterialTheme.typography.titleLarge.copy(color = CinemaColors.TextSecondary),
-                )
-            }
-            CinemaButton(
-                text = stringResource(R.string.btn_close),
-                variant = CinemaButtonVariant.PrimaryAccent,
-                onClick = { navController.popBackStack() },
-            )
-        }
-        Text(
-            text = stringResource(R.string.error_session_id),
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 64.dp),
-            style = MaterialTheme.typography.titleMedium.copy(color = CinemaColors.TextMuted),
-        )
-    }
-}
-
-@Composable
-private fun ReloadPosterWall(
+private fun PosterWall(
     modifier: Modifier = Modifier,
 ) {
     val images = remember {
-        (FakeDataProvider.movies.mapNotNull { it.backdropUrl ?: it.imageUrl } +
-            FakeDataProvider.seriesList.mapNotNull { it.backdropUrl ?: it.imageUrl })
-            .take(15)
+        (FakeDataProvider.movies.mapNotNull { it.imageUrl } + FakeDataProvider.seriesList.mapNotNull { it.imageUrl })
+            .take(12)
     }
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        images.chunked(5).forEachIndexed { rowIndex, row ->
+        images.chunked(4).forEachIndexed { rowIndex, row ->
             Row(
-                modifier = Modifier.offset(x = if (rowIndex % 2 == 0) 0.dp else 150.dp),
+                modifier = Modifier.offset(x = if (rowIndex % 2 == 0) 0.dp else 130.dp),
                 horizontalArrangement = Arrangement.spacedBy(18.dp),
             ) {
                 row.forEach { imageUrl ->
                     Box(
                         modifier = Modifier
-                            .size(width = 430.dp, height = 238.dp)
+                            .size(width = 330.dp, height = 190.dp)
                             .clip(CinemaShapes.Medium)
-                            .background(CinemaColors.SurfaceSoft),
+                            .background(CinemaColors.Surface),
                     ) {
                         CinemaAsyncImage(
                             imageUrl = imageUrl,
@@ -190,7 +167,7 @@ private fun ReloadPosterWall(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(CinemaColors.Background.copy(alpha = 0.28f)),
+                                .background(CinemaColors.Background.copy(alpha = 0.26f)),
                         )
                     }
                 }

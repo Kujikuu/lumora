@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -76,57 +77,60 @@ fun SettingsRow(
         modifier = modifier.fillMaxWidth(),
         onClick = onClick,
         enabled = enabled,
-        shape = CinemaShapes.Small,
+        shape = CinemaShapes.XLarge,
         defaultBorderWidth = 0.dp,
     ) { focused ->
+        val rowBackground = when {
+            !enabled -> CinemaColors.SurfaceSoft.copy(alpha = 0.5f)
+            focused -> CinemaColors.White
+            isSelected -> CinemaColors.White
+            else -> CinemaColors.SurfaceSoft
+        }
+        val rowContent = when {
+            focused || isSelected -> CinemaColors.Background
+            !enabled -> CinemaColors.TextMuted
+            else -> CinemaColors.White
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    when {
-                        !enabled -> CinemaColors.SurfaceSoft.copy(alpha = 0.5f)
-                        focused -> CinemaColors.Surface
-                        isSelected -> CinemaColors.SurfaceSoft
-                        else -> CinemaColors.Background
-                    },
-                    CinemaShapes.Small,
-                )
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .defaultMinSize(minHeight = 92.dp)
+                .background(rowBackground, CinemaShapes.XLarge)
+                .padding(horizontal = 38.dp, vertical = 22.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyLarge.copy(
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = when {
-                        !enabled -> CinemaColors.TextMuted
-                        isSelected -> CinemaColors.White
-                        else -> CinemaColors.TextPrimary
-                    },
+                    fontWeight = FontWeight.Black,
+                    color = rowContent,
                 ),
             )
             when {
                 trailing != null -> {
                     Text(
                         text = trailing,
-                        style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            color = if (focused || isSelected) CinemaColors.TextMuted else CinemaColors.TextSecondary,
+                            fontWeight = FontWeight.Bold,
+                        ),
                     )
                 }
                 trailingIcon != null && enabled -> {
                     Icon(
                         imageVector = trailingIcon,
                         contentDescription = stringResource(R.string.settings_expand_collapse),
-                        tint = CinemaColors.TextMuted,
-                        modifier = Modifier.size(20.dp),
+                        tint = if (focused || isSelected) CinemaColors.TextMuted else CinemaColors.TextSecondary,
+                        modifier = Modifier.size(34.dp),
                     )
                 }
                 enabled -> {
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = null,
-                        tint = CinemaColors.TextMuted,
-                        modifier = Modifier.size(18.dp),
+                        tint = if (focused || isSelected) CinemaColors.TextMuted else CinemaColors.TextSecondary,
+                        modifier = Modifier.size(34.dp),
                     )
                 }
             }

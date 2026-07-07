@@ -131,7 +131,7 @@ fun CatalogRefreshBanner(
     modifier: Modifier = Modifier,
 ) {
     val bannerText = when (refreshState) {
-        CatalogRefreshState.Idle -> syncBannerText
+        CatalogRefreshState.Idle -> null
         is CatalogRefreshState.Refreshing -> stringResource(R.string.refresh_in_progress)
         is CatalogRefreshState.Success -> refreshState.message
         is CatalogRefreshState.Failed -> refreshState.message

@@ -1,27 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">IPTV Cinema</string>
+    <string name="app_name">Yango Play</string>
     <string name="phase1_subtitle">Phase 1 — Foundation ready</string>
 
     <!-- Navigation -->
-    <string name="nav_home">Home</string>
+    <string name="nav_home">Watch</string>
     <string name="nav_live_tv">Live TV</string>
-    <string name="nav_movies">Movies</string>
-    <string name="nav_series">Series</string>
+    <string name="nav_movies">Crunchyroll</string>
+    <string name="nav_series">Music</string>
     <string name="nav_sports">Sports</string>
     <string name="nav_kids">Kids</string>
     <string name="nav_my_list">My List</string>
-    <string name="nav_favorites">Favorites</string>
+    <string name="nav_favorites">My Collection</string>
     <string name="nav_search">Search</string>
-    <string name="nav_settings">Settings</string>
+    <string name="nav_settings">Mobile App</string>
     <string name="nav_profile">Profile</string>
+    <string name="nav_profile_name">AHMED AFIFI</string>
+    <string name="nav_switch_accounts">Switch accounts</string>
 
     <string name="footer_favorites">Favorites</string>
     <string name="footer_recently_added">Recently Added</string>
     <string name="footer_top_rated">Top Rated</string>
 
     <!-- Buttons -->
-    <string name="btn_watch_now">Watch Now</string>
+    <string name="btn_watch_now">Play</string>
+    <string name="btn_watch_later">Watch later</string>
     <string name="btn_details">Details</string>
     <string name="btn_remove">Remove</string>
     <string name="btn_cancel">Cancel</string>
@@ -60,16 +63,25 @@
     <string name="toggle_off">Off</string>
 
     <!-- Splash -->
-    <string name="splash_tagline">Your premium entertainment hub</string>
-    <string name="splash_loading">Preparing your experience</string>
+    <string name="splash_tagline">Movies, series and playlists. All in one</string>
+    <string name="splash_loading">Loading Yango Play</string>
+
+    <!-- Welcome -->
+    <string name="welcome_eyebrow">Movies and series</string>
+    <string name="welcome_title">Movies, series &amp; playlists. All in one</string>
+    <string name="welcome_title_alt">High quality and ad-free</string>
+    <string name="welcome_get_started">Get started</string>
+    <string name="welcome_explore">Explore Yango Play</string>
+    <string name="welcome_more">More about Yango Play</string>
+    <string name="welcome_go_up">Go up</string>
 
     <!-- Activation -->
-    <string name="activation_title">Activate Your TV</string>
-    <string name="activation_step1">1. On your phone or computer, go to iptv.afifistudio.com</string>
-    <string name="activation_step2">2. Enter the activation code shown below.</string>
+    <string name="activation_title">There are two ways to log in to Yango app</string>
+    <string name="activation_step1">Scan the QR code with your phone\'s camera</string>
+    <string name="activation_step2">Open a browser on another device and go to:</string>
     <string name="activation_enter_account">Enter Existing Account</string>
     <string name="activation_create_account">Create Account</string>
-    <string name="activation_scan">Scan to sign in</string>
+    <string name="activation_scan">Enter code:</string>
     <string name="activation_scan_hint">Use your phone camera to quickly open the activation page.</string>
     <string name="activation_continue_hint">Use the remote: highlight a button below, then press OK to continue.</string>
     <string name="activation_generating">Generating activation code…</string>
@@ -85,7 +97,7 @@
     <!-- Source -->
     <string name="source_title">Add Your IPTV Source</string>
     <string name="source_subtitle">Connect your provider to start watching live TV, movies, and series.</string>
-    <string name="source_footer">IPTV Cinema does not provide channels or streams. Use your own legal provider.</string>
+    <string name="source_footer">Yango Play does not provide channels or streams. Use your own legal provider.</string>
     <string name="source_xtream_title">Xtream Codes</string>
     <string name="source_xtream_desc">Use server URL, username, and password.</string>
     <string name="source_m3u_title">M3U Playlist</string>
@@ -138,10 +150,12 @@
     <string name="refresh_success_m3u">Synced %1$d channels</string>
 
     <!-- Profile -->
-    <string name="profile_title">Choose Profile</string>
+    <string name="profile_title">Choose an account</string>
     <string name="profile_subtitle">Who\'s watching?</string>
     <string name="profile_manage">Manage Profiles</string>
-    <string name="profile_switch">Switch Profile</string>
+    <string name="profile_switch">Choose an account</string>
+    <string name="profile_role_administrator">Administrator</string>
+    <string name="profile_other_accounts">Other accounts</string>
     <string name="profile_none_found">No profiles found.</string>
     <string name="profile_load_error">Unable to load profiles</string>
 
@@ -167,6 +181,12 @@
     <string name="error_series_not_found">Series not found</string>
     <string name="error_load_list">Unable to load your list</string>
     <string name="error_incorrect_pin">Incorrect PIN</string>
+    <string name="error_server_not_responding">The server is not responding</string>
+    <string name="error_reload_page">Please try reloading the page</string>
+    <string name="error_session_id">Session ID: 52A725</string>
+    <string name="reload_title">MOVIES, SERIES AND MUSIC, ALL IN ONE</string>
+    <string name="btn_reload">Reload</string>
+    <string name="btn_change_account">Change account</string>
 
     <!-- Catalog messages -->
     <string name="msg_no_source_connected">No source connected</string>
@@ -184,6 +204,7 @@
     <!-- Home / Browse -->
     <string name="home_continue_watching">Continue Watching</string>
     <string name="home_trending">Trending Now</string>
+    <string name="home_top_10_egypt">Top 10 in Egypt</string>
     <string name="home_live_channels">Live Channels</string>
     <string name="home_live_now">Live Now</string>
     <string name="home_popular_movies">Popular Movies</string>
@@ -192,7 +213,8 @@
     <string name="home_new_releases">New Releases</string>
     <string name="home_popular_series">Popular Series</string>
     <string name="home_mood_row_title">Browse by Mood</string>
-    <string name="home_spotlight">Spotlight</string>
+    <string name="home_spotlight">YANGO MOVIES</string>
+    <string name="yango_movies_label">YANGO MOVIES</string>
     <string name="btn_continue_watching">Continue Watching</string>
     <string name="home_continue_progress">%1$d%% watched</string>
     <string name="badge_top_label">TOP</string>
@@ -234,6 +256,7 @@
 
     <!-- Search -->
     <string name="search_title">Search</string>
+    <string name="search_people_hint">Search for movies and people</string>
     <string name="search_subtitle">Find your favorite movies, series, and live channels.</string>
     <string name="search_recent">Recent Searches</string>
     <string name="search_recent_empty">Your recent searches will appear here.</string>
@@ -246,8 +269,9 @@
     <string name="search_device_keyboard">Device Keyboard</string>
 
     <!-- My List -->
-    <string name="mylist_title">My List</string>
+    <string name="mylist_title">My Collection</string>
     <string name="mylist_subtitle">All your saved movies, series, and channels in one place.</string>
+    <string name="mylist_all_added">All added</string>
     <string name="mylist_nothing_saved">Nothing saved yet</string>
     <string name="mylist_nothing_saved_desc">Browse movies and series to add them to your list.</string>
     <string name="mylist_remove_tip">Tip: Long press an item to remove it from your list.</string>
@@ -278,6 +302,7 @@
     <string name="livetv_no_program_guide">No program guide available</string>
     <string name="livetv_on_now">ON NOW</string>
     <string name="livetv_view_guide">View All Guide ›</string>
+    <string name="livetv_next_at">Next at %1$s</string>
     <string name="livetv_tv_guide">TV Guide</string>
     <string name="livetv_program_time">%1$s – %2$s  ·  %3$s</string>
     <string name="livetv_pin_category">Enter PIN to change category</string>
@@ -319,6 +344,17 @@
     <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="settings_subtitle">Manage your account, preferences, and device settings.</string>
+    <string name="settings_active">Yango Play is active ✓</string>
+    <string name="settings_support">Support</string>
+    <string name="settings_user_agreement">User agreement</string>
+    <string name="settings_devices">Devices</string>
+    <string name="settings_my_devices">My devices</string>
+    <string name="settings_devices_count">%1$d of %2$d</string>
+    <string name="settings_watching">Watching</string>
+    <string name="settings_general">General</string>
+    <string name="settings_manage_data">Manage data</string>
+    <string name="settings_delete_account">Delete your account</string>
+    <string name="settings_audio_language">Audio language</string>
     <string name="settings_account">Account</string>
     <string name="settings_subscription">Subscription</string>
     <string name="settings_playback">Playback</string>
@@ -342,7 +378,7 @@
     <string name="settings_quality_auto">Auto Best Available</string>
     <string name="settings_audio_english">English</string>
     <string name="settings_subtitles_off">Off</string>
-    <string name="settings_theme_dark">Dark Cinema</string>
+    <string name="settings_theme_dark">Yango Dark</string>
     <string name="settings_renews">Renews %1$s</string>
     <string name="settings_subscription_desc">Premium Plan active until July 15, 2026.</string>
     <string name="settings_language_desc">App language follows your Android TV system language. Change it in device Settings → Language.</string>
@@ -353,7 +389,7 @@
     <string name="settings_in_player">In player</string>
     <string name="settings_notifications_desc">New episode alerts and sync notifications are enabled.</string>
     <string name="settings_device_desc">Launch on Live TV, auto-start last profile, and HDMI-CEC options.</string>
-    <string name="settings_about_desc">IPTV Cinema v1.0.0 — Phase 5 Supabase Integration</string>
+    <string name="settings_about_desc">Yango Play v1.0.0</string>
     <string name="settings_expand_collapse">Expand or collapse</string>
     <string name="settings_blocked_categories">Blocked Categories</string>
     <string name="settings_category_bullet">• %1$s</string>
@@ -361,7 +397,7 @@
     <string name="feedback_quality_soon">Quality selector coming soon</string>
     <string name="feedback_audio_soon">Audio selector coming soon</string>
     <string name="feedback_subtitle_soon">Subtitle selector coming soon</string>
-    <string name="feedback_theme_locked">Theme locked to Dark Cinema</string>
+    <string name="feedback_theme_locked">Theme locked to Yango Dark</string>
 
     <!-- Parental -->
     <string name="parental_title">Parental Controls</string>

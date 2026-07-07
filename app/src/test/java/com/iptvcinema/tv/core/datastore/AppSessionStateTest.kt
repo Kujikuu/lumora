@@ -10,10 +10,10 @@ import org.junit.Test
 class AppSessionStateTest {
 
     @Test
-    fun resolveStartupDestination_unauthenticated_returnsActivation() {
+    fun resolveStartupDestination_unauthenticated_returnsWelcome() {
         val state = AppSessionState(isAuthenticated = false)
 
-        assertEquals(StartupDestination.Activation, state.resolveStartupDestination())
+        assertEquals(StartupDestination.Welcome, state.resolveStartupDestination())
     }
 
     @Test
@@ -70,11 +70,11 @@ class AppSessionStateTest {
     }
 
     @Test
-    fun redirectRouteFor_returnsActivationWhenUnauthenticated() {
+    fun redirectRouteFor_returnsWelcomeWhenUnauthenticated() {
         val state = AppSessionState(isAuthenticated = false)
 
         assertEquals(
-            StartupDestination.Activation.route(),
+            StartupDestination.Welcome.route(),
             state.redirectRouteFor(SessionRequirement.Ready),
         )
     }

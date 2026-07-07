@@ -23,6 +23,7 @@ fun MainShellScaffold(
     navController: NavController,
     selectedNavItem: NavItem,
     sessionViewModel: SessionViewModel = hiltViewModel(LocalActivity.current as ComponentActivity),
+    onRailExitRight: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val isCloudDegraded by sessionViewModel.isCloudDegraded.collectAsState()
@@ -49,6 +50,7 @@ fun MainShellScaffold(
         onFavoritesClick = { shellNavigate(navController, AppRoute.MY_LIST) },
         onRecentlyAddedClick = { shellNavigate(navController, AppRoute.movies()) },
         onTopRatedClick = { shellNavigate(navController, AppRoute.movies("Top Rated")) },
+        onRailExitRight = onRailExitRight,
     ) {
         Column {
             if (isCloudDegraded) {

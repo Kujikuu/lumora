@@ -1,41 +1,50 @@
 package com.iptvcinema.tv.features.mylist
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.design.components.CinemaAsyncImage
 import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
-import com.iptvcinema.tv.core.design.components.ContentRail
 import com.iptvcinema.tv.core.design.components.EmptyState
 import com.iptvcinema.tv.core.design.components.ErrorState
-import com.iptvcinema.tv.core.design.components.FilterChipRow
-import com.iptvcinema.tv.core.design.components.PosterCard
-import com.iptvcinema.tv.core.design.components.PosterGrid
+import com.iptvcinema.tv.core.design.components.FocusableCinemaCard
+import com.iptvcinema.tv.core.design.components.PosterCardData
 import com.iptvcinema.tv.core.design.components.SkeletonPosterGrid
 import com.iptvcinema.tv.core.design.theme.CinemaColors
+import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.FavoriteContentType
 import com.iptvcinema.tv.core.model.FavoriteItem
@@ -43,7 +52,6 @@ import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
 import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
-import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -51,18 +59,6 @@ fun MyListScreen(
     navController: NavController,
     viewModel: MyListViewModel = hiltViewModel(),
 ) {
-    val chipFocus = remember { FocusRequester() }
-    val focusState = rememberScreenFocusState("my_list")
-    val filters = rememberMyListFilters()
-    var selectedFilter by remember(focusState.focusIndex) {
-        mutableIntStateOf(
-            if (focusState.hasSavedFocus) {
-                focusState.focusIndex.coerceIn(0, filters.lastIndex)
-            } else {
-                0
-            },
-        )
-    }
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -77,16 +73,6 @@ fun MyListScreen(
     }
 
     MainShellBackHandler(navController = navController, isHomeTab = false)
-    val selectedMyListFilter = filters[selectedFilter.coerceIn(0, filters.lastIndex)]
-
-    LaunchedEffect(focusState.hasSavedFocus, selectedFilter) {
-        if (focusState.hasSavedFocus) {
-            focusState.restoreFocus(chipFocus)
-        } else {
-            focusState.requestInitialFocus(chipFocus)
-            focusState.saveFocusIndex(selectedFilter)
-        }
-    }
 
     MainShellScaffold(
         navController = navController,
@@ -115,42 +101,14 @@ fun MyListScreen(
                 )
             }
             is MyListUiState.Ready -> {
-                val filteredItems = filterFavorites(selectedMyListFilter, state.favorites).map { it.toPosterCardData() }
-                val recentlyWatched = state.recentlyWatchedPosters
-
                 Column(
                     modifier = Modifier
-                        .verticalScroll(rememberScrollState())
+                        .fillMaxSize()
                         .padding(top = CinemaSpacing.ScreenPaddingVertical),
                     verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
                 ) {
                     CinemaSerifTitle(text = stringResource(R.string.mylist_title))
-                    Text(
-                        text = stringResource(R.string.mylist_subtitle),
-                        style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
-                        modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
-                    )
-                    Text(
-                        text = pluralStringResource(
-                            R.plurals.saved_items_count,
-                            filteredItems.size,
-                            filteredItems.size,
-                        ),
-                        style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.Accent),
-                        modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
-                    )
-                    FilterChipRow(
-                        items = filters.map { it.label },
-                        selectedIndex = selectedFilter,
-                        onSelected = {
-                            selectedFilter = it
-                            focusState.saveFocusIndex(it)
-                        },
-                        chipFocusRequester = chipFocus,
-                        focusedChipIndex = selectedFilter,
-                        modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
-                    )
-                    if (filteredItems.isEmpty()) {
+                    if (state.favorites.isEmpty()) {
                         EmptyState(
                             title = stringResource(R.string.mylist_nothing_saved),
                             description = stringResource(R.string.mylist_nothing_saved_desc),
@@ -160,81 +118,127 @@ fun MyListScreen(
                             onSecondary = null,
                         )
                     } else {
-                        PosterGrid(
-                            items = filteredItems,
-                            enableVerticalScroll = false,
-                            onItemClick = { poster ->
-                                poster.contentId?.let { contentId ->
-                                    val favorite = state.favorites.find { it.contentId == contentId } ?: return@let
-                                    when (favorite.contentType) {
-                                        FavoriteContentType.MOVIE -> navController.navigate(AppRoute.movieDetails(contentId))
-                                        FavoriteContentType.SERIES, FavoriteContentType.EPISODE ->
-                                            navController.navigate(AppRoute.seriesDetails(contentId))
-                                        FavoriteContentType.CHANNEL -> navController.navigate(AppRoute.liveTv(contentId))
-                                    }
-                                }
-                            },
-                            onItemLongClick = { poster ->
-                                poster.contentId?.let { contentId ->
-                                    state.favorites.find { it.contentId == contentId }?.let(viewModel::removeFavorite)
-                                }
-                            },
+                        Text(
+                            text = stringResource(R.string.btn_watch_later),
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                color = CinemaColors.White,
+                                fontWeight = FontWeight.Black,
+                            ),
+                            modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
                         )
-                    }
-                    if (recentlyWatched.isNotEmpty()) {
-                        ContentRail(
-                            title = stringResource(R.string.rail_recently_watched),
-                            items = recentlyWatched,
-                            countLabel = recentlyWatched.size.toString(),
-                        ) { poster ->
-                            PosterCard(
-                                data = poster,
-                                onClick = {
-                                    state.recentlyWatched.find { it.contentId == poster.contentId }?.let { item ->
-                                        when (item.contentType) {
-                                            com.iptvcinema.tv.core.model.WatchHistoryContentType.MOVIE ->
-                                                navController.navigate(AppRoute.player(item.contentId, "movie"))
-                                            com.iptvcinema.tv.core.model.WatchHistoryContentType.EPISODE ->
-                                                navController.navigate(
-                                                    AppRoute.player(item.contentId, "episode", item.seriesId),
-                                                )
-                                            com.iptvcinema.tv.core.model.WatchHistoryContentType.CHANNEL ->
-                                                navController.navigate(AppRoute.player(item.contentId, "live"))
-                                        }
-                                    }
-                                },
-                            )
+                        LazyRow(
+                            contentPadding = PaddingValues(
+                                start = CinemaSpacing.ContentStart,
+                                end = CinemaSpacing.ScreenPadding,
+                            ),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            item {
+                                AllAddedCard()
+                            }
+                            items(state.favorites, key = { it.id }) { favorite ->
+                                MyCollectionTile(
+                                    data = favorite.toPosterCardData(),
+                                    onClick = { openFavorite(navController, favorite) },
+                                    onLongClick = { viewModel.removeFavorite(favorite) },
+                                )
+                            }
                         }
                     }
-                    Text(
-                        text = stringResource(R.string.mylist_remove_tip),
-                        style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
-                    )
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun rememberMyListFilters(): List<MyListFilter> = listOf(
-    MyListFilter(stringResource(R.string.mylist_filter_all), null),
-    MyListFilter(stringResource(R.string.mylist_filter_movies), FavoriteContentType.MOVIE),
-    MyListFilter(stringResource(R.string.mylist_filter_series), FavoriteContentType.SERIES),
-    MyListFilter(stringResource(R.string.mylist_filter_channels), FavoriteContentType.CHANNEL),
-)
-
-private data class MyListFilter(
-    val label: String,
-    val contentType: FavoriteContentType?,
-)
-
-private fun filterFavorites(filter: MyListFilter, favorites: List<FavoriteItem>): List<FavoriteItem> = when (filter.contentType) {
-    null -> favorites
-    FavoriteContentType.MOVIE -> favorites.filter { it.contentType == FavoriteContentType.MOVIE }
-    FavoriteContentType.SERIES -> favorites.filter {
-        it.contentType == FavoriteContentType.SERIES || it.contentType == FavoriteContentType.EPISODE
+private fun AllAddedCard() {
+    FocusableCinemaCard(
+        modifier = Modifier
+            .width(270.dp)
+            .height(153.dp),
+        onClick = {},
+        shape = CinemaShapes.Small,
+        focusScale = 1.02f,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(CinemaColors.White)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Default.FavoriteBorder,
+                contentDescription = null,
+                tint = CinemaColors.Background,
+                modifier = Modifier.width(29.dp).height(29.dp),
+            )
+            Text(
+                text = stringResource(R.string.mylist_all_added),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    color = CinemaColors.Background,
+                    fontWeight = FontWeight.Bold,
+                ),
+            )
+        }
     }
-    FavoriteContentType.CHANNEL -> favorites.filter { it.contentType == FavoriteContentType.CHANNEL }
-    FavoriteContentType.EPISODE -> favorites
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun MyCollectionTile(
+    data: PosterCardData,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    FocusableCinemaCard(
+        modifier = Modifier
+            .width(245.dp)
+            .height(141.dp),
+        onClick = onClick,
+        onLongClick = onLongClick,
+        shape = CinemaShapes.Small,
+        focusScale = 1.02f,
+        contentDescription = data.title,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(CinemaShapes.Small)
+                .background(CinemaColors.Surface),
+        ) {
+            CinemaAsyncImage(
+                imageUrl = data.imageUrl,
+                contentDescription = data.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                fallbackLabel = data.title,
+            )
+            Text(
+                text = data.title,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(9.dp),
+                style = MaterialTheme.typography.titleSmall.copy(
+                    color = CinemaColors.White,
+                    fontWeight = FontWeight.Bold,
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+private fun openFavorite(navController: NavController, favorite: FavoriteItem) {
+    when (favorite.contentType) {
+        FavoriteContentType.MOVIE -> navController.navigate(AppRoute.movieDetails(favorite.contentId))
+        FavoriteContentType.SERIES, FavoriteContentType.EPISODE ->
+            navController.navigate(AppRoute.seriesDetails(favorite.contentId))
+        FavoriteContentType.CHANNEL -> navController.navigate(AppRoute.liveTv(favorite.contentId))
+    }
 }

@@ -11,6 +11,7 @@ import com.iptvcinema.tv.core.navigation.NavItem.Settings
 
 object AppRoute {
     const val SPLASH = "splash"
+    const val WELCOME = "welcome"
     const val ACTIVATION = "activation"
     const val ADD_SOURCE = "add_source?mode={mode}"
     const val XTREAM_FORM = "xtream_form"

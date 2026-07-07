@@ -21,10 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -167,18 +164,18 @@ fun HeroBanner(
                 .align(Alignment.BottomStart)
                 .fillMaxWidth(0.55f)
                 .padding(
-                    start = CinemaSpacing.NavRailWidth + 16.dp,
-                    bottom = 28.dp,
+                    start = CinemaSpacing.ContentStart,
                 ),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             BadgeChip(
-                text = stringResource(R.string.home_spotlight),
-                backgroundColor = CinemaColors.AccentDeep,
+                text = stringResource(R.string.yango_movies_label),
+                backgroundColor = Color.Transparent,
+                textColor = CinemaColors.Secondary,
             )
             Text(
                 text = title,
-                style = MaterialTheme.typography.displaySmall.copy(
+                style = MaterialTheme.typography.displayMedium.copy(
                     fontWeight = FontWeight.Black,
                     color = CinemaColors.White,
                 ),
@@ -187,8 +184,8 @@ fun HeroBanner(
             )
             if (description.isNotBlank()) {
                 Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium.copy(
+                        text = description,
+                    style = MaterialTheme.typography.bodyLarge.copy(
                         color = CinemaColors.TextPrimary,
                     ),
                     maxLines = 3,
@@ -231,63 +228,12 @@ fun HeroBanner(
                             }
                         },
                 )
-                if (onAddToList != null) {
-                    CinemaButton(
-                        text = "",
-                        variant = CinemaButtonVariant.Icon,
-                        icon = Icons.Default.Add,
-                        onClick = onAddToList,
-                    )
-                }
-                if (onFavorite != null) {
-                    CinemaButton(
-                        text = "",
-                        variant = CinemaButtonVariant.Icon,
-                        icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        onClick = onFavorite,
-                    )
-                }
                 CinemaButton(
-                    text = stringResource(R.string.btn_details),
+                    text = stringResource(R.string.btn_watch_later),
                     variant = CinemaButtonVariant.SecondaryDark,
-                    icon = Icons.Default.Info,
-                    onClick = onDetails,
+                    icon = Icons.Default.FavoriteBorder,
+                    onClick = onAddToList ?: onFavorite ?: onDetails,
                 )
-            }
-        }
-
-        if (carouselThumbs.isNotEmpty()) {
-            Row(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = CinemaSpacing.ScreenPadding),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                carouselThumbs.forEachIndexed { index, (imageUrl, label) ->
-                    FocusableCinemaCard(
-                        modifier = Modifier.size(CinemaSpacing.HeroThumbSize),
-                        onClick = { onThumbSelect?.invoke(index) },
-                        shape = CinemaShapes.Medium,
-                        contentDescription = label,
-                        focusScale = if (index == selectedThumbIndex) 1.08f else 1f,
-                    ) { _ ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CinemaShapes.Medium)
-                                .background(CinemaColors.Surface),
-                        ) {
-                            CinemaAsyncImage(
-                                imageUrl = imageUrl,
-                                contentDescription = label,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop,
-                                fallbackLabel = label,
-                            )
-                        }
-                    }
-                }
             }
         }
 

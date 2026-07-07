@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,12 +25,12 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +41,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -54,8 +60,8 @@ import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.navigation.NavItem
 
-private val RailCollapsedWidth = 56.dp
-private val RailExpandedWidth = 220.dp
+private val RailCollapsedWidth = 92.dp
+private val RailExpandedWidth = 340.dp
 
 private data class RailEntry(
     val navItem: NavItem,
@@ -73,6 +79,7 @@ fun CinemaNavRail(
     onProfileClick: () -> Unit,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
+    onExitRight: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val width by animateDpAsState(
@@ -82,12 +89,13 @@ fun CinemaNavRail(
     )
 
     val primaryItems = listOf(
-        RailEntry(NavItem.Home, Icons.Default.Home) { onNavigate(NavItem.Home) },
         RailEntry(NavItem.Search, Icons.Default.Search, onSearchClick),
-        RailEntry(NavItem.LiveTv, Icons.Default.LiveTv) { onNavigate(NavItem.LiveTv) },
+        RailEntry(NavItem.Home, Icons.Default.Home) { onNavigate(NavItem.Home) },
         RailEntry(NavItem.Movies, Icons.Default.Movie) { onNavigate(NavItem.Movies) },
-        RailEntry(NavItem.Series, Icons.Default.VideoLibrary) { onNavigate(NavItem.Series) },
         RailEntry(NavItem.MyList, Icons.Default.Favorite) { onNavigate(NavItem.MyList) },
+        RailEntry(NavItem.LiveTv, Icons.Default.LiveTv) { onNavigate(NavItem.LiveTv) },
+        RailEntry(NavItem.Series, Icons.Default.LibraryMusic) { onNavigate(NavItem.Series) },
+        RailEntry(NavItem.Settings, Icons.Default.PhoneAndroid) { onSettingsClick() },
     )
 
     Column(
@@ -102,15 +110,40 @@ fun CinemaNavRail(
                     ),
                 ),
             )
+            .onPreviewKeyEvent { event ->
+                if (
+                    event.type == KeyEventType.KeyDown &&
+                    event.key == Key.DirectionRight &&
+                    onExitRight != null
+                ) {
+                    onExpandedChange(false)
+                    onExitRight()
+                    true
+                } else {
+                    false
+                }
+            }
             .focusGroup()
             .onFocusChanged { onExpandedChange(it.hasFocus) }
-            .padding(vertical = 20.dp, horizontal = 8.dp),
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+            .padding(vertical = 30.dp, horizontal = 6.dp),
+        horizontalAlignment = if (expanded) Alignment.Start else Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
-        CinemaBrandMark(size = 32.dp)
+        if (expanded) {
+            Text(
+                text = stringResource(R.string.app_name).uppercase(),
+                modifier = Modifier.padding(start = 54.dp),
+                style = MaterialTheme.typography.displaySmall.copy(
+                    color = CinemaColors.White,
+                    fontWeight = FontWeight.Black,
+                ),
+                maxLines = 1,
+            )
+        } else {
+            CinemaLogo(navBar = true)
+        }
 
-        Spacer(Modifier.size(16.dp))
+        Spacer(Modifier.size(if (expanded) 66.dp else 46.dp))
 
         primaryItems.forEach { entry ->
             RailItemRow(
@@ -124,20 +157,48 @@ fun CinemaNavRail(
 
         Spacer(Modifier.weight(1f))
 
-        RailItemRow(
-            label = stringResource(R.string.nav_profile),
-            icon = Icons.Default.Person,
-            selected = selected == NavItem.Profile,
-            expanded = expanded,
+        FocusableCinemaCard(
+            modifier = if (expanded) Modifier.fillMaxWidth().height(64.dp) else Modifier.size(42.dp),
             onClick = onProfileClick,
-        )
-        RailItemRow(
-            label = stringResource(NavItem.Settings.labelRes),
-            icon = Icons.Default.Settings,
-            selected = selected == NavItem.Settings,
-            expanded = expanded,
-            onClick = onSettingsClick,
-        )
+            shape = CinemaShapes.XLarge,
+            focusedBorderWidth = 0.dp,
+            contentDescription = stringResource(R.string.nav_profile),
+        ) { focused ->
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        if (focused || selected == NavItem.Profile) {
+                            CinemaColors.Surface.copy(alpha = 0.45f)
+                        } else {
+                            CinemaColors.Background.copy(alpha = 0f)
+                        },
+                        CinemaShapes.XLarge,
+                    )
+                    .padding(start = if (expanded) 54.dp else 0.dp, end = if (expanded) 12.dp else 0.dp),
+                horizontalArrangement = if (expanded) Arrangement.spacedBy(14.dp) else Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AccountAvatar(size = if (expanded) 56.dp else 32.dp)
+                AnimatedVisibility(visible = expanded) {
+                    Column {
+                        Text(
+                            text = stringResource(R.string.nav_profile_name),
+                            maxLines = 1,
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                color = CinemaColors.White,
+                                fontWeight = FontWeight.Black,
+                            ),
+                        )
+                        Text(
+                            text = stringResource(R.string.nav_switch_accounts),
+                            maxLines = 1,
+                            style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -160,43 +221,55 @@ private fun RailItemRow(
         contentDescription = label,
     ) { focused ->
         val contentColor = when {
-            selected -> CinemaColors.AccentSoft
+            selected -> CinemaColors.White
             focused -> CinemaColors.White
             else -> CinemaColors.TextMuted
         }
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    when {
-                        selected -> CinemaColors.Accent.copy(alpha = 0.15f)
-                        focused -> CinemaColors.White.copy(alpha = 0.06f)
-                        else -> CinemaColors.Background.copy(alpha = 0f)
-                    },
-                    CinemaShapes.Small,
-                )
-                .padding(horizontal = 10.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                .height(42.dp)
+                .background(CinemaColors.Background.copy(alpha = 0f), CinemaShapes.Small),
+            contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(22.dp),
-            )
-            AnimatedVisibility(
-                visible = expanded,
-                enter = fadeIn(tween(150)) + expandHorizontally(tween(180)),
-                exit = fadeOut(tween(100)) + shrinkHorizontally(tween(140)),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = if (expanded) Arrangement.spacedBy(12.dp) else Arrangement.Center,
             ) {
-                Text(
-                    text = label,
-                    maxLines = 1,
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                        color = contentColor,
-                    ),
+                Row(
+                    modifier = Modifier.padding(start = if (expanded) 54.dp else 0.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = if (expanded) Arrangement.spacedBy(20.dp) else Arrangement.Center,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = contentColor,
+                        modifier = Modifier.size(28.dp),
+                    )
+                    AnimatedVisibility(
+                        visible = expanded,
+                        enter = fadeIn(tween(150)) + expandHorizontally(tween(180)),
+                        exit = fadeOut(tween(100)) + shrinkHorizontally(tween(140)),
+                    ) {
+                        Text(
+                            text = label,
+                            maxLines = 1,
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                color = contentColor,
+                            ),
+                        )
+                    }
+                }
+            }
+            if (selected) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .size(width = 34.dp, height = 3.dp)
+                        .background(CinemaColors.Accent),
                 )
             }
         }
@@ -216,6 +289,7 @@ fun CinemaScreen(
     onFavoritesClick: (() -> Unit)? = null,
     onRecentlyAddedClick: (() -> Unit)? = null,
     onTopRatedClick: (() -> Unit)? = null,
+    onRailExitRight: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -261,6 +335,7 @@ fun CinemaScreen(
                 onProfileClick = onProfileClick ?: { onNavigate(NavItem.Profile) },
                 expanded = railExpanded,
                 onExpandedChange = { railExpanded = it },
+                onExitRight = onRailExitRight,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .zIndex(2f),

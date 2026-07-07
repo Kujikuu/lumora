@@ -1,11 +1,12 @@
 package com.iptvcinema.tv.features.search
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -15,9 +16,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -32,10 +33,7 @@ import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.ChannelTile
 import com.iptvcinema.tv.core.design.components.ContentRail
 import com.iptvcinema.tv.core.design.components.EmptyState
-import com.iptvcinema.tv.core.design.components.FilterChipRow
 import com.iptvcinema.tv.core.design.components.PosterCard
-import com.iptvcinema.tv.core.design.components.RecentSearchChip
-import com.iptvcinema.tv.core.design.components.SearchInput
 import com.iptvcinema.tv.core.design.components.SearchKeyboard
 import com.iptvcinema.tv.core.design.components.SearchKeyboardLayout
 import com.iptvcinema.tv.core.design.theme.CinemaColors
@@ -55,25 +53,18 @@ fun SearchScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val searchFocus = remember { FocusRequester() }
-    val chipFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("search")
     val catalogCallbacks = rememberCatalogStateCallbacks(navController, onRetry = viewModel::retry)
     var keyboardLayout by remember { mutableStateOf(SearchKeyboardLayout.English) }
-    val searchFilters = listOf(
-        stringResource(R.string.filter_all),
-        stringResource(R.string.filter_movies),
-        stringResource(R.string.filter_series),
-        stringResource(R.string.filter_live_tv),
-    )
 
     MainShellBackHandler(navController = navController, isHomeTab = false)
 
-    LaunchedEffect(focusState.hasSavedFocus, uiState.selectedFilterIndex) {
+    LaunchedEffect(focusState.hasSavedFocus) {
         if (focusState.hasSavedFocus) {
-            focusState.restoreFocus(chipFocus)
+            focusState.restoreFocus(searchFocus)
         } else {
             focusState.requestInitialFocus(searchFocus)
-            focusState.saveFocusIndex(uiState.selectedFilterIndex)
+            focusState.saveFocusIndex(0)
         }
     }
 
@@ -87,26 +78,26 @@ fun SearchScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(
                     start = CinemaSpacing.ContentStart,
-                    end = 24.dp,
-                    top = 24.dp,
-                    bottom = 8.dp,
+                    end = 90.dp,
+                    top = 72.dp,
+                    bottom = 44.dp,
                 ),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(34.dp),
         ) {
             Text(
-                text = stringResource(R.string.search_title),
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = CinemaColors.White,
+                text = uiState.query.ifBlank { stringResource(R.string.search_people_hint) },
+                modifier = Modifier.width(1320.dp),
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontWeight = FontWeight.Normal,
+                    color = if (uiState.query.isBlank()) {
+                        CinemaColors.TextMuted.copy(alpha = 0.34f)
+                    } else {
+                        CinemaColors.White
+                    },
                 ),
-            )
-            SearchInput(
-                query = uiState.query,
-                onQueryChange = viewModel::updateQuery,
-                onSearch = viewModel::retry,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(searchFocus),
+                maxLines = 1,
+                softWrap = false,
             )
             SearchKeyboard(
                 layout = keyboardLayout,
@@ -125,102 +116,80 @@ fun SearchScreen(
                     }
                 },
                 onClear = viewModel::clearSearch,
-            )
-            FilterChipRow(
-                items = searchFilters,
-                selectedIndex = uiState.selectedFilterIndex,
-                onSelected = {
-                    viewModel.selectFilter(it)
-                    focusState.saveFocusIndex(it)
-                },
-                chipFocusRequester = chipFocus,
-                focusedChipIndex = uiState.selectedFilterIndex,
+                firstKeyFocusRequester = searchFocus,
             )
 
-            if (uiState.recentSearches.isNotEmpty()) {
-                Text(
-                    text = stringResource(R.string.search_recent),
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        color = CinemaColors.TextSecondary,
-                        fontWeight = FontWeight.Medium,
-                    ),
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    uiState.recentSearches.forEach { term ->
-                        RecentSearchChip(query = term, onClick = { viewModel.applyRecentSearch(term) })
-                    }
-                }
-            }
-
-            CatalogStateContent(
-                loadState = uiState.loadState,
-                message = uiState.message,
-                sourceStatus = uiState.sourceStatus,
-                sourceType = uiState.sourceType,
-                skeletonStyle = CatalogSkeletonStyle.PosterGrid,
-                emptyTitle = stringResource(R.string.search_no_results),
-                emptyDescription = stringResource(R.string.search_no_results_desc),
-                onAddSource = catalogCallbacks.onAddSource,
-                onRetry = catalogCallbacks.onRetry,
-                onManageSources = catalogCallbacks.onManageSources,
-                onEditSource = catalogCallbacks.onEditSource,
-            ) {
-                when {
-                    uiState.query.trim().length >= 2 && !uiState.hasResults -> {
-                        EmptyState(
-                            title = stringResource(R.string.search_no_results),
-                            description = stringResource(R.string.search_no_results_desc),
-                            primaryAction = stringResource(R.string.btn_clear),
-                            secondaryAction = null,
-                            onPrimary = viewModel::clearSearch,
-                            onSecondary = null,
-                        )
-                    }
-                    else -> {
-                        Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                            if (uiState.movieResults.isNotEmpty()) {
-                                ContentRail(
-                                    title = stringResource(R.string.search_top_results),
-                                    items = uiState.movieResults,
-                                ) { movie ->
-                                    PosterCard(
-                                        data = movie,
-                                        onClick = {
-                                            movie.contentId?.let {
-                                                navController.navigate(AppRoute.movieDetails(it))
-                                            }
-                                        },
-                                    )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                CatalogStateContent(
+                    loadState = uiState.loadState,
+                    message = uiState.message,
+                    sourceStatus = uiState.sourceStatus,
+                    sourceType = uiState.sourceType,
+                    skeletonStyle = CatalogSkeletonStyle.PosterGrid,
+                    emptyTitle = stringResource(R.string.search_no_results),
+                    emptyDescription = stringResource(R.string.search_no_results_desc),
+                    onAddSource = catalogCallbacks.onAddSource,
+                    onRetry = catalogCallbacks.onRetry,
+                    onManageSources = catalogCallbacks.onManageSources,
+                    onEditSource = catalogCallbacks.onEditSource,
+                ) {
+                    when {
+                        uiState.query.trim().length >= 2 && !uiState.hasResults -> {
+                            EmptyState(
+                                title = stringResource(R.string.search_no_results),
+                                description = stringResource(R.string.search_no_results_desc),
+                                primaryAction = stringResource(R.string.btn_clear),
+                                secondaryAction = null,
+                                onPrimary = viewModel::clearSearch,
+                                onSecondary = null,
+                            )
+                        }
+                        else -> {
+                            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                                if (uiState.movieResults.isNotEmpty()) {
+                                    ContentRail(
+                                        title = stringResource(R.string.search_top_results),
+                                        items = uiState.movieResults,
+                                    ) { movie ->
+                                        PosterCard(
+                                            data = movie,
+                                            onClick = {
+                                                movie.contentId?.let {
+                                                    navController.navigate(AppRoute.movieDetails(it))
+                                                }
+                                            },
+                                        )
+                                    }
                                 }
-                            }
-                            if (uiState.seriesResults.isNotEmpty()) {
-                                ContentRail(
-                                    title = stringResource(R.string.search_series_results),
-                                    items = uiState.seriesResults,
-                                ) { series ->
-                                    PosterCard(
-                                        data = series,
-                                        onClick = {
-                                            series.contentId?.let {
-                                                navController.navigate(AppRoute.seriesDetails(it))
-                                            }
-                                        },
-                                    )
+                                if (uiState.seriesResults.isNotEmpty()) {
+                                    ContentRail(
+                                        title = stringResource(R.string.search_series_results),
+                                        items = uiState.seriesResults,
+                                    ) { series ->
+                                        PosterCard(
+                                            data = series,
+                                            onClick = {
+                                                series.contentId?.let {
+                                                    navController.navigate(AppRoute.seriesDetails(it))
+                                                }
+                                            },
+                                        )
+                                    }
                                 }
-                            }
-                            if (uiState.channelResults.isNotEmpty()) {
-                                ContentRail(
-                                    title = stringResource(R.string.search_live_channels),
-                                    items = uiState.channelResults,
-                                ) { channel ->
-                                    ChannelTile(
-                                        data = channel,
-                                        onClick = {
-                                            channel.id?.let { channelId ->
-                                                navController.navigate(AppRoute.player(channelId, "live"))
-                                            } ?: navController.navigate(AppRoute.liveTv())
-                                        },
-                                    )
+                                if (uiState.channelResults.isNotEmpty()) {
+                                    ContentRail(
+                                        title = stringResource(R.string.search_live_channels),
+                                        items = uiState.channelResults,
+                                    ) { channel ->
+                                        ChannelTile(
+                                            data = channel,
+                                            onClick = {
+                                                channel.id?.let { channelId ->
+                                                    navController.navigate(AppRoute.player(channelId, "live"))
+                                                } ?: navController.navigate(AppRoute.liveTv())
+                                            },
+                                        )
+                                    }
                                 }
                             }
                         }

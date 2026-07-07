@@ -184,6 +184,7 @@ fun BadgeChip(
     text: String,
     modifier: Modifier = Modifier,
     backgroundColor: androidx.compose.ui.graphics.Color = CinemaColors.LiveRed,
+    textColor: androidx.compose.ui.graphics.Color = CinemaColors.White,
 ) {
     Box(
         modifier = modifier
@@ -195,7 +196,7 @@ fun BadgeChip(
             text = text,
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.Bold,
-                color = CinemaColors.White,
+                color = textColor,
             ),
         )
     }

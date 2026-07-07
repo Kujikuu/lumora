@@ -1420,21 +1420,33 @@ fun SearchKeyboard(
     onBackspace: () -> Unit,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
+    firstKeyFocusRequester: FocusRequester? = null,
 ) {
     val rows = SearchKeyboardLayouts.rowsFor(layout)
+    val keyWidth = 34.dp
+    val keyHeight = 44.dp
+    val keyGap = 12.dp
     val layoutLabel = when (layout) {
         SearchKeyboardLayout.English -> "EN"
         SearchKeyboardLayout.Arabic -> "ع"
     }
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        rows.forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                row.forEach { key ->
+        rows.forEachIndexed { rowIndex, row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(keyGap)) {
+                row.forEachIndexed { keyIndex, key ->
                     FocusableCinemaCard(
-                        modifier = Modifier.size(40.dp),
+                        modifier = Modifier
+                            .size(width = keyWidth, height = keyHeight)
+                            .then(
+                                if (rowIndex == 0 && keyIndex == 0 && firstKeyFocusRequester != null) {
+                                    Modifier.focusRequester(firstKeyFocusRequester)
+                                } else {
+                                    Modifier
+                                },
+                            ),
                         onClick = {
                             val output = if (layout == SearchKeyboardLayout.English) {
                                 key.lowercase()
@@ -1443,21 +1455,30 @@ fun SearchKeyboard(
                             }
                             onKeyPress(output)
                         },
-                        shape = CinemaShapes.Small,
-                    ) { _ ->
+                        shape = CinemaShapes.XLarge,
+                    ) { focused ->
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
-                                .background(CinemaColors.SurfaceSoft, CinemaShapes.Small),
+                                .size(width = keyWidth, height = keyHeight)
+                                .background(
+                                    if (focused) CinemaColors.White else CinemaColors.Background,
+                                    CinemaShapes.XLarge,
+                                ),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(text = key, style = MaterialTheme.typography.labelLarge)
+                            Text(
+                                text = key,
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    color = if (focused) CinemaColors.Background else CinemaColors.White,
+                                    fontWeight = FontWeight.Normal,
+                                ),
+                            )
                         }
                     }
                 }
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             CinemaButton(
                 text = layoutLabel,
                 variant = CinemaButtonVariant.PrimaryAccent,

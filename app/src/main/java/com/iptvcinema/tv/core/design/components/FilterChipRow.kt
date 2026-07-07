@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -90,28 +91,32 @@ fun CategoryChip(
     ) { focused ->
         Box(
             modifier = Modifier
+                .defaultMinSize(minHeight = 52.dp)
                 .background(
                     color = when {
                         isSelected -> CinemaColors.Accent
-                        focused -> CinemaColors.Surface
+                        focused -> CinemaColors.White
                         else -> CinemaColors.SurfaceSoft
                     },
-                    shape = CinemaShapes.Small,
+                    shape = CinemaShapes.XLarge,
                 )
                 .then(
                     if (!isSelected && focused) {
-                        Modifier.border(1.dp, CinemaColors.FocusBorder, CinemaShapes.Small)
+                        Modifier.border(1.dp, CinemaColors.FocusBorder, CinemaShapes.XLarge)
                     } else {
                         Modifier
                     },
                 )
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 26.dp, vertical = 12.dp),
         ) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) CinemaColors.White else CinemaColors.TextPrimary,
+                    fontWeight = if (isSelected || focused) FontWeight.Bold else FontWeight.Normal,
+                    color = when {
+                        focused && !isSelected -> CinemaColors.Background
+                        else -> CinemaColors.White
+                    },
                 ),
             )
         }
