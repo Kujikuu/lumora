@@ -1,13 +1,18 @@
 package com.iptvcinema.tv.features.livetv
 
+import android.view.ViewGroup
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,8 +21,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.ChildCare
+import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.LiveTv
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Nightlight
+import androidx.compose.material.icons.filled.Sports
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -25,44 +42,57 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
-import com.iptvcinema.tv.core.design.components.BadgeChip
+import com.iptvcinema.tv.core.data.repository.CatalogLoadState
 import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.CinemaAsyncImage
 import com.iptvcinema.tv.core.design.components.CinemaScreen
 import com.iptvcinema.tv.core.design.components.FocusableCinemaCard
+import com.iptvcinema.tv.core.design.components.PlayerBufferingOverlay
+import com.iptvcinema.tv.core.design.components.PlayerRebufferOverlay
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
-import com.iptvcinema.tv.core.epg.GuideLayoutHelper
 import com.iptvcinema.tv.core.model.ChannelItem
-import com.iptvcinema.tv.core.navigation.AppRoute
+import com.iptvcinema.tv.core.model.EpgProgram
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
-import com.iptvcinema.tv.core.navigation.NavItem
 import com.iptvcinema.tv.core.navigation.rememberCatalogStateCallbacks
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
+import kotlinx.coroutines.delay
+
+private const val OVERLAY_HIDE_DELAY_MS = 4_000L
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -73,8 +103,9 @@ fun LiveTvScreen(
     viewModel: LiveTvViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val channelListFocus = remember { FocusRequester() }
-    val chipFocus = remember { FocusRequester() }
+    val playerState by viewModel.playerState.collectAsState()
+    val channelStripFocus = remember { FocusRequester() }
+    val videoSurfaceFocus = remember { FocusRequester() }
     val channelFocusState = rememberScreenFocusState("live_tv")
     val categories = uiState.categories
     var selectedCategory by remember { mutableIntStateOf(0) }
@@ -90,11 +121,23 @@ fun LiveTvScreen(
     var showCategoryPin by remember { mutableStateOf(false) }
     var categoryPinError by remember { mutableStateOf<String?>(null) }
     var pendingCategoryIndex by remember { mutableIntStateOf(-1) }
+    var overlaysVisible by remember { mutableStateOf(true) }
+    var overlayActivityToken by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
     val incorrectPinMessage = stringResource(R.string.error_incorrect_pin)
     val emptyDescription = stringResource(R.string.msg_no_live_channels_desc)
 
-    fun playChannel(channel: ChannelItem) {
-        navController.navigate(AppRoute.player(channel.id, "live"))
+    fun revealOverlays() {
+        overlaysVisible = true
+        overlayActivityToken++
+    }
+
+    fun selectChannelAt(index: Int) {
+        val channel = uiState.channels.getOrNull(index) ?: return
+        focusedChannelIndex = index
+        channelFocusState.saveFocusIndex(index)
+        viewModel.onChannelSelected(channel)
+        revealOverlays()
     }
 
     fun selectCategoryAt(index: Int) {
@@ -104,6 +147,7 @@ fun LiveTvScreen(
         } else {
             selectedCategory = index
             viewModel.selectCategory(categories.getOrNull(index))
+            revealOverlays()
         }
     }
 
@@ -125,6 +169,7 @@ fun LiveTvScreen(
                         selectedCategory = pendingCategoryIndex
                         viewModel.selectCategory(categories.getOrNull(pendingCategoryIndex))
                         pendingCategoryIndex = -1
+                        revealOverlays()
                     }
                 } else {
                     categoryPinError = incorrectPinMessage
@@ -143,45 +188,129 @@ fun LiveTvScreen(
 
     LaunchedEffect(initialChannelId, uiState.channels) {
         if (!initialChannelId.isNullOrBlank() && uiState.channels.isNotEmpty()) {
-            viewModel.selectChannelById(initialChannelId)
             val index = uiState.channels.indexOfFirst { it.id == initialChannelId }
             if (index >= 0) {
-                focusedChannelIndex = index
-                channelFocusState.saveFocusIndex(index)
+                selectChannelAt(index)
             }
         }
     }
 
-    LaunchedEffect(uiState.channels.size, focusedChannelIndex) {
-        if (uiState.channels.isNotEmpty()) {
+    LaunchedEffect(uiState.channels, uiState.selectedChannel?.id) {
+        if (uiState.channels.isEmpty()) return@LaunchedEffect
+        val index = uiState.channels.indexOfFirst { it.id == uiState.selectedChannel?.id }
+            .takeIf { it >= 0 } ?: 0
+        focusedChannelIndex = index
+    }
+
+    LaunchedEffect(uiState.channels.size, overlaysVisible) {
+        if (uiState.channels.isNotEmpty() && overlaysVisible) {
             if (channelFocusState.hasSavedFocus) {
-                channelFocusState.restoreFocus(channelListFocus)
+                channelFocusState.restoreFocus(channelStripFocus)
             } else {
-                channelFocusState.requestInitialFocus(channelListFocus)
+                channelFocusState.requestInitialFocus(channelStripFocus)
                 channelFocusState.saveFocusIndex(focusedChannelIndex)
             }
         }
     }
 
+    LaunchedEffect(uiState.playbackNotice) {
+        uiState.playbackNotice?.let { message ->
+            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+            viewModel.clearPlaybackNotice()
+        }
+    }
+
+    LaunchedEffect(overlaysVisible, overlayActivityToken, uiState.loadState) {
+        if (!overlaysVisible || uiState.loadState != CatalogLoadState.Ready) return@LaunchedEffect
+        delay(OVERLAY_HIDE_DELAY_MS)
+        overlaysVisible = false
+        videoSurfaceFocus.requestFocus()
+    }
+
+    DisposableEffect(Unit) {
+        viewModel.onScreenVisible()
+        onDispose {
+            viewModel.onScreenHidden()
+        }
+    }
+
     MainShellBackHandler(navController = navController, isHomeTab = false)
     val previewChannel = uiState.previewChannel
+    val nextProgram = uiState.selectedChannelPrograms.getOrNull(1)
+        ?: uiState.selectedChannelPrograms.firstOrNull { program ->
+            program.channelId == previewChannel?.id && program.startEpochMs > uiState.nowMs
+        }
+    val currentProgram = uiState.selectedChannelPrograms.firstOrNull { program ->
+        program.channelId == previewChannel?.id &&
+            program.startEpochMs <= uiState.nowMs &&
+            program.endEpochMs > uiState.nowMs
+    }
+    val minutesLeft = currentProgram?.let { program ->
+        ((program.endEpochMs - uiState.nowMs) / 60_000L).toInt().coerceAtLeast(0)
+    }
 
     val catalogCallbacks = rememberCatalogStateCallbacks(
         navController = navController,
         onRetry = viewModel::refreshCurrentSource,
     )
+    val isReady = uiState.loadState == CatalogLoadState.Ready && previewChannel != null
 
     CinemaScreen(showTopNav = false) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown || !isReady) return@onPreviewKeyEvent false
+                    when (event.key) {
+                        Key.DirectionLeft -> {
+                            if (!overlaysVisible) {
+                                if (focusedChannelIndex > 0) {
+                                    selectChannelAt(focusedChannelIndex - 1)
+                                }
+                                true
+                            } else {
+                                revealOverlays()
+                                false
+                            }
+                        }
+                        Key.DirectionRight -> {
+                            if (!overlaysVisible) {
+                                if (focusedChannelIndex < uiState.channels.lastIndex) {
+                                    selectChannelAt(focusedChannelIndex + 1)
+                                }
+                                true
+                            } else {
+                                revealOverlays()
+                                false
+                            }
+                        }
+                        else -> {
+                            if (!overlaysVisible) {
+                                revealOverlays()
+                            } else {
+                                overlayActivityToken++
+                            }
+                            false
+                        }
+                    }
+                },
         ) {
-            CatalogRefreshBanner(
-                syncBannerText = uiState.syncBannerText,
-                refreshState = uiState.refreshState,
-                onRefresh = viewModel::refreshCurrentSource,
-                modifier = Modifier.padding(horizontal = CinemaSpacing.ContentStart),
-            )
+            if (isReady) {
+                LiveTvVideoSurface(viewModel = viewModel)
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(CinemaColors.Background),
+                )
+            }
+
+            if (playerState.isBuffering && !playerState.hasFirstFrame) {
+                PlayerBufferingOverlay()
+            } else if (playerState.isBuffering && playerState.hasFirstFrame || playerState.isReconnecting) {
+                PlayerRebufferOverlay()
+            }
+
             CatalogStateContent(
                 loadState = uiState.loadState,
                 message = uiState.message,
@@ -195,90 +324,175 @@ fun LiveTvScreen(
                 onManageSources = catalogCallbacks.onManageSources,
                 onEditSource = catalogCallbacks.onEditSource,
                 onRefreshCatalog = viewModel::refreshCurrentSource,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxSize(),
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            start = 30.dp,
-                            end = 30.dp,
-                            top = 20.dp,
-                        )
-                        .onPreviewKeyEvent { event ->
-                            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                            when (event.key) {
-                                Key.PageDown -> {
-                                    viewModel.shiftGuideWindow(GuideLayoutHelper.SHIFT_HOURS)
-                                    true
-                                }
-                                Key.PageUp -> {
-                                    viewModel.shiftGuideWindow(-GuideLayoutHelper.SHIFT_HOURS)
-                                    true
-                                }
-                                else -> false
-                            }
-                        }
-                        .padding(bottom = 38.dp),
+                AnimatedVisibility(
+                    visible = overlaysVisible,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.fillMaxSize(),
                 ) {
-                    if (categories.isNotEmpty()) {
-                        LiveCategoryRow(
-                            items = categories,
-                            selectedIndex = selectedCategory.coerceIn(0, categories.lastIndex.coerceAtLeast(0)),
-                            onSelected = { selectCategoryAt(it) },
-                            chipFocusRequester = chipFocus,
-                            focusedChipIndex = selectedCategory,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    if (previewChannel != null) {
-                        LiveNowStrip(
-                            channel = previewChannel,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 120.dp)
-                                .focusRequester(channelListFocus),
-                            onClick = { playChannel(previewChannel) },
-                        )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 30.dp, vertical = 20.dp),
+                    ) {
+                        if (!uiState.syncBannerText.isNullOrBlank()) {
+                            CatalogRefreshBanner(
+                                syncBannerText = uiState.syncBannerText,
+                                refreshState = uiState.refreshState,
+                                onRefresh = viewModel::refreshCurrentSource,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                        if (categories.isNotEmpty()) {
+                            LiveCategoryRow(
+                                items = categories,
+                                selectedIndex = selectedCategory.coerceIn(0, categories.lastIndex.coerceAtLeast(0)),
+                                onSelected = { selectCategoryAt(it) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .onFocusChanged { if (it.hasFocus) revealOverlays() },
+                            )
+                        }
+                        Spacer(modifier = Modifier.weight(1f))
+                        if (previewChannel != null) {
+                            LiveChannelStrip(
+                                channel = previewChannel,
+                                nextProgramTitle = nextProgram?.title,
+                                nextProgramTime = nextProgram?.let { formatProgramClock(it) } ?: previewChannel.programEnd,
+                                minutesLeft = minutesLeft,
+                                canGoPrevious = focusedChannelIndex > 0,
+                                canGoNext = focusedChannelIndex < uiState.channels.lastIndex,
+                                onPreviousChannel = {
+                                    if (focusedChannelIndex > 0) {
+                                        selectChannelAt(focusedChannelIndex - 1)
+                                    }
+                                },
+                                onNextChannel = {
+                                    if (focusedChannelIndex < uiState.channels.lastIndex) {
+                                        selectChannelAt(focusedChannelIndex + 1)
+                                    }
+                                },
+                                onInteraction = { revealOverlays() },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 120.dp)
+                                    .focusRequester(channelStripFocus),
+                            )
+                        }
                     }
                 }
+            }
+
+            if (isReady && !overlaysVisible) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .focusRequester(videoSurfaceFocus)
+                        .focusable(),
+                )
             }
         }
     }
 }
 
+@androidx.annotation.OptIn(UnstableApi::class)
+@Composable
+private fun LiveTvVideoSurface(
+    viewModel: LiveTvViewModel,
+) {
+    AndroidView(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CinemaColors.Background),
+        factory = { context ->
+            PlayerView(context).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                )
+                useController = false
+                setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
+                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+            }
+        },
+        update = { playerView ->
+            playerView.player = viewModel.getExoPlayer()
+        },
+    )
+}
+
+private fun formatProgramClock(program: EpgProgram): String {
+    val hour = program.startHour
+    val minute = program.startMinute
+    return "%02d:%02d".format(hour, minute)
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun LiveNowStrip(
+private fun LiveChannelStrip(
     channel: ChannelItem,
-    onClick: () -> Unit,
+    nextProgramTitle: String?,
+    nextProgramTime: String,
+    minutesLeft: Int?,
+    canGoPrevious: Boolean,
+    canGoNext: Boolean,
+    onPreviousChannel: () -> Unit,
+    onNextChannel: () -> Unit,
+    onInteraction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     FocusableCinemaCard(
-        modifier = modifier.height(130.dp),
-        onClick = onClick,
-        shape = CinemaShapes.Medium,
+        modifier = modifier
+            .height(148.dp)
+            .onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                onInteraction()
+                when (event.key) {
+                    Key.DirectionLeft -> {
+                        if (canGoPrevious) {
+                            onPreviousChannel()
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    Key.DirectionRight -> {
+                        if (canGoNext) {
+                            onNextChannel()
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    else -> false
+                }
+            },
+        onClick = onInteraction,
+        shape = CinemaShapes.Card,
         focusScale = 1.01f,
         contentDescription = channel.name,
     ) { focused ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(if (focused) CinemaColors.Surface else CinemaColors.BackgroundSoft),
+                .background(
+                    if (focused) CinemaColors.Surface else CinemaColors.SurfaceSoft.copy(alpha = 0.92f),
+                    CinemaShapes.Card,
+                )
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 17.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
                     modifier = Modifier
-                        .height(54.dp)
-                        .aspectRatio(1f)
-                        .clip(CinemaShapes.XLarge)
+                        .size(58.dp)
+                        .clip(CircleShape)
                         .background(CinemaColors.SurfaceSoft),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -292,7 +506,7 @@ private fun LiveNowStrip(
                 }
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Text(
                         text = channel.name,
@@ -302,51 +516,58 @@ private fun LiveNowStrip(
                     )
                     Text(
                         text = channel.currentProgram.ifBlank { channel.name },
-                        style = MaterialTheme.typography.titleMedium.copy(
+                        style = MaterialTheme.typography.headlineSmall.copy(
                             color = CinemaColors.White,
                             fontWeight = FontWeight.Black,
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.42f)
-                            .height(3.dp)
-                            .clip(CinemaShapes.XLarge)
-                            .background(CinemaColors.Surface),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(channel.programProgress.coerceIn(0f, 1f))
-                                .height(3.dp)
-                                .background(CinemaColors.TextSecondary),
-                        )
-                    }
                 }
                 Column(
-                    modifier = Modifier.width(180.dp),
-                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                    modifier = Modifier.width(190.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalAlignment = Alignment.End,
                 ) {
                     Text(
-                        text = stringResource(R.string.livetv_next_at, channel.programEnd),
-                        style = MaterialTheme.typography.titleSmall.copy(color = CinemaColors.TextSecondary),
+                        text = stringResource(R.string.livetv_next_at, nextProgramTime),
+                        style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextSecondary),
                         maxLines = 1,
                     )
                     Text(
-                        text = channel.programDescription.ifBlank { channel.category },
-                        style = MaterialTheme.typography.titleSmall.copy(color = CinemaColors.TextSecondary),
+                        text = nextProgramTitle ?: channel.programDescription.ifBlank { channel.category },
+                        style = MaterialTheme.typography.titleSmall.copy(color = CinemaColors.White),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
-            BadgeChip(
-                text = stringResource(R.string.badge_live),
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(9.dp),
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(4.dp)
+                        .clip(CinemaShapes.XLarge)
+                        .background(CinemaColors.Background),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(channel.programProgress.coerceIn(0f, 1f))
+                            .background(CinemaColors.TextSecondary),
+                    )
+                }
+                if (minutesLeft != null) {
+                    Text(
+                        text = stringResource(R.string.livetv_minutes_left, minutesLeft),
+                        style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextSecondary),
+                    )
+                }
+            }
         }
     }
 }
@@ -362,6 +583,19 @@ private val LiveCategoryColors = listOf(
     listOf(Color(0xFF6B7BFF), Color(0xFF90B2FF)),
 )
 
+private fun liveCategoryIcon(label: String, index: Int): ImageVector = when {
+    index == 0 || label.contains("all", ignoreCase = true) -> Icons.Default.Apps
+    label.contains("entertain", ignoreCase = true) -> Icons.Default.EmojiEmotions
+    label.contains("movie", ignoreCase = true) -> Icons.Default.Movie
+    label.contains("music", ignoreCase = true) -> Icons.Default.MusicNote
+    label.contains("kid", ignoreCase = true) -> Icons.Default.ChildCare
+    label.contains("news", ignoreCase = true) -> Icons.Default.Campaign
+    label.contains("islam", ignoreCase = true) -> Icons.Default.Nightlight
+    label.contains("doc", ignoreCase = true) -> Icons.Default.Lightbulb
+    label.contains("sport", ignoreCase = true) -> Icons.Default.Sports
+    else -> Icons.Default.LiveTv
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun LiveCategoryRow(
@@ -369,8 +603,6 @@ private fun LiveCategoryRow(
     selectedIndex: Int,
     onSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    chipFocusRequester: FocusRequester? = null,
-    focusedChipIndex: Int = 0,
 ) {
     LazyRow(
         modifier = modifier
@@ -395,44 +627,36 @@ private fun LiveCategoryRow(
                         fontWeight = FontWeight.Medium,
                     ),
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 FocusableCinemaCard(
                     modifier = Modifier
-                        .width(98.dp)
-                        .height(63.dp)
-                        .then(
-                            if (index == focusedChipIndex && chipFocusRequester != null) {
-                                Modifier.focusRequester(chipFocusRequester)
-                            } else {
-                                Modifier
-                            },
-                        ),
+                        .size(63.dp),
                     onClick = { onSelected(index) },
-                    shape = CinemaShapes.XLarge,
+                    shape = CircleShape,
                     focusedBorderWidth = 0.dp,
-                ) { focused ->
+                ) { _ ->
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
-                                androidx.compose.ui.graphics.Brush.linearGradient(colors),
-                                CinemaShapes.XLarge,
+                                Brush.linearGradient(colors),
+                                CircleShape,
                             ),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            text = if (index == 0) "•••" else label.take(1).uppercase(),
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                color = CinemaColors.White,
-                                fontWeight = FontWeight.Black,
-                            ),
+                        Icon(
+                            imageVector = liveCategoryIcon(label, index),
+                            contentDescription = null,
+                            tint = CinemaColors.White,
+                            modifier = Modifier.size(28.dp),
                         )
-                        if (selected || focused) {
+                        if (selected) {
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
-                                    .padding(bottom = 5.dp)
-                                    .width(11.dp)
+                                    .padding(bottom = 4.dp)
+                                    .width(10.dp)
                                     .height(4.dp)
                                     .clip(CinemaShapes.XLarge)
                                     .background(CinemaColors.White),

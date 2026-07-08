@@ -5,8 +5,8 @@
 
     <string name="nav_home">Watch</string>
     <string name="nav_live_tv">البث المباشر</string>
-    <string name="nav_movies">Crunchyroll</string>
-    <string name="nav_series">Music</string>
+    <string name="nav_movies">Movies</string>
+    <string name="nav_series">Series</string>
     <string name="nav_sports">الرياضة</string>
     <string name="nav_kids">الأطفال</string>
     <string name="nav_my_list">قائمتي</string>
@@ -51,6 +51,10 @@
     <string name="btn_add_to_favorites">إضافة إلى المفضلة</string>
     <string name="btn_favorited">في المفضلة</string>
     <string name="btn_play_first">تشغيل الأولى</string>
+    <string name="btn_play_series">تشغيل المسلسل</string>
+    <string name="btn_play_movie">تشغيل الفيلم</string>
+    <string name="btn_choose_episode">اختر حلقة</string>
+    <string name="btn_more_like_this">المزيد مثل هذا</string>
     <string name="btn_continue_series">متابعة S%1$d E%2$d</string>
     <string name="btn_watch_live">شاهد مباشر</string>
     <string name="btn_open_in_live_tv">فتح في البث المباشر</string>
@@ -191,21 +195,26 @@
     <string name="channel_today_lineup">جدول اليوم</string>
     <string name="channel_related">قنوات ذات صلة</string>
 
-    <string name="home_continue_watching">متابعة المشاهدة</string>
+    <string name="home_continue_watching">Continue watching</string>
     <string name="home_trending">الرائج الآن</string>
-    <string name="home_top_10_egypt">Top 10 in Egypt</string>
+    <string name="home_top_10_egypt">⚡ Top 10 in Egypt</string>
     <string name="home_live_channels">القنوات المباشرة</string>
     <string name="home_live_now">مباشر الآن</string>
     <string name="home_popular_movies">أفلام شائعة</string>
     <string name="home_recently_added">أضيف مؤخراً</string>
     <string name="home_favorites">المفضلة</string>
-    <string name="home_new_releases">الإصدارات الجديدة</string>
+    <string name="home_new_releases">New Releases</string>
+    <string name="home_recommended_series">Recommended Series</string>
+    <string name="home_arabic_subtitles">With Arabic Subtitles</string>
     <string name="home_popular_series">مسلسلات شائعة</string>
     <string name="home_mood_row_title">تصفح حسب المزاج</string>
     <string name="home_spotlight">YANGO MOVIES</string>
     <string name="yango_movies_label">YANGO MOVIES</string>
     <string name="btn_continue_watching">متابعة المشاهدة</string>
     <string name="home_continue_progress">تمت مشاهدة %1$d%%</string>
+    <string name="home_remaining_minutes">%1$d min</string>
+    <string name="home_remaining_hours_minutes">%1$d h %2$d min</string>
+    <string name="home_remaining_hours_only">%1$d h</string>
     <string name="badge_top_label">TOP</string>
     <string name="badge_top_number">10</string>
     <string name="mood_action">أكشن</string>
@@ -272,8 +281,11 @@
     <string name="details_languages">اللغات المتاحة</string>
     <string name="details_subtitles">الترجمة</string>
     <string name="details_season">الموسم %1$d</string>
+    <string name="details_season_episodes_count">الموسم %1$d، %2$d حلقة</string>
+    <string name="details_episode_label">الحلقة %1$d</string>
     <string name="details_episode_number">ح%1$d</string>
     <string name="details_episode_duration">%1$d د</string>
+    <string name="details_episode_duration_minutes">%1$d دقيقة</string>
     <string name="details_runtime_hours_minutes">%1$d س %2$d د</string>
     <string name="details_rating">التقييم %1$s</string>
     <string name="feedback_rating_blocked">هذا العنوان يتجاوز حد التصنيف للملف الشخصي</string>
@@ -288,6 +300,7 @@
     <string name="livetv_on_now">يُعرض الآن</string>
     <string name="livetv_view_guide">عرض الدليل الكامل ›</string>
     <string name="livetv_next_at">Next at %1$s</string>
+    <string name="livetv_minutes_left">%1$d minutes left</string>
     <string name="livetv_tv_guide">دليل التلفاز</string>
     <string name="livetv_program_time">%1$s – %2$s  ·  %3$s</string>
     <string name="livetv_pin_category">أدخل PIN لتغيير الفئة</string>

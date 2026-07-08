@@ -22,16 +22,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -92,10 +92,9 @@ fun CinemaNavRail(
         RailEntry(NavItem.Search, Icons.Default.Search, onSearchClick),
         RailEntry(NavItem.Home, Icons.Default.Home) { onNavigate(NavItem.Home) },
         RailEntry(NavItem.Movies, Icons.Default.Movie) { onNavigate(NavItem.Movies) },
-        RailEntry(NavItem.MyList, Icons.Default.Favorite) { onNavigate(NavItem.MyList) },
+        RailEntry(NavItem.Series, Icons.Default.VideoLibrary) { onNavigate(NavItem.Series) },
         RailEntry(NavItem.LiveTv, Icons.Default.LiveTv) { onNavigate(NavItem.LiveTv) },
-        RailEntry(NavItem.Series, Icons.Default.LibraryMusic) { onNavigate(NavItem.Series) },
-        RailEntry(NavItem.Settings, Icons.Default.PhoneAndroid) { onSettingsClick() },
+        RailEntry(NavItem.MyList, Icons.Default.Bookmarks) { onNavigate(NavItem.MyList) },
     )
 
     Column(
@@ -220,27 +219,29 @@ private fun RailItemRow(
         focusScale = 1.0f,
         contentDescription = label,
     ) { focused ->
-        val contentColor = when {
-            selected -> CinemaColors.White
-            focused -> CinemaColors.White
-            else -> CinemaColors.TextMuted
-        }
+        val isActive = selected || focused
+        val contentColor = if (isActive) CinemaColors.White else CinemaColors.TextMuted
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(42.dp)
-                .background(CinemaColors.Background.copy(alpha = 0f), CinemaShapes.Small),
-            contentAlignment = Alignment.Center,
+                .heightIn(min = 48.dp)
+                .padding(vertical = 4.dp),
+            contentAlignment = if (expanded) Alignment.CenterStart else Alignment.Center,
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = if (expanded) 54.dp else 0.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = if (expanded) Arrangement.spacedBy(12.dp) else Arrangement.Center,
+                horizontalArrangement = if (expanded) {
+                    Arrangement.spacedBy(20.dp)
+                } else {
+                    Arrangement.Center
+                },
             ) {
-                Row(
-                    modifier = Modifier.padding(start = if (expanded) 54.dp else 0.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = if (expanded) Arrangement.spacedBy(20.dp) else Arrangement.Center,
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Icon(
                         imageVector = icon,
@@ -248,29 +249,30 @@ private fun RailItemRow(
                         tint = contentColor,
                         modifier = Modifier.size(28.dp),
                     )
-                    AnimatedVisibility(
-                        visible = expanded,
-                        enter = fadeIn(tween(150)) + expandHorizontally(tween(180)),
-                        exit = fadeOut(tween(100)) + shrinkHorizontally(tween(140)),
-                    ) {
-                        Text(
-                            text = label,
-                            maxLines = 1,
-                            style = MaterialTheme.typography.titleSmall.copy(
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                color = contentColor,
-                            ),
+                    if (isActive) {
+                        Box(
+                            modifier = Modifier
+                                .size(width = 34.dp, height = 3.dp)
+                                .background(CinemaColors.Accent),
                         )
+                    } else {
+                        Spacer(modifier = Modifier.height(3.dp))
                     }
                 }
-            }
-            if (selected) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .size(width = 34.dp, height = 3.dp)
-                        .background(CinemaColors.Accent),
-                )
+                AnimatedVisibility(
+                    visible = expanded,
+                    enter = fadeIn(tween(150)) + expandHorizontally(tween(180)),
+                    exit = fadeOut(tween(100)) + shrinkHorizontally(tween(140)),
+                ) {
+                    Text(
+                        text = label,
+                        maxLines = 1,
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            color = contentColor,
+                        ),
+                    )
+                }
             }
         }
     }
@@ -294,52 +296,65 @@ fun CinemaScreen(
     content: @Composable () -> Unit,
 ) {
     val showRail = showTopNav && selectedNavItem != null && onNavigate != null
+    val shellImmersion = remember { ShellImmersionState() }
     var railExpanded by remember { mutableStateOf(false) }
+    val hideNavRail = shellImmersion.hideNavRail
     val scrimAlpha by animateFloatAsState(
-        targetValue = if (railExpanded) 0.4f else 0f,
+        targetValue = if (railExpanded && !hideNavRail) 0.4f else 0f,
         animationSpec = tween(durationMillis = 200),
         label = "railScrim",
     )
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(CinemaColors.Background),
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.TopStart,
-            ) {
-                content()
-            }
-        }
-
-        if (showRail) {
-            if (scrimAlpha > 0f) {
+    CompositionLocalProvider(LocalShellImmersion provides shellImmersion) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(CinemaColors.Background),
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .zIndex(1f)
-                        .background(CinemaColors.Background.copy(alpha = scrimAlpha)),
-                )
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.TopStart,
+                ) {
+                    content()
+                }
             }
 
-            CinemaNavRail(
-                selected = selectedNavItem!!,
-                onNavigate = onNavigate!!,
-                onSearchClick = onSearchClick ?: { onNavigate(NavItem.Search) },
-                onSettingsClick = onSettingsClick ?: { onNavigate(NavItem.Settings) },
-                onProfileClick = onProfileClick ?: { onNavigate(NavItem.Profile) },
-                expanded = railExpanded,
-                onExpandedChange = { railExpanded = it },
-                onExitRight = onRailExitRight,
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .zIndex(2f),
-            )
+            if (showRail) {
+                if (scrimAlpha > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .zIndex(1f)
+                            .background(CinemaColors.Background.copy(alpha = scrimAlpha)),
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible = !hideNavRail,
+                    enter = fadeIn(tween(180)) + expandHorizontally(tween(200), expandFrom = Alignment.Start),
+                    exit = fadeOut(tween(140)) + shrinkHorizontally(tween(180), shrinkTowards = Alignment.Start),
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .zIndex(2f),
+                ) {
+                    CinemaNavRail(
+                        selected = selectedNavItem!!,
+                        onNavigate = onNavigate!!,
+                        onSearchClick = onSearchClick ?: { onNavigate(NavItem.Search) },
+                        onSettingsClick = onSettingsClick ?: { onNavigate(NavItem.Settings) },
+                        onProfileClick = onProfileClick ?: { onNavigate(NavItem.Profile) },
+                        expanded = railExpanded,
+                        onExpandedChange = { expanded ->
+                            railExpanded = expanded
+                            if (expanded) shellImmersion.showNavRail()
+                        },
+                        onExitRight = onRailExitRight,
+                    )
+                }
+            }
         }
     }
 }

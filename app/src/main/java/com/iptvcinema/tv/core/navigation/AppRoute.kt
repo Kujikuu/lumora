@@ -23,7 +23,9 @@ object AppRoute {
     const val MOVIES = "movies?filter={filter}"
     const val SERIES = "series?filter={filter}"
     const val MOVIE_DETAILS = "movie_details/{movieId}"
+    const val MOVIE_RELATED = "movie_related/{movieId}"
     const val SERIES_DETAILS = "series_details/{seriesId}"
+    const val SERIES_EPISODES = "series_episodes/{seriesId}"
     const val CHANNEL_DETAILS = "channel_details/{channelId}"
     const val PLAYER = "player/{contentId}/{contentType}?seriesId={seriesId}&resumePositionMs={resumePositionMs}"
     const val SEARCH = "search"
@@ -41,7 +43,9 @@ object AppRoute {
         "profile_selection?mode=${mode.name}"
 
     fun movieDetails(movieId: String) = "movie_details/$movieId"
+    fun movieRelated(movieId: String) = "movie_related/$movieId"
     fun seriesDetails(seriesId: String) = "series_details/$seriesId"
+    fun seriesEpisodes(seriesId: String) = "series_episodes/$seriesId"
     fun channelDetails(channelId: String) = "channel_details/$channelId"
     fun player(
         contentId: String,

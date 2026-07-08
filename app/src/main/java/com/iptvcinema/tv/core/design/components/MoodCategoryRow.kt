@@ -98,7 +98,7 @@ fun MoodCategoryRow(
                             }
                         },
                     onClick = { onCategoryClick(category) },
-                    shape = CinemaShapes.Medium,
+                    shape = CinemaShapes.Card,
                     contentDescription = stringResource(category.labelRes),
                 ) { _ ->
                     Box(
@@ -108,7 +108,7 @@ fun MoodCategoryRow(
                                 Brush.linearGradient(
                                     listOf(Color(category.gradientStartArgb), Color(category.gradientEndArgb)),
                                 ),
-                                CinemaShapes.Medium,
+                                CinemaShapes.Card,
                             ),
                         contentAlignment = Alignment.Center,
                     ) {

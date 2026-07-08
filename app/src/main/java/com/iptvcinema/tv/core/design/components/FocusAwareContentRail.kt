@@ -13,11 +13,14 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -57,6 +60,22 @@ fun FocusAwareContentRail(
     val railHeight = variant.railHeight()
     val focusOverflow = CinemaSpacing.FocusScaleOverflow
     var hadFocusInRail by remember(title) { mutableStateOf(false) }
+    var focusedItemIndex by remember(title) { mutableIntStateOf(0) }
+    val shellImmersion = LocalShellImmersion.current
+    val contentStart = shellContentStart()
+
+    LaunchedEffect(listState, shellImmersion) {
+        if (shellImmersion == null) return@LaunchedEffect
+        snapshotFlow {
+            Triple(
+                listState.firstVisibleItemIndex,
+                listState.firstVisibleItemScrollOffset,
+                focusedItemIndex,
+            )
+        }.collect { (_, _, index) ->
+            shellImmersion.updateRailScroll(listState, index)
+        }
+    }
 
     Column(
         modifier = modifier
@@ -68,7 +87,7 @@ fun FocusAwareContentRail(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    start = CinemaSpacing.NavRailWidth + 16.dp,
+                    start = contentStart,
                     end = CinemaSpacing.ScreenPadding,
                 ),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -97,7 +116,7 @@ fun FocusAwareContentRail(
                 .padding(vertical = focusOverflow / 2)
                 .onFocusChanged { if (!it.hasFocus) hadFocusInRail = false },
             contentPadding = PaddingValues(
-                start = CinemaSpacing.NavRailWidth + 16.dp,
+                start = contentStart,
                 end = CinemaSpacing.ScreenPadding,
             ),
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
@@ -116,8 +135,14 @@ fun FocusAwareContentRail(
                     onCardClick = { onCardClick(item) },
                     onFocusChanged = { focused ->
                         if (focused) {
+                            focusedItemIndex = index
                             onItemFocused(item)
                             onFocusedItemIndexChange(index)
+                            shellImmersion?.updateRailImmersion(
+                                hasRailFocus = true,
+                                focusedItemIndex = index,
+                                listState = listState,
+                            )
                             scope.launch {
                                 val enteringRail = !hadFocusInRail
                                 hadFocusInRail = true

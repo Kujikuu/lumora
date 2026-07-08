@@ -45,7 +45,7 @@ fun SkeletonBox(
         modifier = modifier
             .then(if (width != Dp.Unspecified) Modifier.width(width) else Modifier)
             .height(height)
-            .clip(CinemaShapes.Small)
+            .clip(CinemaShapes.Card)
             .background(CinemaColors.TextPrimary.copy(alpha = alpha)),
     )
 }

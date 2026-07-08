@@ -6,8 +6,8 @@
     <!-- Navigation -->
     <string name="nav_home">Watch</string>
     <string name="nav_live_tv">Live TV</string>
-    <string name="nav_movies">Crunchyroll</string>
-    <string name="nav_series">Music</string>
+    <string name="nav_movies">Movies</string>
+    <string name="nav_series">Series</string>
     <string name="nav_sports">Sports</string>
     <string name="nav_kids">Kids</string>
     <string name="nav_my_list">My List</string>
@@ -53,6 +53,10 @@
     <string name="btn_add_to_favorites">Add to Favorites</string>
     <string name="btn_favorited">Favorited</string>
     <string name="btn_play_first">Play First</string>
+    <string name="btn_play_series">Play series</string>
+    <string name="btn_play_movie">Play movie</string>
+    <string name="btn_choose_episode">Choose episode</string>
+    <string name="btn_more_like_this">More like this</string>
     <string name="btn_continue_series">Continue S%1$d E%2$d</string>
     <string name="btn_watch_live">Watch Live</string>
     <string name="btn_open_in_live_tv">Open in Live TV</string>
@@ -202,21 +206,26 @@
     <string name="channel_related">Related Channels</string>
 
     <!-- Home / Browse -->
-    <string name="home_continue_watching">Continue Watching</string>
+    <string name="home_continue_watching">Continue watching</string>
     <string name="home_trending">Trending Now</string>
-    <string name="home_top_10_egypt">Top 10 in Egypt</string>
+    <string name="home_top_10_egypt">⚡ Top 10 in Egypt</string>
     <string name="home_live_channels">Live Channels</string>
     <string name="home_live_now">Live Now</string>
     <string name="home_popular_movies">Popular Movies</string>
     <string name="home_recently_added">Recently Added</string>
     <string name="home_favorites">Favorites</string>
     <string name="home_new_releases">New Releases</string>
+    <string name="home_recommended_series">Recommended Series</string>
+    <string name="home_arabic_subtitles">With Arabic Subtitles</string>
     <string name="home_popular_series">Popular Series</string>
     <string name="home_mood_row_title">Browse by Mood</string>
     <string name="home_spotlight">YANGO MOVIES</string>
     <string name="yango_movies_label">YANGO MOVIES</string>
     <string name="btn_continue_watching">Continue Watching</string>
     <string name="home_continue_progress">%1$d%% watched</string>
+    <string name="home_remaining_minutes">%1$d min</string>
+    <string name="home_remaining_hours_minutes">%1$d h %2$d min</string>
+    <string name="home_remaining_hours_only">%1$d h</string>
     <string name="badge_top_label">TOP</string>
     <string name="badge_top_number">10</string>
     <string name="mood_action">Action</string>
@@ -286,8 +295,11 @@
     <string name="details_languages">Available Languages</string>
     <string name="details_subtitles">Subtitles</string>
     <string name="details_season">Season %1$d</string>
+    <string name="details_season_episodes_count">Season %1$d, %2$d episodes</string>
+    <string name="details_episode_label">Episode %1$d</string>
     <string name="details_episode_number">E%1$d</string>
     <string name="details_episode_duration">%1$dm</string>
+    <string name="details_episode_duration_minutes">%1$d min</string>
     <string name="details_runtime_hours_minutes">%1$dh %2$dm</string>
     <string name="details_rating">Rating %1$s</string>
     <string name="feedback_rating_blocked">This title exceeds the profile rating limit</string>
@@ -303,6 +315,7 @@
     <string name="livetv_on_now">ON NOW</string>
     <string name="livetv_view_guide">View All Guide ›</string>
     <string name="livetv_next_at">Next at %1$s</string>
+    <string name="livetv_minutes_left">%1$d minutes left</string>
     <string name="livetv_tv_guide">TV Guide</string>
     <string name="livetv_program_time">%1$s – %2$s  ·  %3$s</string>
     <string name="livetv_pin_category">Enter PIN to change category</string>

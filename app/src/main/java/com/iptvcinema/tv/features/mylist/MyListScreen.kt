@@ -12,13 +12,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -52,6 +57,8 @@ import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
 import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
+import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -61,6 +68,15 @@ fun MyListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val contentFocus = remember { FocusRequester() }
+    val focusState = rememberScreenFocusState("my_list")
+    val scope = rememberCoroutineScope()
+
+    val exitRailToContent: () -> Unit = {
+        scope.launch {
+            runCatching { contentFocus.requestFocus() }
+        }
+    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -77,6 +93,7 @@ fun MyListScreen(
     MainShellScaffold(
         navController = navController,
         selectedNavItem = NavItem.MyList,
+        onRailExitRight = exitRailToContent,
     ) {
         when (val state = uiState) {
             MyListUiState.Loading -> {
@@ -101,6 +118,11 @@ fun MyListScreen(
                 )
             }
             is MyListUiState.Ready -> {
+                LaunchedEffect(state.favorites.isNotEmpty(), focusState.initialFocusHandled) {
+                    if (state.favorites.isNotEmpty() && !focusState.initialFocusHandled) {
+                        focusState.requestInitialFocus(contentFocus)
+                    }
+                }
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -120,9 +142,9 @@ fun MyListScreen(
                     } else {
                         Text(
                             text = stringResource(R.string.btn_watch_later),
-                            style = MaterialTheme.typography.titleMedium.copy(
+                            style = MaterialTheme.typography.labelLarge.copy(
                                 color = CinemaColors.White,
-                                fontWeight = FontWeight.Black,
+                                fontWeight = FontWeight.Medium,
                             ),
                             modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
                         )
@@ -134,7 +156,9 @@ fun MyListScreen(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             item {
-                                AllAddedCard()
+                                AllAddedCard(
+                                    modifier = Modifier.focusRequester(contentFocus),
+                                )
                             }
                             items(state.favorites, key = { it.id }) { favorite ->
                                 MyCollectionTile(
@@ -153,13 +177,13 @@ fun MyListScreen(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun AllAddedCard() {
+private fun AllAddedCard(modifier: Modifier = Modifier) {
     FocusableCinemaCard(
-        modifier = Modifier
+        modifier = modifier
             .width(270.dp)
             .height(153.dp),
         onClick = {},
-        shape = CinemaShapes.Small,
+        shape = CinemaShapes.Card,
         focusScale = 1.02f,
     ) {
         Column(
@@ -171,7 +195,7 @@ private fun AllAddedCard() {
             verticalArrangement = Arrangement.Center,
         ) {
             Icon(
-                imageVector = Icons.Default.FavoriteBorder,
+                imageVector = Icons.Default.Bookmarks,
                 contentDescription = null,
                 tint = CinemaColors.Background,
                 modifier = Modifier.width(29.dp).height(29.dp),
@@ -201,14 +225,14 @@ private fun MyCollectionTile(
             .height(141.dp),
         onClick = onClick,
         onLongClick = onLongClick,
-        shape = CinemaShapes.Small,
+        shape = CinemaShapes.Card,
         focusScale = 1.02f,
         contentDescription = data.title,
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clip(CinemaShapes.Small)
+                .clip(CinemaShapes.Card)
                 .background(CinemaColors.Surface),
         ) {
             CinemaAsyncImage(

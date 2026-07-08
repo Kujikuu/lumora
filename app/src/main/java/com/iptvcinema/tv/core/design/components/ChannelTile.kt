@@ -50,20 +50,20 @@ fun ChannelTile(
     FocusableCinemaCard(
         modifier = modifier.width(172.dp),
         onClick = onClick,
-        shape = CinemaShapes.Medium,
+        shape = CinemaShapes.Card,
         contentDescription = data.channelName,
         defaultBorderWidth = 0.dp,
     ) { focused ->
         Column(
             modifier = Modifier
-                .clip(CinemaShapes.Medium)
+                .clip(CinemaShapes.Card)
                 .background(if (focused) CinemaColors.SurfaceSoft else Color.Transparent),
         ) {
             Box(
                 modifier = Modifier
                     .width(172.dp)
                     .height(106.dp)
-                    .clip(CinemaShapes.Medium)
+                    .clip(CinemaShapes.Card)
                     .background(CinemaColors.SurfaceSoft),
             ) {
                 CinemaAsyncImage(

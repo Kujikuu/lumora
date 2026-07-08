@@ -6,8 +6,6 @@ import com.iptvcinema.tv.core.datastore.StartupDestination
 import com.iptvcinema.tv.core.datastore.StartupSessionBootstrap
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,16 +20,8 @@ class SplashViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val sessionStateDeferred = async { startupSessionBootstrap.prepareSessionState() }
-            val minimumSplashDeferred = async { delay(SPLASH_MIN_DURATION_MS) }
-
-            val sessionState = sessionStateDeferred.await()
-            minimumSplashDeferred.await()
+            val sessionState = startupSessionBootstrap.prepareSessionState()
             _startupDestination.value = sessionState.resolveStartupDestination()
         }
-    }
-
-    companion object {
-        private const val SPLASH_MIN_DURATION_MS = 2000L
     }
 }

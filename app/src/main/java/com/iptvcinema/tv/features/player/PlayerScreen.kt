@@ -6,12 +6,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import android.view.ViewGroup
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,6 +37,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
@@ -265,18 +271,36 @@ fun PlayerScreen(
     }
     val channelLogoUrl = if (playerState.isLive) playbackRequest?.posterUrl else null
     val layoutDirection = LocalLayoutDirection.current
+    val activity = LocalActivity.current
     val sidebarSlideOffset = if (layoutDirection == LayoutDirection.Rtl) {
         { fullWidth: Int -> -fullWidth }
     } else {
         { fullWidth: Int -> fullWidth }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 48.dp)
-                .onPreviewKeyEvent { event ->
+    DisposableEffect(activity) {
+        val window = activity?.window
+        if (window != null) {
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            val insetsController = WindowInsetsControllerCompat(window, window.decorView)
+            insetsController.hide(WindowInsetsCompat.Type.systemBars())
+            insetsController.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+        onDispose {
+            if (window != null) {
+                WindowCompat.setDecorFitsSystemWindows(window, true)
+                WindowInsetsControllerCompat(window, window.decorView)
+                    .show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CinemaColors.Background)
+            .onPreviewKeyEvent { event ->
                     if (trackPickerOpen || pickerOpen) return@onPreviewKeyEvent false
                     if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
 
@@ -308,8 +332,13 @@ fun PlayerScreen(
                     },
                 factory = { context ->
                     PlayerView(context).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                        )
                         useController = false
                         setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     }
                 },
                 update = { playerView ->
@@ -511,7 +540,6 @@ fun PlayerScreen(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-        }
     }
 }
 

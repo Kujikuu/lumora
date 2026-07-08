@@ -75,25 +75,21 @@ fun PosterCard(
         modifier
     }
 
-    FocusableCinemaCard(
-        modifier = cardModifier,
-        onClick = onClick,
-        onLongClick = onLongClick,
-        shape = CinemaShapes.Medium,
-        contentDescription = data.title,
-        defaultBorderWidth = 0.dp,
-        focusScale = focusScale,
-    ) { focused ->
-        Column(
-            modifier = Modifier
-                .clip(CinemaShapes.Medium)
-                .background(if (focused) CinemaColors.SurfaceSoft else Color.Transparent),
+    Column(modifier = cardModifier) {
+        FocusableCinemaCard(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onClick,
+            onLongClick = onLongClick,
+            shape = CinemaShapes.Card,
+            contentDescription = data.title,
+            defaultBorderWidth = 0.dp,
+            focusScale = focusScale,
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(imageAspectRatio)
-                    .clip(CinemaShapes.Medium)
+                    .clip(CinemaShapes.Card)
                     .background(CinemaColors.Surface),
             ) {
                 CinemaAsyncImage(
@@ -161,19 +157,19 @@ fun PosterCard(
                     }
                 }
             }
-            Text(
-                text = data.title,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    color = if (focused) CinemaColors.White else CinemaColors.TextPrimary,
-                    fontWeight = if (focused) FontWeight.Bold else FontWeight.Medium,
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = CinemaSpacing.CardGap, vertical = 7.dp),
-            )
         }
+        Text(
+            text = data.title,
+            style = MaterialTheme.typography.labelSmall.copy(
+                color = CinemaColors.TextPrimary,
+                fontWeight = FontWeight.Medium,
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = CinemaSpacing.CardGap, vertical = 7.dp),
+        )
     }
 }
 

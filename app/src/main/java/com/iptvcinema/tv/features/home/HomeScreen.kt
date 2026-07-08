@@ -9,6 +9,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -34,15 +35,12 @@ import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.EmptyState
 import com.iptvcinema.tv.core.design.components.ExpandedPosterCardVariant
-import com.iptvcinema.tv.core.design.components.FocusAwareChannelRail
 import com.iptvcinema.tv.core.design.components.FocusAwareContentRail
 import com.iptvcinema.tv.core.design.components.HeroCarousel
-import com.iptvcinema.tv.core.design.components.MoodCategoryRow
 import com.iptvcinema.tv.core.design.components.Top10Rail
+import com.iptvcinema.tv.core.design.components.LocalShellImmersion
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.home.HomeContentCard
-import com.iptvcinema.tv.core.model.home.MoodBrowseTarget
-import com.iptvcinema.tv.core.model.home.MoodCategory
 import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
 import com.iptvcinema.tv.core.navigation.MainShellScaffold
@@ -54,12 +52,10 @@ import kotlinx.coroutines.launch
 
 private object HomeSections {
     const val CONTINUE = "home_continue"
-    const val LIVE_NOW = "home_live_now"
-    const val POPULAR = "home_popular"
+    const val RECOMMENDED = "home_recommended"
+    const val NEW_RELEASES = "home_new_releases"
     const val TRENDING = "home_trending"
-    const val SERIES = "home_series"
-    const val RECENT = "home_recent"
-    const val FAVORITES = "home_favorites"
+    const val ARABIC_SUBTITLES = "home_arabic_subtitles"
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -77,6 +73,7 @@ fun HomeScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
+    val shellImmersion = LocalShellImmersion.current
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -93,14 +90,18 @@ fun HomeScreen(
     MainShellBackHandler(navController = navController, isHomeTab = true)
 
     val hasHeroFocusTarget = uiState.heroMovies.isNotEmpty()
-    val hasFallbackFocusTarget = uiState.continueWatching.isNotEmpty() ||
-        uiState.liveNow.isNotEmpty() ||
-        uiState.popularMovies.isNotEmpty() ||
-        uiState.featuredSeries.isNotEmpty() ||
-        uiState.recentlyAdded.isNotEmpty() ||
-        uiState.favorites.isNotEmpty()
+    val hasContinueWatching = uiState.continueWatching.isNotEmpty()
+    val hasRecommendedSeries = uiState.featuredSeries.isNotEmpty()
+    val hasNewReleases = uiState.recentlyAdded.isNotEmpty()
+    val hasTop10 = uiState.trending.isNotEmpty()
+    val hasArabicSubtitles = uiState.popularMovies.isNotEmpty()
+    val hasAnyRail = hasContinueWatching || hasRecommendedSeries || hasNewReleases ||
+        hasTop10 || hasArabicSubtitles
+    val hasFallbackFocusTarget = hasAnyRail
+
     val focusHeroOrFirstRail: () -> Unit = {
         scope.launch {
+            shellImmersion?.showNavRail()
             scrollState.scrollTo(0)
             val target = if (hasHeroFocusTarget) watchNowFocus else fallbackContentFocus
             runCatching { target.requestFocus() }
@@ -122,6 +123,15 @@ fun HomeScreen(
         }
     } else {
         Modifier
+    }
+
+    val railFocusCounter = remember { mutableIntStateOf(0) }
+    railFocusCounter.intValue = 0
+    fun consumeRailFocus(): Pair<Modifier, FocusRequester?> {
+        val index = railFocusCounter.intValue++
+        val upModifier = if (index == 0) returnToHeroOnUp else Modifier
+        val focusRequester = if (!hasHeroFocusTarget && index == 0) fallbackContentFocus else null
+        return upModifier to focusRequester
     }
 
     LaunchedEffect(uiState.loadState) {
@@ -194,15 +204,15 @@ fun HomeScreen(
                     )
                 }
 
-                if (uiState.continueWatching.isNotEmpty()) {
+                if (hasContinueWatching) {
+                    val (railModifier, railFocus) = consumeRailFocus()
                     FocusAwareContentRail(
-                        modifier = returnToHeroOnUp,
+                        modifier = railModifier,
                         title = stringResource(R.string.home_continue_watching),
                         items = uiState.continueWatching,
                         variant = ExpandedPosterCardVariant.Landscape,
-                        countLabel = uiState.continueWatching.size.toString(),
                         sectionId = HomeSections.CONTINUE,
-                        firstItemFocusRequester = if (!hasHeroFocusTarget) fallbackContentFocus else null,
+                        firstItemFocusRequester = railFocus,
                         onItemFocused = firstRailFocused,
                         onWatchNow = { card -> navigateToPlayer(navController, card) },
                         onAddToList = { card -> viewModel.toggleFavorite(card) },
@@ -211,47 +221,15 @@ fun HomeScreen(
                     )
                 }
 
-                if (uiState.liveNow.isNotEmpty()) {
-                    FocusAwareChannelRail(
-                        modifier = if (uiState.continueWatching.isEmpty()) returnToHeroOnUp else Modifier,
-                        title = stringResource(R.string.home_live_now),
-                        items = uiState.liveNow,
-                        countLabel = uiState.liveNow.size.toString(),
-                        firstItemFocusRequester = if (
-                            !hasHeroFocusTarget && uiState.continueWatching.isEmpty()
-                        ) {
-                            fallbackContentFocus
-                        } else {
-                            null
-                        },
-                        onChannelClick = { channel ->
-                            channel.id?.let { channelId ->
-                                navController.navigate(AppRoute.player(channelId, "live"))
-                            } ?: navController.navigate(AppRoute.liveTv())
-                        },
-                    )
-                }
-
-                if (uiState.popularMovies.isNotEmpty()) {
+                if (hasRecommendedSeries) {
+                    val (railModifier, railFocus) = consumeRailFocus()
                     FocusAwareContentRail(
-                        modifier = if (
-                            uiState.continueWatching.isEmpty() &&
-                            uiState.liveNow.isEmpty()
-                        ) returnToHeroOnUp else Modifier,
-                        title = stringResource(R.string.home_popular_movies),
-                        items = uiState.popularMovies,
-                        variant = ExpandedPosterCardVariant.Landscape,
-                        countLabel = uiState.popularMovies.size.toString(),
-                        sectionId = HomeSections.POPULAR,
-                        firstItemFocusRequester = if (
-                            !hasHeroFocusTarget &&
-                            uiState.continueWatching.isEmpty() &&
-                            uiState.liveNow.isEmpty()
-                        ) {
-                            fallbackContentFocus
-                        } else {
-                            null
-                        },
+                        modifier = railModifier,
+                        title = stringResource(R.string.home_recommended_series),
+                        items = uiState.featuredSeries,
+                        variant = ExpandedPosterCardVariant.LandscapePoster,
+                        sectionId = HomeSections.RECOMMENDED,
+                        firstItemFocusRequester = railFocus,
                         onWatchNow = { card -> navigateToPlayer(navController, card) },
                         onAddToList = { card -> viewModel.toggleFavorite(card) },
                         onFavorite = { card -> viewModel.toggleFavorite(card) },
@@ -259,127 +237,53 @@ fun HomeScreen(
                     )
                 }
 
-                if (uiState.trending.isNotEmpty()) {
+                if (hasNewReleases) {
+                    val (railModifier, railFocus) = consumeRailFocus()
+                    FocusAwareContentRail(
+                        modifier = railModifier,
+                        title = stringResource(R.string.home_new_releases),
+                        items = uiState.recentlyAdded,
+                        variant = ExpandedPosterCardVariant.LandscapePoster,
+                        sectionId = HomeSections.NEW_RELEASES,
+                        firstItemFocusRequester = railFocus,
+                        onWatchNow = { card -> navigateToPlayer(navController, card) },
+                        onAddToList = { card -> viewModel.toggleFavorite(card) },
+                        onFavorite = { card -> viewModel.toggleFavorite(card) },
+                        onCardClick = { card -> navigateToDetails(navController, card) },
+                    )
+                }
+
+                if (hasTop10) {
+                    val (railModifier, railFocus) = consumeRailFocus()
                     Top10Rail(
-                        modifier = if (
-                            uiState.continueWatching.isEmpty() &&
-                            uiState.liveNow.isEmpty() &&
-                            uiState.popularMovies.isEmpty()
-                        ) returnToHeroOnUp else Modifier,
+                        modifier = railModifier,
                         title = stringResource(R.string.home_top_10_egypt),
                         items = uiState.trending,
+                        firstItemFocusRequester = railFocus,
                         onCardClick = { card -> navigateToDetails(navController, card) },
                     )
                 }
 
-                if (uiState.featuredSeries.isNotEmpty()) {
+                if (hasArabicSubtitles) {
+                    val (railModifier, railFocus) = consumeRailFocus()
                     FocusAwareContentRail(
-                        modifier = if (
-                            uiState.continueWatching.isEmpty() &&
-                            uiState.liveNow.isEmpty() &&
-                            uiState.popularMovies.isEmpty()
-                        ) returnToHeroOnUp else Modifier,
-                        title = stringResource(R.string.home_popular_series),
-                        items = uiState.featuredSeries,
-                        variant = ExpandedPosterCardVariant.Landscape,
-                        countLabel = uiState.featuredSeries.size.toString(),
-                        sectionId = HomeSections.SERIES,
-                        firstItemFocusRequester = if (
-                            !hasHeroFocusTarget &&
-                            uiState.continueWatching.isEmpty() &&
-                            uiState.liveNow.isEmpty() &&
-                            uiState.popularMovies.isEmpty()
-                        ) {
-                            fallbackContentFocus
-                        } else {
-                            null
-                        },
+                        modifier = railModifier,
+                        title = stringResource(R.string.home_arabic_subtitles),
+                        items = uiState.popularMovies,
+                        variant = ExpandedPosterCardVariant.LandscapePoster,
+                        sectionId = HomeSections.ARABIC_SUBTITLES,
+                        firstItemFocusRequester = railFocus,
                         onWatchNow = { card -> navigateToPlayer(navController, card) },
                         onAddToList = { card -> viewModel.toggleFavorite(card) },
                         onFavorite = { card -> viewModel.toggleFavorite(card) },
                         onCardClick = { card -> navigateToDetails(navController, card) },
                     )
                 }
-
-                if (uiState.recentlyAdded.isNotEmpty()) {
-                    FocusAwareContentRail(
-                        modifier = if (
-                            uiState.continueWatching.isEmpty() &&
-                            uiState.liveNow.isEmpty() &&
-                            uiState.popularMovies.isEmpty() &&
-                            uiState.featuredSeries.isEmpty()
-                        ) returnToHeroOnUp else Modifier,
-                        title = stringResource(R.string.home_recently_added),
-                        items = uiState.recentlyAdded,
-                        variant = ExpandedPosterCardVariant.Landscape,
-                        countLabel = uiState.recentlyAdded.size.toString(),
-                        sectionId = HomeSections.RECENT,
-                        firstItemFocusRequester = if (
-                            !hasHeroFocusTarget &&
-                            uiState.continueWatching.isEmpty() &&
-                            uiState.liveNow.isEmpty() &&
-                            uiState.popularMovies.isEmpty() &&
-                            uiState.featuredSeries.isEmpty()
-                        ) {
-                            fallbackContentFocus
-                        } else {
-                            null
-                        },
-                        onWatchNow = { card -> navigateToPlayer(navController, card) },
-                        onAddToList = { card -> viewModel.toggleFavorite(card) },
-                        onFavorite = { card -> viewModel.toggleFavorite(card) },
-                        onCardClick = { card -> navigateToDetails(navController, card) },
-                    )
-                }
-
-                if (uiState.favorites.isNotEmpty()) {
-                    FocusAwareContentRail(
-                        modifier = if (
-                            uiState.continueWatching.isEmpty() &&
-                            uiState.liveNow.isEmpty() &&
-                            uiState.popularMovies.isEmpty() &&
-                            uiState.featuredSeries.isEmpty() &&
-                            uiState.recentlyAdded.isEmpty()
-                        ) returnToHeroOnUp else Modifier,
-                        title = stringResource(R.string.home_favorites),
-                        items = uiState.favorites,
-                        variant = ExpandedPosterCardVariant.Landscape,
-                        countLabel = uiState.favorites.size.toString(),
-                        sectionId = HomeSections.FAVORITES,
-                        firstItemFocusRequester = if (
-                            !hasHeroFocusTarget &&
-                            uiState.continueWatching.isEmpty() &&
-                            uiState.liveNow.isEmpty() &&
-                            uiState.popularMovies.isEmpty() &&
-                            uiState.featuredSeries.isEmpty() &&
-                            uiState.recentlyAdded.isEmpty()
-                        ) {
-                            fallbackContentFocus
-                        } else {
-                            null
-                        },
-                        onWatchNow = { card -> navigateToPlayer(navController, card) },
-                        onAddToList = { card -> viewModel.toggleFavorite(card) },
-                        onFavorite = { card -> viewModel.toggleFavorite(card) },
-                        onCardClick = { card -> navigateToDetails(navController, card) },
-                    )
-                }
-
-                MoodCategoryRow(
-                    title = stringResource(R.string.home_mood_row_title),
-                    categories = uiState.moodCategories,
-                    onCategoryClick = { category -> navigateMoodCategory(navController, category) },
-                )
 
                 if (
                     uiState.loadState == CatalogLoadState.Ready &&
                     heroMovies.isEmpty() &&
-                    uiState.continueWatching.isEmpty() &&
-                    uiState.liveNow.isEmpty() &&
-                    uiState.popularMovies.isEmpty() &&
-                    uiState.featuredSeries.isEmpty() &&
-                    uiState.recentlyAdded.isEmpty() &&
-                    uiState.favorites.isEmpty()
+                    !hasAnyRail
                 ) {
                     EmptyState(
                         title = stringResource(R.string.home_empty_title),
@@ -411,12 +315,4 @@ private fun navigateToDetails(navController: NavController, card: HomeContentCar
         "series" -> navController.navigate(AppRoute.seriesDetails(card.contentId))
         else -> navController.navigate(AppRoute.movieDetails(card.contentId))
     }
-}
-
-private fun navigateMoodCategory(navController: NavController, category: MoodCategory) {
-    val route = when (category.target) {
-        MoodBrowseTarget.Movies -> AppRoute.movies(category.filter)
-        MoodBrowseTarget.Series -> AppRoute.series(category.filter)
-    }
-    navController.navigate(route)
 }

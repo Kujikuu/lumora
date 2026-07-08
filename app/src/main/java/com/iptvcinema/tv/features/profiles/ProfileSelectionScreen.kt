@@ -222,14 +222,14 @@ private fun ProfileSelectionContent(
                         FocusableCinemaCard(
                             modifier = Modifier.size(80.dp),
                             onClick = onManageProfiles,
-                            shape = CinemaShapes.XLarge,
+                            shape = CinemaShapes.Card,
                             focusedBorderWidth = 0.dp,
                             contentDescription = stringResource(R.string.profile_manage),
                         ) { _ ->
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .background(CinemaColors.SurfaceSoft, CinemaShapes.XLarge),
+                                    .background(CinemaColors.SurfaceSoft, CinemaShapes.Card),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
@@ -288,13 +288,13 @@ private fun AccountRow(
     FocusableCinemaCard(
         modifier = modifier.width(500.dp),
         onClick = onClick,
-        shape = CinemaShapes.XLarge,
+        shape = CinemaShapes.Card,
         defaultBorderWidth = 0.dp,
         focusedBorderWidth = 0.dp,
     ) { focused ->
         Row(
             modifier = Modifier
-                .clip(CinemaShapes.XLarge)
+                .clip(CinemaShapes.Card)
                 .background(if (focused || selected) CinemaColors.Surface.copy(alpha = 0.28f) else Color.Transparent)
                 .padding(horizontal = 0.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(30.dp),

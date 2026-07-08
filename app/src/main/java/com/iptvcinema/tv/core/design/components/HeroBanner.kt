@@ -84,6 +84,8 @@ fun HeroBanner(
 ) {
     val sectionBringIntoViewRequester = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
+    val shellImmersion = LocalShellImmersion.current
+    val heroContentStart = shellHeroContentStart()
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val sideGradientColors = if (isRtl) {
         listOf(
@@ -164,7 +166,7 @@ fun HeroBanner(
                 .align(Alignment.BottomStart)
                 .fillMaxWidth(0.55f)
                 .padding(
-                    start = CinemaSpacing.ContentStart,
+                    start = heroContentStart,
                 ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -222,6 +224,7 @@ fun HeroBanner(
                         .then(watchNowFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
                         .onFocusChanged { focusState ->
                             if (focusState.isFocused) {
+                                shellImmersion?.showNavRail()
                                 scope.launch {
                                     sectionBringIntoViewRequester.bringIntoView()
                                 }
@@ -469,11 +472,11 @@ fun ProfileCard(
     FocusableCinemaCard(
         modifier = modifier.size(width = 140.dp, height = 180.dp),
         onClick = onClick,
-        shape = CinemaShapes.Medium,
+        shape = CinemaShapes.Card,
     ) { focused ->
         FocusableCardSurface(
             backgroundColor = if (focused || isSelected) CinemaColors.Surface else CinemaColors.SurfaceSoft,
-            shape = CinemaShapes.Medium,
+            shape = CinemaShapes.Card,
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -483,7 +486,7 @@ fun ProfileCard(
                 Box(
                     modifier = Modifier
                         .size(72.dp)
-                        .clip(CinemaShapes.Medium)
+                        .clip(CinemaShapes.Card)
                         .background(CinemaColors.SurfaceSoft),
                     contentAlignment = Alignment.Center,
                 ) {

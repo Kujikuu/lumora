@@ -3,6 +3,7 @@ package com.iptvcinema.tv.core.navigation
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,7 +25,9 @@ import com.iptvcinema.tv.features.activation.ActivationScreenWithViewModel
 import com.iptvcinema.tv.features.activation.ActivationViewModel
 import com.iptvcinema.tv.features.details.ChannelDetailsScreen
 import com.iptvcinema.tv.features.details.MovieDetailsScreen
+import com.iptvcinema.tv.features.details.MovieRelatedScreen
 import com.iptvcinema.tv.features.details.SeriesDetailsScreen
+import com.iptvcinema.tv.features.details.SeriesEpisodesScreen
 import com.iptvcinema.tv.features.home.HomeScreen
 import com.iptvcinema.tv.features.livetv.LiveTvScreen
 import com.iptvcinema.tv.features.movies.MoviesScreen
@@ -42,7 +45,6 @@ import com.iptvcinema.tv.features.sources.M3uFormScreen
 import com.iptvcinema.tv.features.sources.PlaylistManagementScreen
 import com.iptvcinema.tv.features.sources.SourceViewModel
 import com.iptvcinema.tv.features.sources.XtreamFormScreen
-import com.iptvcinema.tv.features.splash.SplashScreen
 import com.iptvcinema.tv.features.splash.SplashViewModel
 import com.iptvcinema.tv.features.states.EmptyStateScreen
 import com.iptvcinema.tv.features.states.ErrorStateScreen
@@ -53,6 +55,7 @@ import com.iptvcinema.tv.features.welcome.WelcomeScreen
 @Composable
 fun AppNavGraph(
     navController: NavHostController = rememberNavController(),
+    onStartupReady: () -> Unit = {},
 ) {
     val activity = LocalActivity.current as ComponentActivity
     val sessionViewModel: SessionViewModel = hiltViewModel(activity)
@@ -65,12 +68,14 @@ fun AppNavGraph(
             val viewModel: SplashViewModel = hiltViewModel()
             val destination by viewModel.startupDestination.collectAsState()
 
-            SplashScreen(
-                startupDestination = destination,
-                onNavigate = { startupDestination ->
+            BlockBackHandler()
+
+            LaunchedEffect(destination) {
+                destination?.let { startupDestination ->
                     navController.navigateOnboardingClearingStack(startupDestination.route())
-                },
-            )
+                    onStartupReady()
+                }
+            }
         }
 
         composable(AppRoute.WELCOME) {
@@ -325,11 +330,35 @@ fun AppNavGraph(
         }
 
         composable(
+            route = AppRoute.MOVIE_RELATED,
+            arguments = listOf(navArgument("movieId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            SessionRouteGuard(navController = navController, requirement = SessionRequirement.Ready) {
+                MovieRelatedScreen(
+                    movieId = backStackEntry.arguments?.getString("movieId").orEmpty(),
+                    navController = navController,
+                )
+            }
+        }
+
+        composable(
             route = AppRoute.SERIES_DETAILS,
             arguments = listOf(navArgument("seriesId") { type = NavType.StringType }),
         ) { backStackEntry ->
             SessionRouteGuard(navController = navController, requirement = SessionRequirement.Ready) {
                 SeriesDetailsScreen(
+                    seriesId = backStackEntry.arguments?.getString("seriesId").orEmpty(),
+                    navController = navController,
+                )
+            }
+        }
+
+        composable(
+            route = AppRoute.SERIES_EPISODES,
+            arguments = listOf(navArgument("seriesId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            SessionRouteGuard(navController = navController, requirement = SessionRequirement.Ready) {
+                SeriesEpisodesScreen(
                     seriesId = backStackEntry.arguments?.getString("seriesId").orEmpty(),
                     navController = navController,
                 )

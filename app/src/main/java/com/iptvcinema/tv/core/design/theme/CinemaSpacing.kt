@@ -31,6 +31,10 @@ object CinemaSpacing {
     val CompactLandscapePosterHeight = 84.dp
     val CompactLandscapeCardTotalHeight = 62.dp
     val ExpandedLandscapeCardHeight = 184.dp
+    /** 16:9 poster-only landscape cards (Recommended Series, New Releases). */
+    val ExpandedLandscapePosterOnlyHeight = 146.dp
+    val ExpandedLandscapePosterTitleHeight = 24.dp
+    val ExpandedLandscapePosterTotalHeight = ExpandedLandscapePosterOnlyHeight + ExpandedLandscapePosterTitleHeight + 7.dp
     val MoodTileSize = 60.dp
     val HeroThumbSize = 28.dp
 

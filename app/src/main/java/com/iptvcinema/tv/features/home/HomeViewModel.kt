@@ -32,6 +32,7 @@ import com.iptvcinema.tv.core.model.catalog.FeaturedCatalogContent
 import com.iptvcinema.tv.core.parental.ParentalGate
 import com.iptvcinema.tv.core.player.PlaybackSessionTracker
 import com.iptvcinema.tv.core.util.AppStrings
+import com.iptvcinema.tv.core.util.RemainingWatchTimeFormatter
 import com.iptvcinema.tv.core.util.SyncStatusFormatter
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.model.home.HomeCardAction
@@ -150,6 +151,10 @@ class HomeViewModel @Inject constructor(
                         val progress = item.durationMs?.takeIf { it > 0 }?.let { duration ->
                             (item.positionMs.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
                         }
+                        val remainingTimeLabel = RemainingWatchTimeFormatter.formatFromWatchHistory(
+                            item,
+                            appStrings,
+                        )
                         val display = catalogRepository.resolveWatchHistoryCardDisplay(
                             sourceId = session.currentSourceId,
                             item = item,
@@ -168,6 +173,7 @@ class HomeViewModel @Inject constructor(
                             subtitle = display.subtitle,
                             imageUrl = display.posterUrl,
                             progress = progress,
+                            remainingTimeLabel = remainingTimeLabel,
                             isFavorite = favorites.isFavorite(item.contentId, favoriteType),
                             primaryAction = HomeCardAction.ContinueWatching,
                         )

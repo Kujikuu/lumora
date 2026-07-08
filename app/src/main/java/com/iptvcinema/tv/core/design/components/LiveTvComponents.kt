@@ -73,7 +73,7 @@ fun ChannelListPanel(
     Column(
         modifier = modifier
             .width(320.dp)
-            .clip(CinemaShapes.Medium)
+            .clip(CinemaShapes.Card)
             .background(CinemaColors.SurfaceSoft)
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -132,7 +132,7 @@ private fun ChannelListRow(
                 }
             },
         onClick = onClick,
-        shape = CinemaShapes.Small,
+        shape = CinemaShapes.Card,
     ) { isFocused ->
         Row(
             modifier = Modifier
@@ -205,7 +205,7 @@ fun LivePreviewCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(CinemaShapes.Medium)
+            .clip(CinemaShapes.Card)
             .background(CinemaColors.SurfaceSoft)
             .padding(CinemaSpacing.ButtonGap),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -451,7 +451,7 @@ private fun MiniEpgProgramRow(
                         }
                     },
                 onClick = { onProgramClick(program) },
-                shape = CinemaShapes.Small,
+                shape = CinemaShapes.Card,
             ) { _ ->
                 Box(
                     modifier = Modifier
@@ -490,7 +490,7 @@ fun OnNowPanel(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(CinemaShapes.Large)
+            .clip(CinemaShapes.Card)
             .background(CinemaColors.SurfaceSoft)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -511,7 +511,7 @@ fun OnNowPanel(
             FocusableCinemaCard(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = { onChannelClick(channel) },
-                shape = CinemaShapes.Medium,
+                shape = CinemaShapes.Card,
             ) { _ ->
                 Column(
                     modifier = Modifier
@@ -764,7 +764,7 @@ private fun GuideChannelRow(
                             }
                         },
                     onClick = { onProgramClick(program) },
-                    shape = CinemaShapes.Small,
+                    shape = CinemaShapes.Card,
                 ) { _ ->
                     Box(
                         modifier = Modifier

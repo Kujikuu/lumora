@@ -20,7 +20,14 @@ import com.iptvcinema.tv.core.model.SourceStatus
 import com.iptvcinema.tv.core.model.SourceType
 import com.iptvcinema.tv.core.data.repository.ParentalControlsRepository
 import com.iptvcinema.tv.core.parental.ParentalGate
+import com.iptvcinema.tv.core.parental.ParentalPlaybackGuard
+import com.iptvcinema.tv.core.player.PlaybackRepository
+import com.iptvcinema.tv.core.player.PlaybackResolveResult
+import com.iptvcinema.tv.core.player.PlayerManager
+import com.iptvcinema.tv.core.player.PlayerUiState
 import com.iptvcinema.tv.core.player.PlaybackSessionTracker
+import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.util.AppStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -52,6 +59,7 @@ data class LiveTvUiState(
     val favoriteChannelIds: Set<String> = emptySet(),
     val syncBannerText: String? = null,
     val refreshState: CatalogRefreshState = CatalogRefreshState.Idle,
+    val playbackNotice: String? = null,
 ) {
     val previewChannel: ChannelItem?
         get() {
@@ -78,6 +86,10 @@ class LiveTvViewModel @Inject constructor(
     private val parentalControlsRepository: ParentalControlsRepository,
     private val parentalGate: ParentalGate,
     private val playbackSessionTracker: PlaybackSessionTracker,
+    private val playerManager: PlayerManager,
+    private val playbackRepository: PlaybackRepository,
+    private val parentalPlaybackGuard: ParentalPlaybackGuard,
+    private val appStrings: AppStrings,
     private val catalogRefreshController: CatalogRefreshController,
     private val catalogSyncProgressTracker: CatalogSyncProgressTracker,
 ) : ViewModel() {
@@ -101,9 +113,12 @@ class LiveTvViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(LiveTvUiState())
     val uiState: StateFlow<LiveTvUiState> = _uiState.asStateFlow()
+    val playerState: StateFlow<PlayerUiState> = playerManager.state
 
     private var epgLoadJob: Job? = null
     private var clockJob: Job? = null
+    private var playbackJob: Job? = null
+    private var activePlaybackChannelId: String? = null
 
     init {
         CatalogRefreshSupport.observeSyncBanner(viewModelScope, catalogRepository) { banner ->
@@ -158,9 +173,16 @@ class LiveTvViewModel @Inject constructor(
                 favoriteChannelIds.value = result.favoriteChannelIds
                 val slice = result.slice
                 if (slice.loadState == CatalogLoadState.Ready && slice.channels.isNotEmpty()) {
-                    selectedChannel.value = selectedChannel.value?.takeIf { selected ->
+                    val previousChannelId = selectedChannel.value?.id
+                    val resolvedChannel = selectedChannel.value?.takeIf { selected ->
                         slice.channels.any { it.id == selected.id }
                     } ?: slice.channels.firstOrNull()
+                    selectedChannel.value = resolvedChannel
+                    resolvedChannel?.id?.let { channelId ->
+                        if (channelId != previousChannelId || activePlaybackChannelId == null) {
+                            startPlayback(channelId)
+                        }
+                    }
                 } else if (slice.channels.isEmpty()) {
                     selectedChannel.value = null
                 }
@@ -277,6 +299,66 @@ class LiveTvViewModel @Inject constructor(
         if (previousChannelId != channel.id && !fullGuideOpen.value) {
             refreshEpg()
         }
+        if (previousChannelId != channel.id) {
+            startPlayback(channel.id)
+        }
+    }
+
+    fun onScreenVisible() {
+        selectedChannel.value?.id?.let { channelId ->
+            if (activePlaybackChannelId != channelId || !playerManager.state.value.isPlaying) {
+                startPlayback(channelId)
+            }
+        }
+    }
+
+    fun onScreenHidden() {
+        playbackJob?.cancel()
+        playerManager.handleCommand(com.iptvcinema.tv.core.player.PlayerCommand.Pause)
+    }
+
+    fun clearPlaybackNotice() {
+        if (_uiState.value.playbackNotice != null) {
+            _uiState.value = _uiState.value.copy(playbackNotice = null)
+        }
+    }
+
+    fun getExoPlayer() = playerManager.getExoPlayer()
+
+    private fun startPlayback(channelId: String) {
+        playbackJob?.cancel()
+        playbackJob = viewModelScope.launch {
+            val result = runCatching {
+                playbackRepository.resolve(channelId, "live")
+            }.getOrElse {
+                _uiState.value = _uiState.value.copy(
+                    playbackNotice = appStrings.get(R.string.error_unable_load_content),
+                )
+                return@launch
+            }
+            when (result) {
+                is PlaybackResolveResult.Success -> {
+                    val session = appSessionRepository.sessionState.first()
+                    if (parentalPlaybackGuard.isPlaybackBlocked(session, result.request)) {
+                        _uiState.value = _uiState.value.copy(
+                            playbackNotice = appStrings.get(R.string.parental_playback_blocked),
+                        )
+                        return@launch
+                    }
+                    activePlaybackChannelId = channelId
+                    playerManager.play(
+                        request = result.request,
+                        startPositionMs = 0L,
+                        isXtreamSource = session.sourceType == SourceType.XTREAM_CODES,
+                    )
+                    playbackSessionTracker.setCurrentLiveChannel(channelId)
+                    _uiState.value = _uiState.value.copy(playbackNotice = null)
+                }
+                is PlaybackResolveResult.Error -> {
+                    _uiState.value = _uiState.value.copy(playbackNotice = result.message)
+                }
+            }
+        }
     }
 
     fun selectChannelById(channelId: String?) {
@@ -364,6 +446,10 @@ class LiveTvViewModel @Inject constructor(
     override fun onCleared() {
         epgLoadJob?.cancel()
         clockJob?.cancel()
+        playbackJob?.cancel()
+        playbackSessionTracker.setCurrentLiveChannel(null)
+        playerManager.release()
+        activePlaybackChannelId = null
         super.onCleared()
     }
 

@@ -50,7 +50,7 @@ fun FocusableCinemaCard(
     onClick: () -> Unit,
     enabled: Boolean = true,
     onLongClick: (() -> Unit)? = null,
-    shape: RoundedCornerShape = CinemaShapes.Medium,
+    shape: RoundedCornerShape = CinemaShapes.Card,
     defaultBorderWidth: Dp = 0.dp,
     focusedBorderWidth: Dp = 2.dp,
     focusScale: Float = FOCUSED_SCALE,
@@ -142,7 +142,7 @@ fun FocusableCinemaCard(
 @Composable
 fun BoxScope.FocusableCardSurface(
     backgroundColor: Color,
-    shape: RoundedCornerShape = CinemaShapes.Medium,
+    shape: RoundedCornerShape = CinemaShapes.Card,
     contentAlignment: Alignment = Alignment.Center,
     content: @Composable BoxScope.() -> Unit,
 ) {

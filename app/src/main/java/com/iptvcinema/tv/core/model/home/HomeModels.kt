@@ -21,6 +21,7 @@ data class HomeContentCard(
     val highlightText: String? = null,
     val subtitle: String? = null,
     val progress: Float? = null,
+    val remainingTimeLabel: String? = null,
     val isFavorite: Boolean = false,
     val showTop10Badge: Boolean = false,
     val primaryAction: HomeCardAction = HomeCardAction.WatchNow,

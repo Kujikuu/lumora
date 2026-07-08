@@ -16,10 +16,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.ViewAgenda
+import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +53,8 @@ import com.iptvcinema.tv.core.model.CastMember
 import com.iptvcinema.tv.core.model.EpgProgram
 
 private val DetailPosterInsetWidth = 120.dp
+private val EpisodeLandscapeCardWidth = 220.dp
+private val EpisodeLandscapeImageHeight = 124.dp
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -59,12 +67,15 @@ fun DetailHero(
     isFavorite: Boolean = false,
     modifier: Modifier = Modifier,
     primaryActionLabel: String = "",
-    favoriteLabel: String = "",
-    favoritedLabel: String = "",
+    watchLaterLabel: String = "",
     showTrailer: Boolean = false,
     onTrailer: (() -> Unit)? = null,
+    onChooseEpisode: (() -> Unit)? = null,
+    onMoreLikeThis: (() -> Unit)? = null,
+    showScrollHint: Boolean = false,
     backdropUrl: String? = null,
     posterUrl: String? = null,
+    showPosterInset: Boolean = false,
     watchNowFocusRequester: FocusRequester? = null,
 ) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -84,17 +95,14 @@ fun DetailHero(
     val resolvedPrimaryActionLabel = primaryActionLabel.ifBlank {
         stringResource(R.string.btn_watch_now)
     }
-    val resolvedFavoriteLabel = favoriteLabel.ifBlank {
-        stringResource(R.string.btn_add_to_favorites)
-    }
-    val resolvedFavoritedLabel = favoritedLabel.ifBlank {
-        stringResource(R.string.btn_favorited)
+    val resolvedWatchLaterLabel = watchLaterLabel.ifBlank {
+        stringResource(R.string.btn_watch_later)
     }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = CinemaSpacing.HeroMinHeight, max = CinemaSpacing.HeroMaxHeight),
+            .heightIn(min = CinemaSpacing.HeroMinHeight),
     ) {
         CinemaAsyncImage(
             imageUrl = backdropUrl,
@@ -127,18 +135,18 @@ fun DetailHero(
                 ),
         )
 
-        if (!posterUrl.isNullOrBlank()) {
+        if (showPosterInset && !posterUrl.isNullOrBlank()) {
             Box(
                 modifier = Modifier
                     .align(if (isRtl) Alignment.BottomEnd else Alignment.BottomStart)
                     .padding(
-                        start = if (isRtl) 0.dp else CinemaSpacing.ContentStart,
-                        end = if (isRtl) CinemaSpacing.ContentStart else 0.dp,
+                        start = if (isRtl) 0.dp else CinemaSpacing.ScreenPadding,
+                        end = if (isRtl) CinemaSpacing.ScreenPadding else 0.dp,
                         bottom = 20.dp,
                     )
                     .width(DetailPosterInsetWidth)
                     .height(DetailPosterInsetWidth * 1.5f)
-                    .clip(CinemaShapes.Medium)
+                    .clip(CinemaShapes.Card)
                     .background(CinemaColors.Surface),
             ) {
                 CinemaAsyncImage(
@@ -154,12 +162,20 @@ fun DetailHero(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .fillMaxWidth(0.6f)
+                .fillMaxWidth(0.62f)
                 .padding(
-                    start = CinemaSpacing.ContentStart +
-                        if (!posterUrl.isNullOrBlank() && !isRtl) DetailPosterInsetWidth + 16.dp else 0.dp,
-                    end = if (!posterUrl.isNullOrBlank() && isRtl) DetailPosterInsetWidth + 16.dp else 0.dp,
-                    bottom = 20.dp,
+                    start = CinemaSpacing.ScreenPadding +
+                        if (showPosterInset && !posterUrl.isNullOrBlank() && !isRtl) {
+                            DetailPosterInsetWidth + 16.dp
+                        } else {
+                            0.dp
+                        },
+                    end = if (showPosterInset && !posterUrl.isNullOrBlank() && isRtl) {
+                        DetailPosterInsetWidth + 16.dp
+                    } else {
+                        0.dp
+                    },
+                    bottom = if (showScrollHint) 36.dp else 28.dp,
                 ),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -184,8 +200,9 @@ fun DetailHero(
                 )
             }
             Row(
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.padding(top = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 CinemaButton(
                     text = resolvedPrimaryActionLabel,
@@ -194,20 +211,152 @@ fun DetailHero(
                     onClick = onWatchNow,
                     modifier = watchNowFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
                 )
-                CinemaButton(
-                    text = if (isFavorite) resolvedFavoritedLabel else resolvedFavoriteLabel,
-                    variant = CinemaButtonVariant.Ghost,
-                    icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    onClick = onFavorite,
-                )
+                if (onChooseEpisode != null) {
+                    CinemaButton(
+                        text = stringResource(R.string.btn_choose_episode),
+                        variant = CinemaButtonVariant.SecondaryDark,
+                        icon = Icons.Default.ViewAgenda,
+                        onClick = onChooseEpisode,
+                    )
+                }
+                if (onMoreLikeThis != null) {
+                    CinemaButton(
+                        text = stringResource(R.string.btn_more_like_this),
+                        variant = CinemaButtonVariant.SecondaryDark,
+                        icon = Icons.Default.ViewCarousel,
+                        onClick = onMoreLikeThis,
+                    )
+                }
                 if (showTrailer && onTrailer != null) {
                     CinemaButton(
-                        text = stringResource(R.string.btn_trailer),
-                        variant = CinemaButtonVariant.SecondaryDark,
+                        text = "",
+                        variant = CinemaButtonVariant.Icon,
+                        icon = Icons.Default.Videocam,
                         onClick = onTrailer,
                     )
                 }
+                CinemaButton(
+                    text = resolvedWatchLaterLabel,
+                    variant = CinemaButtonVariant.SecondaryDark,
+                    icon = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                    onClick = onFavorite,
+                )
+                CinemaButton(
+                    text = "",
+                    variant = CinemaButtonVariant.Icon,
+                    icon = Icons.Default.ThumbUp,
+                    onClick = onFavorite,
+                )
             }
+        }
+        if (showScrollHint) {
+            androidx.tv.material3.Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = null,
+                tint = CinemaColors.White,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 10.dp)
+                    .size(28.dp),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun EpisodeLandscapeCard(
+    episodeNumber: Int,
+    title: String,
+    durationMinutes: Int,
+    thumbnailUrl: String?,
+    fallbackImageUrl: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val episodeLabel = title.ifBlank {
+        stringResource(R.string.details_episode_label, episodeNumber)
+    }
+    Column(
+        modifier = modifier.width(EpisodeLandscapeCardWidth),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FocusableCinemaCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(EpisodeLandscapeImageHeight),
+            onClick = onClick,
+            shape = CinemaShapes.Card,
+            defaultBorderWidth = 0.dp,
+            focusScale = 1.02f,
+            contentDescription = episodeLabel,
+        ) { focused ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CinemaShapes.Card)
+                    .background(CinemaColors.Surface),
+            ) {
+                CinemaAsyncImage(
+                    imageUrl = thumbnailUrl ?: fallbackImageUrl,
+                    contentDescription = episodeLabel,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    fallbackLabel = episodeLabel,
+                )
+                if (focused) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .size(46.dp)
+                            .clip(CircleShape)
+                            .background(CinemaColors.Accent),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        androidx.tv.material3.Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = CinemaColors.White,
+                            modifier = Modifier.size(28.dp),
+                        )
+                    }
+                }
+                if (durationMinutes > 0) {
+                    Text(
+                        text = stringResource(R.string.details_episode_duration_minutes, durationMinutes),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Medium,
+                            color = CinemaColors.White,
+                        ),
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 8.dp, bottom = 8.dp)
+                            .clip(CinemaShapes.Card)
+                            .background(CinemaColors.Background.copy(alpha = 0.72f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
+            }
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(CinemaColors.Accent),
+            )
+            Text(
+                text = episodeLabel,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = FontWeight.Medium,
+                    color = CinemaColors.White,
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -274,7 +423,7 @@ fun ProgramLineupCard(
             .width(220.dp)
             .height(120.dp),
         onClick = onClick,
-        shape = CinemaShapes.Medium,
+        shape = CinemaShapes.Card,
         defaultBorderWidth = 0.dp,
     ) { focused ->
         Column(
@@ -282,7 +431,7 @@ fun ProgramLineupCard(
                 .fillMaxSize()
                 .background(
                     if (focused) CinemaColors.Surface else CinemaColors.SurfaceSoft,
-                    CinemaShapes.Medium,
+                    CinemaShapes.Card,
                 )
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -314,7 +463,7 @@ fun ProgramLineupCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(3.dp)
-                        .clip(CinemaShapes.Small)
+                        .clip(CinemaShapes.Card)
                         .background(CinemaColors.Surface),
                 ) {
                     Box(
@@ -340,8 +489,8 @@ private fun ChannelProgramRow(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(CinemaShapes.Medium)
-            .background(CinemaColors.SurfaceSoft, CinemaShapes.Medium)
+            .clip(CinemaShapes.Card)
+            .background(CinemaColors.SurfaceSoft, CinemaShapes.Card)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -380,7 +529,7 @@ private fun ChannelProgramRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(4.dp)
-                    .clip(CinemaShapes.Small)
+                    .clip(CinemaShapes.Card)
                     .background(CinemaColors.Surface),
             ) {
                 Box(
@@ -403,7 +552,7 @@ fun CastCard(
     FocusableCinemaCard(
         modifier = modifier.width(100.dp),
         onClick = {},
-        shape = CinemaShapes.Medium,
+        shape = CinemaShapes.Card,
         defaultBorderWidth = 0.dp,
     ) { _ ->
         Column(
@@ -480,7 +629,7 @@ fun EpisodeCard(
             .width(260.dp)
             .height(90.dp),
         onClick = onClick,
-        shape = CinemaShapes.Medium,
+        shape = CinemaShapes.Card,
         defaultBorderWidth = 0.dp,
     ) { focused ->
         Row(
@@ -488,7 +637,7 @@ fun EpisodeCard(
                 .fillMaxWidth()
                 .background(
                     if (focused) CinemaColors.Surface else CinemaColors.SurfaceSoft,
-                    CinemaShapes.Medium,
+                    CinemaShapes.Card,
                 )
                 .padding(10.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -497,7 +646,7 @@ fun EpisodeCard(
             Box(
                 modifier = Modifier
                     .size(width = 64.dp, height = 64.dp)
-                    .clip(CinemaShapes.Small)
+                    .clip(CinemaShapes.Card)
                     .background(CinemaColors.Background),
                 contentAlignment = Alignment.Center,
             ) {
@@ -558,7 +707,7 @@ fun PlayerEpisodeSidebarRow(
             .fillMaxWidth()
             .height(88.dp),
         onClick = onClick,
-        shape = CinemaShapes.Medium,
+        shape = CinemaShapes.Card,
         defaultBorderWidth = 0.dp,
     ) { focused ->
         Row(
@@ -570,7 +719,7 @@ fun PlayerEpisodeSidebarRow(
                         isPlaying -> CinemaColors.SurfaceSoft.copy(alpha = 0.85f)
                         else -> CinemaColors.Background.copy(alpha = 0.5f)
                     },
-                    CinemaShapes.Medium,
+                    CinemaShapes.Card,
                 )
                 .padding(8.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -594,7 +743,7 @@ fun PlayerEpisodeSidebarRow(
             Box(
                 modifier = Modifier
                     .size(width = 120.dp, height = 68.dp)
-                    .clip(CinemaShapes.Small),
+                    .clip(CinemaShapes.Card),
             ) {
                 CinemaAsyncImage(
                     imageUrl = thumbnailUrl ?: fallbackImageUrl,
@@ -606,7 +755,7 @@ fun PlayerEpisodeSidebarRow(
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
-                        .background(CinemaColors.Background.copy(alpha = 0.75f), CinemaShapes.Small)
+                        .background(CinemaColors.Background.copy(alpha = 0.75f), CinemaShapes.Card)
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 ) {
                     Text(

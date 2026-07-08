@@ -46,12 +46,12 @@ fun SourceTypeCard(
             .fillMaxWidth()
             .padding(vertical = 8.dp),
         onClick = onClick,
-        shape = CinemaShapes.Large,
+        shape = CinemaShapes.Card,
     ) { _ ->
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CinemaColors.SurfaceSoft, CinemaShapes.Large)
+                .background(CinemaColors.SurfaceSoft, CinemaShapes.Card)
                 .padding(CinemaSpacing.SectionGap),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -106,7 +106,7 @@ fun ImportPreviewPanel(
 ) {
     Column(
         modifier = modifier
-            .clip(CinemaShapes.Large)
+            .clip(CinemaShapes.Card)
             .background(CinemaColors.SurfaceGlass)
             .padding(CinemaSpacing.SectionGap),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -157,12 +157,12 @@ fun SourceCard(
     FocusableCinemaCard(
         modifier = modifier.fillMaxWidth(),
         onClick = onEdit,
-        shape = CinemaShapes.Large,
+        shape = CinemaShapes.Card,
     ) { _ ->
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CinemaColors.SurfaceSoft, CinemaShapes.Large)
+                .background(CinemaColors.SurfaceSoft, CinemaShapes.Card)
                 .padding(CinemaSpacing.SectionGap),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -209,7 +209,7 @@ fun SyncStatusPanel(
 ) {
     Column(
         modifier = modifier
-            .clip(CinemaShapes.Large)
+            .clip(CinemaShapes.Card)
             .background(CinemaColors.SurfaceGlass)
             .padding(CinemaSpacing.SectionGap),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -298,7 +298,7 @@ fun QrActivationPanel(
     Box(
         modifier = modifier
             .size(size)
-            .clip(CinemaShapes.Large)
+            .clip(CinemaShapes.Card)
             .background(CinemaColors.White)
             .padding(size * 0.06f),
         contentAlignment = Alignment.Center,
