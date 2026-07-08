@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -18,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -298,25 +300,31 @@ fun QrActivationPanel(
     Box(
         modifier = modifier
             .size(size)
-            .clip(CinemaShapes.Card)
+            .clip(CinemaShapes.Large)
             .background(CinemaColors.White)
-            .padding(size * 0.06f),
+            .padding(18.dp),
         contentAlignment = Alignment.Center,
     ) {
         if (qrBitmap != null) {
             Image(
                 bitmap = qrBitmap,
                 contentDescription = stringResource(R.string.cd_activation_qr),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(CinemaShapes.Small),
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
             )
         } else {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .background(CinemaColors.Background.copy(alpha = 0.08f), CinemaShapes.Small),
-            )
+                    .fillMaxSize()
+                    .clip(CinemaShapes.Medium)
+                    .background(CinemaColors.Background.copy(alpha = 0.06f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "…",
+                    style = MaterialTheme.typography.displaySmall.copy(color = CinemaColors.TextMuted),
+                )
+            }
         }
     }
 }

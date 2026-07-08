@@ -27,6 +27,7 @@ import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.model.home.HomeCardAction
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.model.home.toFavoriteContentType
+import com.iptvcinema.tv.core.util.removeContinueWatching
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -267,6 +268,15 @@ class SeriesViewModel @Inject constructor(
                     sourceId = session.currentSourceId,
                 )
                 updateCardFavoriteState(card.contentId, card.toFavoriteContentType(), isFavorite)
+            }
+        }
+    }
+
+    fun removeContinueWatching(card: HomeContentCard) {
+        viewModelScope.launch {
+            val profileId = appSessionRepository.sessionState.first().currentProfileId ?: return@launch
+            runCatching {
+                watchHistoryRepository.removeContinueWatching(profileId, card)
             }
         }
     }

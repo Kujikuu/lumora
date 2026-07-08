@@ -272,7 +272,7 @@ fun EpisodeLandscapeCard(
     }
     Column(
         modifier = modifier.width(EpisodeLandscapeCardWidth),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.CardTitleTopGap),
     ) {
         FocusableCinemaCard(
             modifier = Modifier

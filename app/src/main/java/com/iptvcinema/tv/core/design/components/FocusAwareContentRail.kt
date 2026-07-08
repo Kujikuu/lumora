@@ -53,6 +53,7 @@ fun FocusAwareContentRail(
     sectionId: String? = null,
     focusedItemIndex: Int = -1,
     onFocusedItemIndexChange: (Int) -> Unit = {},
+    onCardLongClick: ((HomeContentCard) -> Unit)? = null,
 ) {
     val listState = rememberLazyListState()
     val sectionBringIntoViewRequester = remember(title) { BringIntoViewRequester() }
@@ -133,6 +134,7 @@ fun FocusAwareContentRail(
                     onAddToList = { onAddToList(item) },
                     onFavorite = { onFavorite(item) },
                     onCardClick = { onCardClick(item) },
+                    onCardLongClick = onCardLongClick?.let { callback -> { callback(item) } },
                     onFocusChanged = { focused ->
                         if (focused) {
                             focusedItemIndex = index

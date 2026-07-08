@@ -81,13 +81,14 @@ private fun BrowseFooterLink(
 ) {
     FocusableCinemaCard(
         onClick = onClick,
-        shape = CinemaShapes.Large,
+        shape = CinemaShapes.Pill,
+        focusScale = 1.02f,
     ) { focused ->
         Row(
             modifier = Modifier
                 .background(
                     if (focused) CinemaColors.Surface else CinemaColors.SurfaceGlass,
-                    CinemaShapes.Large,
+                    CinemaShapes.Pill,
                 )
                 .padding(horizontal = 10.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),

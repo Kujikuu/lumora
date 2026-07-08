@@ -10,8 +10,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.Key
@@ -33,6 +35,7 @@ import com.iptvcinema.tv.core.data.repository.CatalogLoadState
 import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
+import com.iptvcinema.tv.core.design.components.ContinueWatchingMenuDialog
 import com.iptvcinema.tv.core.design.components.EmptyState
 import com.iptvcinema.tv.core.design.components.ExpandedPosterCardVariant
 import com.iptvcinema.tv.core.design.components.FocusAwareContentRail
@@ -45,6 +48,7 @@ import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
 import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
+import com.iptvcinema.tv.core.navigation.openContinueWatchingDetails
 import com.iptvcinema.tv.core.navigation.rememberCatalogScrollState
 import com.iptvcinema.tv.core.navigation.rememberCatalogStateCallbacks
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
@@ -53,9 +57,8 @@ import kotlinx.coroutines.launch
 private object HomeSections {
     const val CONTINUE = "home_continue"
     const val RECOMMENDED = "home_recommended"
-    const val NEW_RELEASES = "home_new_releases"
+    const val RECENTLY_ADDED = "home_recently_added"
     const val TRENDING = "home_trending"
-    const val ARABIC_SUBTITLES = "home_arabic_subtitles"
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -74,6 +77,7 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val shellImmersion = LocalShellImmersion.current
+    var continueMenuCard by remember { mutableStateOf<HomeContentCard?>(null) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -92,11 +96,10 @@ fun HomeScreen(
     val hasHeroFocusTarget = uiState.heroMovies.isNotEmpty()
     val hasContinueWatching = uiState.continueWatching.isNotEmpty()
     val hasRecommendedSeries = uiState.featuredSeries.isNotEmpty()
-    val hasNewReleases = uiState.recentlyAdded.isNotEmpty()
+    val hasRecentlyAdded = uiState.recentlyAdded.isNotEmpty()
     val hasTop10 = uiState.trending.isNotEmpty()
-    val hasArabicSubtitles = uiState.popularMovies.isNotEmpty()
-    val hasAnyRail = hasContinueWatching || hasRecommendedSeries || hasNewReleases ||
-        hasTop10 || hasArabicSubtitles
+    val hasAnyRail = hasContinueWatching || hasRecommendedSeries || hasRecentlyAdded ||
+        hasTop10
     val hasFallbackFocusTarget = hasAnyRail
 
     val focusHeroOrFirstRail: () -> Unit = {
@@ -160,6 +163,12 @@ fun HomeScreen(
         selectedNavItem = NavItem.Home,
         onRailExitRight = focusHeroOrFirstRail,
     ) {
+        ContinueWatchingMenuDialog(
+            card = continueMenuCard,
+            onDismiss = { continueMenuCard = null },
+            onViewDetails = { card -> openContinueWatchingDetails(navController, card) },
+            onRemove = viewModel::removeContinueWatching,
+        )
         CatalogStateContent(
             loadState = uiState.loadState,
             message = uiState.message,
@@ -167,11 +176,12 @@ fun HomeScreen(
             sourceType = uiState.sourceType,
             skeletonStyle = CatalogSkeletonStyle.Home,
             emptyTitle = stringResource(R.string.home_empty_title),
-            emptyDescription = stringResource(R.string.home_empty_desc),
+            emptyDescription = stringResource(R.string.catalog_empty_sync_desc),
             onAddSource = catalogCallbacks.onAddSource,
             onRetry = catalogCallbacks.onRetry,
             onManageSources = catalogCallbacks.onManageSources,
             onEditSource = catalogCallbacks.onEditSource,
+            onRefreshCatalog = viewModel::refreshCurrentSource,
         ) {
             val heroMovies = uiState.heroMovies
             Column(
@@ -218,6 +228,7 @@ fun HomeScreen(
                         onAddToList = { card -> viewModel.toggleFavorite(card) },
                         onFavorite = { card -> viewModel.toggleFavorite(card) },
                         onCardClick = { card -> navigateToPlayer(navController, card) },
+                        onCardLongClick = { card -> continueMenuCard = card },
                     )
                 }
 
@@ -237,41 +248,25 @@ fun HomeScreen(
                     )
                 }
 
-                if (hasNewReleases) {
-                    val (railModifier, railFocus) = consumeRailFocus()
-                    FocusAwareContentRail(
-                        modifier = railModifier,
-                        title = stringResource(R.string.home_new_releases),
-                        items = uiState.recentlyAdded,
-                        variant = ExpandedPosterCardVariant.LandscapePoster,
-                        sectionId = HomeSections.NEW_RELEASES,
-                        firstItemFocusRequester = railFocus,
-                        onWatchNow = { card -> navigateToPlayer(navController, card) },
-                        onAddToList = { card -> viewModel.toggleFavorite(card) },
-                        onFavorite = { card -> viewModel.toggleFavorite(card) },
-                        onCardClick = { card -> navigateToDetails(navController, card) },
-                    )
-                }
-
                 if (hasTop10) {
                     val (railModifier, railFocus) = consumeRailFocus()
                     Top10Rail(
                         modifier = railModifier,
-                        title = stringResource(R.string.home_top_10_egypt),
+                        title = stringResource(R.string.home_top_10_lumora),
                         items = uiState.trending,
                         firstItemFocusRequester = railFocus,
                         onCardClick = { card -> navigateToDetails(navController, card) },
                     )
                 }
 
-                if (hasArabicSubtitles) {
+                if (hasRecentlyAdded) {
                     val (railModifier, railFocus) = consumeRailFocus()
                     FocusAwareContentRail(
                         modifier = railModifier,
-                        title = stringResource(R.string.home_arabic_subtitles),
-                        items = uiState.popularMovies,
+                        title = stringResource(R.string.home_recently_added),
+                        items = uiState.recentlyAdded,
                         variant = ExpandedPosterCardVariant.LandscapePoster,
-                        sectionId = HomeSections.ARABIC_SUBTITLES,
+                        sectionId = HomeSections.RECENTLY_ADDED,
                         firstItemFocusRequester = railFocus,
                         onWatchNow = { card -> navigateToPlayer(navController, card) },
                         onAddToList = { card -> viewModel.toggleFavorite(card) },

@@ -74,6 +74,7 @@ fun CatalogBrowseContent(
     onContinueCardClick: (HomeContentCard) -> Unit,
     onContinueAddToList: (HomeContentCard) -> Unit,
     onContinueFavorite: (HomeContentCard) -> Unit,
+    onContinueCardLongClick: ((HomeContentCard) -> Unit)? = null,
     watchNowFocus: FocusRequester,
     continueWatchingFocus: FocusRequester,
     categoryFocus: FocusRequester,
@@ -139,6 +140,7 @@ fun CatalogBrowseContent(
                     onAddToList = onContinueAddToList,
                     onFavorite = onContinueFavorite,
                     onCardClick = onContinueCardClick,
+                    onCardLongClick = onContinueCardLongClick,
                 )
             }
         }

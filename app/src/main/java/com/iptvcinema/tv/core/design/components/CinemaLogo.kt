@@ -32,7 +32,7 @@ fun CinemaLogo(
     navBar: Boolean = false,
 ) {
     val width = when {
-        navBar -> 46.dp
+        navBar -> 32.dp
         compact -> 52.dp
         else -> 105.dp
     }
@@ -100,7 +100,7 @@ fun AccountAvatar(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun YangoWordmark(
+fun LumoraWordmark(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
 ) {

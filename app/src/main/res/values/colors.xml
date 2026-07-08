@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="brand_background">#000000</color>
-    <color name="brand_accent">#A52CFF</color>
-    <color name="brand_gold">#A52CFF</color>
-    <color name="brand_secondary">#A52CFF</color>
+    <color name="brand_accent">#E70302</color>
+    <color name="brand_gold">#E70302</color>
+    <color name="brand_secondary">#E70302</color>
 </resources>

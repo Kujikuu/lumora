@@ -1,7 +1,6 @@
 package com.iptvcinema.tv.core.design.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,6 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -86,8 +86,9 @@ fun CategoryChip(
     FocusableCinemaCard(
         modifier = modifier,
         onClick = onClick,
-        shape = CinemaShapes.Small,
+        shape = CinemaShapes.Pill,
         defaultBorderWidth = 0.dp,
+        focusScale = 1.02f,
     ) { focused ->
         Box(
             modifier = Modifier
@@ -98,16 +99,10 @@ fun CategoryChip(
                         focused -> CinemaColors.White
                         else -> CinemaColors.SurfaceSoft
                     },
-                    shape = CinemaShapes.XLarge,
-                )
-                .then(
-                    if (!isSelected && focused) {
-                        Modifier.border(1.dp, CinemaColors.FocusBorder, CinemaShapes.XLarge)
-                    } else {
-                        Modifier
-                    },
+                    shape = CinemaShapes.Pill,
                 )
                 .padding(horizontal = 26.dp, vertical = 12.dp),
+            contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = label,

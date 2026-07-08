@@ -21,6 +21,7 @@ import com.iptvcinema.tv.core.model.catalog.CatalogMovie
 import com.iptvcinema.tv.core.model.catalog.CatalogProgram
 import com.iptvcinema.tv.core.model.catalog.CatalogSeries
 import com.iptvcinema.tv.core.model.catalog.CatalogSyncState
+import com.iptvcinema.tv.core.util.RatingFormatter
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -150,7 +151,7 @@ object CatalogUiMapper {
         title = title,
         year = year ?: 0,
         runtimeMinutes = durationMinutes ?: 0,
-        rating = rating.orEmpty(),
+        rating = RatingFormatter.formatForDisplay(rating).orEmpty(),
         plot = plot.orEmpty(),
         genres = genres,
         is4K = title.contains("4k", ignoreCase = true) ||
@@ -171,7 +172,7 @@ object CatalogUiMapper {
         id = id,
         title = title,
         year = year ?: 0,
-        rating = rating.orEmpty(),
+        rating = RatingFormatter.formatForDisplay(rating).orEmpty(),
         plot = plot.orEmpty(),
         genres = listOfNotNull(categoryName?.takeIf { it.isNotBlank() }),
         seasonCount = seasonCount,

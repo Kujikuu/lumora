@@ -5,9 +5,9 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Red circle -->
+    <!-- Lumora brand mark -->
     <path
-        android:fillColor="#D6243A"
+        android:fillColor="#E70302"
         android:pathData="M54,12 C77.2,12 96,30.8 96,54 C96,77.2 77.2,96 54,96 C30.8,96 12,77.2 12,54 C12,30.8 30.8,12 54,12 Z" />
 
     <!-- White play triangle -->

@@ -56,6 +56,7 @@ import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
+import com.iptvcinema.tv.core.util.RatingFormatter
 import com.iptvcinema.tv.core.model.MovieItem
 import kotlinx.coroutines.launch
 
@@ -171,7 +172,7 @@ fun HeroBanner(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             BadgeChip(
-                text = stringResource(R.string.yango_movies_label),
+                text = stringResource(R.string.lumora_movies_label),
                 backgroundColor = Color.Transparent,
                 textColor = CinemaColors.Secondary,
             )
@@ -364,7 +365,7 @@ private fun heroMovieMetadata(movie: MovieItem): List<String> = listOfNotNull(
 
 private fun heroMovieQualityBadges(movie: MovieItem): List<String> = buildList {
     if (movie.is4K) add("4K")
-    movie.rating.takeIf { it.isNotBlank() }?.let { add("★ $it") }
+    RatingFormatter.formatForDisplay(movie.rating)?.let { add("★ $it") }
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)

@@ -8,6 +8,7 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,6 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -60,8 +63,9 @@ import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.navigation.NavItem
 
-private val RailCollapsedWidth = 92.dp
-private val RailExpandedWidth = 340.dp
+private val RailCollapsedWidth = CinemaSpacing.NavRailWidth
+private val RailExpandedWidth = CinemaSpacing.NavRailExpandedWidth
+private val RailIconSlotWidth = CinemaSpacing.NavRailIconSlotWidth
 
 private data class RailEntry(
     val navItem: NavItem,
@@ -125,24 +129,39 @@ fun CinemaNavRail(
             .focusGroup()
             .onFocusChanged { onExpandedChange(it.hasFocus) }
             .padding(vertical = 30.dp, horizontal = 6.dp),
-        horizontalAlignment = if (expanded) Alignment.Start else Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp),
+        horizontalAlignment = Alignment.Start,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        if (expanded) {
-            Text(
-                text = stringResource(R.string.app_name).uppercase(),
-                modifier = Modifier.padding(start = 54.dp),
-                style = MaterialTheme.typography.displaySmall.copy(
-                    color = CinemaColors.White,
-                    fontWeight = FontWeight.Black,
-                ),
-                maxLines = 1,
-            )
-        } else {
-            CinemaLogo(navBar = true)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (expanded) {
+                Image(
+                    painter = painterResource(R.drawable.nav_sidebar_full),
+                    contentDescription = stringResource(R.string.app_name),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.CenterStart,
+                )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.nav_sidebar_min),
+                        contentDescription = stringResource(R.string.app_name),
+                        modifier = Modifier.size(44.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                }
+            }
         }
 
-        Spacer(Modifier.size(if (expanded) 66.dp else 46.dp))
+        Spacer(Modifier.height(36.dp))
 
         primaryItems.forEach { entry ->
             RailItemRow(
@@ -157,7 +176,9 @@ fun CinemaNavRail(
         Spacer(Modifier.weight(1f))
 
         FocusableCinemaCard(
-            modifier = if (expanded) Modifier.fillMaxWidth().height(64.dp) else Modifier.size(42.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = CinemaSpacing.NavRailItemMinHeight),
             onClick = onProfileClick,
             shape = CinemaShapes.XLarge,
             focusedBorderWidth = 0.dp,
@@ -165,7 +186,7 @@ fun CinemaNavRail(
         ) { focused ->
             Row(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
                     .background(
                         if (focused || selected == NavItem.Profile) {
                             CinemaColors.Surface.copy(alpha = 0.45f)
@@ -174,13 +195,17 @@ fun CinemaNavRail(
                         },
                         CinemaShapes.XLarge,
                     )
-                    .padding(start = if (expanded) 54.dp else 0.dp, end = if (expanded) 12.dp else 0.dp),
-                horizontalArrangement = if (expanded) Arrangement.spacedBy(14.dp) else Arrangement.Center,
+                    .padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                AccountAvatar(size = if (expanded) 56.dp else 32.dp)
+                Box(
+                    modifier = Modifier.width(RailIconSlotWidth),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AccountAvatar(size = CinemaSpacing.NavRailProfileAvatarSize)
+                }
                 AnimatedVisibility(visible = expanded) {
-                    Column {
+                    Column(modifier = Modifier.padding(end = 12.dp)) {
                         Text(
                             text = stringResource(R.string.nav_profile_name),
                             maxLines = 1,
@@ -221,23 +246,16 @@ private fun RailItemRow(
     ) { focused ->
         val isActive = selected || focused
         val contentColor = if (isActive) CinemaColors.White else CinemaColors.TextMuted
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 48.dp)
+                .heightIn(min = CinemaSpacing.NavRailItemMinHeight)
                 .padding(vertical = 4.dp),
-            contentAlignment = if (expanded) Alignment.CenterStart else Alignment.Center,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = if (expanded) 54.dp else 0.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = if (expanded) {
-                    Arrangement.spacedBy(20.dp)
-                } else {
-                    Arrangement.Center
-                },
+            Box(
+                modifier = Modifier.width(RailIconSlotWidth),
+                contentAlignment = Alignment.Center,
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -247,32 +265,36 @@ private fun RailItemRow(
                         imageVector = icon,
                         contentDescription = null,
                         tint = contentColor,
-                        modifier = Modifier.size(28.dp),
+                        modifier = Modifier.size(CinemaSpacing.NavRailIconSize),
                     )
                     if (isActive) {
                         Box(
                             modifier = Modifier
-                                .size(width = 34.dp, height = 3.dp)
+                                .size(
+                                    width = CinemaSpacing.NavRailActiveIndicatorWidth,
+                                    height = 3.dp,
+                                )
                                 .background(CinemaColors.Accent),
                         )
                     } else {
                         Spacer(modifier = Modifier.height(3.dp))
                     }
                 }
-                AnimatedVisibility(
-                    visible = expanded,
-                    enter = fadeIn(tween(150)) + expandHorizontally(tween(180)),
-                    exit = fadeOut(tween(100)) + shrinkHorizontally(tween(140)),
-                ) {
-                    Text(
-                        text = label,
-                        maxLines = 1,
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                            color = contentColor,
-                        ),
-                    )
-                }
+            }
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn(tween(150)) + expandHorizontally(tween(180)),
+                exit = fadeOut(tween(100)) + shrinkHorizontally(tween(140)),
+            ) {
+                Text(
+                    text = label,
+                    maxLines = 1,
+                    modifier = Modifier.padding(end = 12.dp),
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                        color = contentColor,
+                    ),
+                )
             }
         }
     }

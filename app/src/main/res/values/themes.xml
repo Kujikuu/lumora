@@ -9,7 +9,7 @@
 
     <style name="Theme.IptvCinema.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/brand_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_yango_wordmark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_lumora_splash_icon</item>
         <item name="windowSplashScreenIconBackgroundColor">@color/brand_background</item>
         <item name="postSplashScreenTheme">@style/Theme.IptvCinema</item>
     </style>

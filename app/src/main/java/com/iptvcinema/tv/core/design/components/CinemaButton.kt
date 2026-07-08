@@ -64,25 +64,27 @@ fun CinemaButton(
         )
     }
 
-    val shape = CinemaShapes.XLarge
-    val horizontalPadding = if (variant == CinemaButtonVariant.Icon) 0.dp else 10.dp
+    val shape = CinemaShapes.Pill
+    val horizontalPadding = if (variant == CinemaButtonVariant.Icon) 0.dp else 20.dp
     val minSize = 46.dp
 
     FocusableCinemaCard(
-        modifier = modifier.defaultMinSize(
-            minHeight = minSize,
-            minWidth = if (variant == CinemaButtonVariant.Icon) minSize else 0.dp,
-        ),
+        modifier = modifier.then(if (fullWidth) Modifier.fillMaxWidth() else Modifier),
         onClick = onClick,
         enabled = enabled,
         shape = shape,
         defaultBorderWidth = 0.dp,
+        focusScale = 1.02f,
     ) { _ ->
         Row(
-            modifier = (if (fullWidth) Modifier.fillMaxWidth() else Modifier)
+            modifier = Modifier
+                .then(if (fullWidth) Modifier.fillMaxWidth() else Modifier)
+                .defaultMinSize(
+                    minHeight = minSize,
+                    minWidth = if (variant == CinemaButtonVariant.Icon) minSize else 0.dp,
+                )
                 .background(backgroundColor, shape)
-                .defaultMinSize(minWidth = if (variant == CinemaButtonVariant.Icon) minSize else 0.dp)
-                .padding(horizontal = if (variant == CinemaButtonVariant.Icon) horizontalPadding else 20.dp, vertical = 9.dp),
+                .padding(horizontal = horizontalPadding, vertical = 9.dp),
             horizontalArrangement = Arrangement.spacedBy(
                 CinemaSpacing.ButtonGap / 2,
                 Alignment.CenterHorizontally,

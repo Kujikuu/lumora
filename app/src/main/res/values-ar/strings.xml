@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Yango Play</string>
+    <string name="app_name">Lumora Play</string>
     <string name="phase1_subtitle">المرحلة 1 — الأساس جاهز</string>
 
     <string name="nav_home">Watch</string>
@@ -64,19 +64,25 @@
     <string name="toggle_off">إيقاف</string>
 
     <string name="splash_tagline">Movies, series and playlists. All in one</string>
-    <string name="splash_loading">Loading Yango Play</string>
+    <string name="splash_loading">Loading Lumora Play</string>
 
     <string name="welcome_eyebrow">Movies and series</string>
     <string name="welcome_title">Movies, series &amp; playlists. All in one</string>
     <string name="welcome_title_alt">High quality and ad-free</string>
+    <string name="welcome_page3_eyebrow">Your library</string>
+    <string name="welcome_page3_title">Sync watchlist and resume anywhere</string>
+    <string name="welcome_page4_eyebrow">Made for you</string>
+    <string name="welcome_page4_title">Smart recommendations built for you</string>
     <string name="welcome_get_started">Get started</string>
-    <string name="welcome_explore">Explore Yango Play</string>
-    <string name="welcome_more">More about Yango Play</string>
+    <string name="welcome_explore">Explore Lumora Play</string>
+    <string name="welcome_more">More about Lumora Play</string>
     <string name="welcome_go_up">Go up</string>
 
-    <string name="activation_title">There are two ways to log in to Yango app</string>
+    <string name="activation_title">There are two ways to log in to Lumora app</string>
     <string name="activation_step1">Scan the QR code with your phone\'s camera</string>
     <string name="activation_step2">Open a browser on another device and go to:</string>
+    <string name="activation_or">or</string>
+    <string name="activation_url">iptv.afifistudio.com</string>
     <string name="activation_enter_account">تسجيل الدخول لحساب موجود</string>
     <string name="activation_create_account">إنشاء حساب</string>
     <string name="activation_scan">Enter code:</string>
@@ -94,7 +100,7 @@
 
     <string name="source_title">أضف مصدر IPTV</string>
     <string name="source_subtitle">اربط مزودك لبدء مشاهدة البث المباشر والأفلام والمسلسلات.</string>
-    <string name="source_footer">Yango Play لا يوفر قنوات أو بثوث. استخدم مزودك القانوني الخاص.</string>
+    <string name="source_footer">Lumora Play لا يوفر قنوات أو بثوث. استخدم مزودك القانوني الخاص.</string>
     <string name="source_xtream_title">Xtream Codes</string>
     <string name="source_xtream_desc">استخدم عنوان الخادم واسم المستخدم وكلمة المرور.</string>
     <string name="source_m3u_title">قائمة M3U</string>
@@ -196,8 +202,11 @@
     <string name="channel_related">قنوات ذات صلة</string>
 
     <string name="home_continue_watching">Continue watching</string>
+    <string name="continue_watching_menu_view_movie">عرض تفاصيل الفيلم</string>
+    <string name="continue_watching_menu_view_series">عرض تفاصيل المسلسل</string>
+    <string name="continue_watching_menu_remove">إزالة من متابعة المشاهدة</string>
     <string name="home_trending">الرائج الآن</string>
-    <string name="home_top_10_egypt">⚡ Top 10 in Egypt</string>
+    <string name="home_top_10_lumora">⚡ أهم 10 في Lumora</string>
     <string name="home_live_channels">القنوات المباشرة</string>
     <string name="home_live_now">مباشر الآن</string>
     <string name="home_popular_movies">أفلام شائعة</string>
@@ -208,8 +217,8 @@
     <string name="home_arabic_subtitles">With Arabic Subtitles</string>
     <string name="home_popular_series">مسلسلات شائعة</string>
     <string name="home_mood_row_title">تصفح حسب المزاج</string>
-    <string name="home_spotlight">YANGO MOVIES</string>
-    <string name="yango_movies_label">YANGO MOVIES</string>
+    <string name="home_spotlight">LUMORA MOVIES</string>
+    <string name="lumora_movies_label">LUMORA MOVIES</string>
     <string name="btn_continue_watching">متابعة المشاهدة</string>
     <string name="home_continue_progress">تمت مشاهدة %1$d%%</string>
     <string name="home_remaining_minutes">%1$d min</string>
@@ -340,7 +349,7 @@
 
     <string name="settings_title">الإعدادات</string>
     <string name="settings_subtitle">إدارة حسابك وتفضيلاتك وإعدادات الجهاز.</string>
-    <string name="settings_active">Yango Play نشط ✓</string>
+    <string name="settings_active">Lumora Play نشط ✓</string>
     <string name="settings_support">الدعم</string>
     <string name="settings_user_agreement">اتفاقية المستخدم</string>
     <string name="settings_devices">الأجهزة</string>
@@ -374,7 +383,7 @@
     <string name="settings_quality_auto">تلقائي — أفضل جودة متاحة</string>
     <string name="settings_audio_english">English</string>
     <string name="settings_subtitles_off">إيقاف</string>
-    <string name="settings_theme_dark">Yango Dark</string>
+    <string name="settings_theme_dark">Lumora Dark</string>
     <string name="settings_renews">يتجدد %1$s</string>
     <string name="settings_subscription_desc">الخطة المميزة نشطة حتى 15 يوليو 2026.</string>
     <string name="settings_language_desc">تتبع لغة التطبيق لغة نظام Android TV. غيّرها من إعدادات الجهاز ← اللغة.</string>
@@ -385,7 +394,7 @@
     <string name="settings_in_player">في المشغّل</string>
     <string name="settings_notifications_desc">تنبيهات الحلقات الجديدة وإشعارات المزامنة مفعّلة.</string>
     <string name="settings_device_desc">البدء على البث المباشر، بدء آخر ملف شخصي تلقائيًا، وخيارات HDMI-CEC.</string>
-    <string name="settings_about_desc">Yango Play v1.0.0</string>
+    <string name="settings_about_desc">Lumora Play v1.0.0</string>
     <string name="settings_expand_collapse">توسيع أو طي</string>
     <string name="settings_blocked_categories">الفئات المحظورة</string>
     <string name="settings_category_bullet">• %1$s</string>
@@ -393,7 +402,7 @@
     <string name="feedback_quality_soon">محدّد الجودة قريبًا</string>
     <string name="feedback_audio_soon">محدّد الصوت قريبًا</string>
     <string name="feedback_subtitle_soon">محدّد الترجمة قريبًا</string>
-    <string name="feedback_theme_locked">المظهر مقفل على Yango Dark</string>
+    <string name="feedback_theme_locked">المظهر مقفل على Lumora Dark</string>
 
     <string name="parental_title">الرقابة الأبوية</string>
     <string name="parental_remove_pin">إزالة PIN</string>

@@ -8,9 +8,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,8 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -37,6 +39,10 @@ import com.iptvcinema.tv.core.design.components.QrActivationPanel
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 
+private val ActivationQrSize = 575.dp
+private val ActivationDividerHeight = 575.dp
+private const val ActivationEmphasisTextScale = 0.6f
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ActivationScreen(
@@ -46,6 +52,7 @@ fun ActivationScreen(
     onRetry: () -> Unit,
 ) {
     val primaryButtonFocus = remember { FocusRequester() }
+    val qrUrl = (uiState as? ActivationUiState.Ready)?.qrUrl.orEmpty()
 
     BlockBackHandler()
 
@@ -58,82 +65,80 @@ fun ActivationScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(CinemaColors.Background)
-                .padding(horizontal = 90.dp, vertical = 86.dp),
-            verticalArrangement = Arrangement.spacedBy(80.dp),
+                .padding(horizontal = 72.dp, vertical = 56.dp),
         ) {
             Text(
                 text = stringResource(R.string.activation_title),
-                style = MaterialTheme.typography.displaySmall.copy(
+                style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Black,
                     color = CinemaColors.White,
                 ),
             )
+
+            Spacer(Modifier.height(36.dp))
+
             Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(98.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalAlignment = Alignment.Top,
             ) {
                 Column(
-                    modifier = Modifier.width(560.dp),
-                    verticalArrangement = Arrangement.spacedBy(42.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     Text(
                         text = stringResource(R.string.activation_step1),
-                        style = MaterialTheme.typography.headlineSmall.copy(
+                        style = MaterialTheme.typography.bodyLarge.copy(
                             color = CinemaColors.TextSecondary,
-                            fontWeight = FontWeight.Medium,
+                            fontWeight = FontWeight.Normal,
                         ),
                     )
                     QrActivationPanel(
-                        content = (uiState as? ActivationUiState.Ready)?.qrUrl.orEmpty(),
-                        size = 540.dp,
+                        content = qrUrl,
+                        size = ActivationQrSize,
                     )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .width(2.dp)
-                        .fillMaxHeight(0.82f)
-                        .background(CinemaColors.TextMuted.copy(alpha = 0.58f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "or",
-                        modifier = Modifier.background(CinemaColors.Background).padding(vertical = 28.dp),
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            color = CinemaColors.TextMuted,
-                            fontWeight = FontWeight.Black,
-                        ),
-                    )
-                }
+                ActivationOrDivider(
+                    modifier = Modifier.align(Alignment.CenterVertically),
+                )
 
                 Column(
-                    modifier = Modifier.width(720.dp),
-                    verticalArrangement = Arrangement.spacedBy(34.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
                 ) {
                     Text(
                         text = stringResource(R.string.activation_step2),
-                        style = MaterialTheme.typography.headlineSmall.copy(
+                        style = MaterialTheme.typography.bodyLarge.copy(
                             color = CinemaColors.TextSecondary,
-                            fontWeight = FontWeight.Medium,
-                        )
-                    )
-                    Text(
-                        text = "play.yango.com/activate",
-                        style = MaterialTheme.typography.displaySmall.copy(
-                            color = CinemaColors.White,
-                            fontWeight = FontWeight.Black,
+                            fontWeight = FontWeight.Normal,
                         ),
                     )
-                    Spacer(Modifier.height(28.dp))
+                    Text(
+                        text = stringResource(R.string.activation_url),
+                        modifier = Modifier.fillMaxWidth(),
+                        style = MaterialTheme.typography.headlineMedium
+                            .scaled(ActivationEmphasisTextScale)
+                            .copy(
+                                color = CinemaColors.White,
+                                fontWeight = FontWeight.Black,
+                            ),
+                    )
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.activation_scan),
-                        style = MaterialTheme.typography.headlineSmall.copy(
+                        style = MaterialTheme.typography.bodyLarge.copy(
                             color = CinemaColors.TextSecondary,
-                            fontWeight = FontWeight.Medium,
+                            fontWeight = FontWeight.Normal,
                         ),
                     )
                     ActivationCodeState(uiState = uiState, onRetry = onRetry)
+                    Spacer(Modifier.weight(1f))
                     Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
                         CinemaButton(
                             text = stringResource(R.string.activation_enter_account),
@@ -157,6 +162,42 @@ fun ActivationScreen(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+private fun ActivationOrDivider(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .padding(horizontal = 40.dp)
+            .height(ActivationDividerHeight)
+            .width(48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .width(1.dp)
+                .background(CinemaColors.TextMuted.copy(alpha = 0.45f)),
+        )
+        Text(
+            text = stringResource(R.string.activation_or),
+            modifier = Modifier
+                .background(CinemaColors.Background)
+                .padding(vertical = 12.dp),
+            style = MaterialTheme.typography.titleMedium.copy(
+                color = CinemaColors.TextMuted,
+                fontWeight = FontWeight.Medium,
+            ),
+        )
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .width(1.dp)
+                .background(CinemaColors.TextMuted.copy(alpha = 0.45f)),
+        )
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
 private fun ActivationCodeState(
     uiState: ActivationUiState,
     onRetry: () -> Unit,
@@ -165,20 +206,24 @@ private fun ActivationCodeState(
         ActivationUiState.Loading -> {
             Text(
                 text = stringResource(R.string.activation_generating),
-                style = MaterialTheme.typography.headlineLarge.copy(
+                style = MaterialTheme.typography.headlineMedium.copy(
                     color = CinemaColors.White,
                     fontWeight = FontWeight.Black,
                 ),
             )
         }
         is ActivationUiState.Ready -> {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     text = uiState.code,
-                    style = MaterialTheme.typography.displaySmall.copy(
-                        color = CinemaColors.White,
-                        fontWeight = FontWeight.Black,
-                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.headlineLarge
+                        .scaled(ActivationEmphasisTextScale)
+                        .copy(
+                            color = CinemaColors.White,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = (2.sp.value * ActivationEmphasisTextScale).sp,
+                        ),
                 )
                 Text(
                     text = uiState.statusMessage,
@@ -210,6 +255,11 @@ private fun ActivationCodeState(
         }
     }
 }
+
+private fun TextStyle.scaled(factor: Float): TextStyle = copy(
+    fontSize = (fontSize.value * factor).sp,
+    lineHeight = (lineHeight.value * factor).sp,
+)
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable

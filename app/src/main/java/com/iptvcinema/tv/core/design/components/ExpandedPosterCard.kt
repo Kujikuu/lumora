@@ -64,6 +64,7 @@ fun ExpandedPosterCard(
     modifier: Modifier = Modifier,
     variant: ExpandedPosterCardVariant = ExpandedPosterCardVariant.Portrait,
     onFocusChanged: (Boolean) -> Unit = {},
+    onCardLongClick: (() -> Unit)? = null,
 ) {
     val cardWidth = CinemaSpacing.ExpandedPosterCardWidth
     val cardHeight = when (variant) {
@@ -79,6 +80,7 @@ fun ExpandedPosterCard(
     val panelHeight = (cardHeight - posterHeight).coerceAtLeast(CinemaSpacing.ExpandedPosterPanelMinHeight)
     val reserveSubtitleSlot = variant == ExpandedPosterCardVariant.Landscape ||
         data.subtitle?.isNotBlank() == true
+    val cardLongClick = onCardLongClick ?: onFavorite
 
     Box(
         modifier = modifier
@@ -90,13 +92,13 @@ fun ExpandedPosterCard(
                 data = data,
                 onCardClick = onCardClick,
                 onWatchNow = onWatchNow,
-                onFavorite = onFavorite,
+                onCardLongClick = cardLongClick,
                 onFocusChanged = onFocusChanged,
             )
             ExpandedPosterCardVariant.LandscapePoster -> LandscapePosterCard(
                 data = data,
                 onCardClick = onCardClick,
-                onFavorite = onFavorite,
+                onCardLongClick = cardLongClick,
                 onFocusChanged = onFocusChanged,
             )
             ExpandedPosterCardVariant.Portrait ->
@@ -108,7 +110,7 @@ fun ExpandedPosterCard(
                     titleMaxLines = 2,
                     reserveSubtitleSlot = reserveSubtitleSlot,
                     onCardClick = onCardClick,
-                    onFavorite = onFavorite,
+                    onCardLongClick = cardLongClick,
                     onFocusChanged = onFocusChanged,
                 )
         }
@@ -120,7 +122,7 @@ fun ExpandedPosterCard(
 private fun LandscapePosterCard(
     data: HomeContentCard,
     onCardClick: () -> Unit,
-    onFavorite: () -> Unit,
+    onCardLongClick: () -> Unit,
     onFocusChanged: (Boolean) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -130,7 +132,7 @@ private fun LandscapePosterCard(
                 .height(CinemaSpacing.ExpandedLandscapePosterOnlyHeight)
                 .onFocusChanged { onFocusChanged(it.isFocused) },
             onClick = onCardClick,
-            onLongClick = onFavorite,
+            onLongClick = onCardLongClick,
             shape = CinemaShapes.Card,
             defaultBorderWidth = 0.dp,
             contentDescription = data.title,
@@ -168,7 +170,7 @@ private fun LandscapePosterCard(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 7.dp),
+                .padding(top = CinemaSpacing.CardTitleTopGap),
         )
     }
 }
@@ -179,7 +181,7 @@ private fun LandscapeHomeCard(
     data: HomeContentCard,
     onCardClick: () -> Unit,
     onWatchNow: () -> Unit,
-    onFavorite: () -> Unit,
+    onCardLongClick: () -> Unit,
     onFocusChanged: (Boolean) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -189,7 +191,7 @@ private fun LandscapeHomeCard(
                 .height(138.dp)
                 .onFocusChanged { onFocusChanged(it.isFocused) },
             onClick = onCardClick,
-            onLongClick = onFavorite,
+            onLongClick = onCardLongClick,
             shape = CinemaShapes.Card,
             defaultBorderWidth = 0.dp,
             contentDescription = data.title,
@@ -261,25 +263,30 @@ private fun LandscapeHomeCard(
                 }
             }
         }
-        Text(
-            text = data.title,
-            style = MaterialTheme.typography.labelLarge.copy(
-                fontWeight = FontWeight.Bold,
-                color = CinemaColors.White,
-            ),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 7.dp),
-        )
-        Text(
-            text = data.subtitle ?: data.runtimeOrEpisodes.orEmpty(),
-            style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth(),
-        )
+                .padding(top = CinemaSpacing.CardTitleTopGap),
+            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.CardTitleSubtitleGap),
+        ) {
+            Text(
+                text = data.title,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = CinemaColors.White,
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                text = data.subtitle ?: data.runtimeOrEpisodes.orEmpty(),
+                style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
@@ -293,7 +300,7 @@ private fun VerticalHomeCard(
     titleMaxLines: Int,
     reserveSubtitleSlot: Boolean,
     onCardClick: () -> Unit,
-    onFavorite: () -> Unit,
+    onCardLongClick: () -> Unit,
     onFocusChanged: (Boolean) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -303,7 +310,7 @@ private fun VerticalHomeCard(
                 .height(posterHeight)
                 .onFocusChanged { onFocusChanged(it.isFocused) },
             onClick = onCardClick,
-            onLongClick = onFavorite,
+            onLongClick = onCardLongClick,
             shape = CinemaShapes.Card,
             defaultBorderWidth = 0.dp,
             contentDescription = data.title,
@@ -319,7 +326,8 @@ private fun VerticalHomeCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(panelHeight)
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+                .padding(horizontal = 10.dp)
+                .padding(top = 10.dp, bottom = 8.dp),
         ) {
             HomeCardInfo(
                 data = data,
@@ -415,7 +423,7 @@ private fun HomeCardInfo(
     Column(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.CardTitleSubtitleGap),
         ) {
             Text(
                 text = data.title,
@@ -430,7 +438,7 @@ private fun HomeCardInfo(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 16.dp),
+                        .heightIn(min = 18.dp),
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     data.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
@@ -509,8 +517,8 @@ private fun PrimaryActionChip(
         Row(
             modifier = modifier
                 .defaultMinSize(minHeight = 36.dp)
-            .clip(CinemaShapes.Small)
-            .background(CinemaColors.Accent, CinemaShapes.Small)
+            .clip(CinemaShapes.Pill)
+            .background(CinemaColors.Accent, CinemaShapes.Pill)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,

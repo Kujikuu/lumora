@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Yango Play</string>
+    <string name="app_name">Lumora Play</string>
     <string name="phase1_subtitle">Phase 1 — Foundation ready</string>
 
     <!-- Navigation -->
@@ -68,21 +68,27 @@
 
     <!-- Splash -->
     <string name="splash_tagline">Movies, series and playlists. All in one</string>
-    <string name="splash_loading">Loading Yango Play</string>
+    <string name="splash_loading">Loading Lumora Play</string>
 
     <!-- Welcome -->
     <string name="welcome_eyebrow">Movies and series</string>
     <string name="welcome_title">Movies, series &amp; playlists. All in one</string>
     <string name="welcome_title_alt">High quality and ad-free</string>
+    <string name="welcome_page3_eyebrow">Your library</string>
+    <string name="welcome_page3_title">Sync watchlist and resume anywhere</string>
+    <string name="welcome_page4_eyebrow">Made for you</string>
+    <string name="welcome_page4_title">Smart recommendations built for you</string>
     <string name="welcome_get_started">Get started</string>
-    <string name="welcome_explore">Explore Yango Play</string>
-    <string name="welcome_more">More about Yango Play</string>
+    <string name="welcome_explore">Explore Lumora Play</string>
+    <string name="welcome_more">More about Lumora Play</string>
     <string name="welcome_go_up">Go up</string>
 
     <!-- Activation -->
-    <string name="activation_title">There are two ways to log in to Yango app</string>
+    <string name="activation_title">There are two ways to log in to Lumora app</string>
     <string name="activation_step1">Scan the QR code with your phone\'s camera</string>
     <string name="activation_step2">Open a browser on another device and go to:</string>
+    <string name="activation_or">or</string>
+    <string name="activation_url">iptv.afifistudio.com</string>
     <string name="activation_enter_account">Enter Existing Account</string>
     <string name="activation_create_account">Create Account</string>
     <string name="activation_scan">Enter code:</string>
@@ -101,7 +107,7 @@
     <!-- Source -->
     <string name="source_title">Add Your IPTV Source</string>
     <string name="source_subtitle">Connect your provider to start watching live TV, movies, and series.</string>
-    <string name="source_footer">Yango Play does not provide channels or streams. Use your own legal provider.</string>
+    <string name="source_footer">Lumora Play does not provide channels or streams. Use your own legal provider.</string>
     <string name="source_xtream_title">Xtream Codes</string>
     <string name="source_xtream_desc">Use server URL, username, and password.</string>
     <string name="source_m3u_title">M3U Playlist</string>
@@ -207,8 +213,11 @@
 
     <!-- Home / Browse -->
     <string name="home_continue_watching">Continue watching</string>
+    <string name="continue_watching_menu_view_movie">View movie details</string>
+    <string name="continue_watching_menu_view_series">View series details</string>
+    <string name="continue_watching_menu_remove">Remove from Continue Watching</string>
     <string name="home_trending">Trending Now</string>
-    <string name="home_top_10_egypt">⚡ Top 10 in Egypt</string>
+    <string name="home_top_10_lumora">⚡ Top 10 in Lumora</string>
     <string name="home_live_channels">Live Channels</string>
     <string name="home_live_now">Live Now</string>
     <string name="home_popular_movies">Popular Movies</string>
@@ -219,8 +228,8 @@
     <string name="home_arabic_subtitles">With Arabic Subtitles</string>
     <string name="home_popular_series">Popular Series</string>
     <string name="home_mood_row_title">Browse by Mood</string>
-    <string name="home_spotlight">YANGO MOVIES</string>
-    <string name="yango_movies_label">YANGO MOVIES</string>
+    <string name="home_spotlight">LUMORA MOVIES</string>
+    <string name="lumora_movies_label">LUMORA MOVIES</string>
     <string name="btn_continue_watching">Continue Watching</string>
     <string name="home_continue_progress">%1$d%% watched</string>
     <string name="home_remaining_minutes">%1$d min</string>
@@ -357,7 +366,7 @@
     <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="settings_subtitle">Manage your account, preferences, and device settings.</string>
-    <string name="settings_active">Yango Play is active ✓</string>
+    <string name="settings_active">Lumora Play is active ✓</string>
     <string name="settings_support">Support</string>
     <string name="settings_user_agreement">User agreement</string>
     <string name="settings_devices">Devices</string>
@@ -391,7 +400,7 @@
     <string name="settings_quality_auto">Auto Best Available</string>
     <string name="settings_audio_english">English</string>
     <string name="settings_subtitles_off">Off</string>
-    <string name="settings_theme_dark">Yango Dark</string>
+    <string name="settings_theme_dark">Lumora Dark</string>
     <string name="settings_renews">Renews %1$s</string>
     <string name="settings_subscription_desc">Premium Plan active until July 15, 2026.</string>
     <string name="settings_language_desc">App language follows your Android TV system language. Change it in device Settings → Language.</string>
@@ -402,7 +411,7 @@
     <string name="settings_in_player">In player</string>
     <string name="settings_notifications_desc">New episode alerts and sync notifications are enabled.</string>
     <string name="settings_device_desc">Launch on Live TV, auto-start last profile, and HDMI-CEC options.</string>
-    <string name="settings_about_desc">Yango Play v1.0.0</string>
+    <string name="settings_about_desc">Lumora Play v1.0.0</string>
     <string name="settings_expand_collapse">Expand or collapse</string>
     <string name="settings_blocked_categories">Blocked Categories</string>
     <string name="settings_category_bullet">• %1$s</string>
@@ -410,7 +419,7 @@
     <string name="feedback_quality_soon">Quality selector coming soon</string>
     <string name="feedback_audio_soon">Audio selector coming soon</string>
     <string name="feedback_subtitle_soon">Subtitle selector coming soon</string>
-    <string name="feedback_theme_locked">Theme locked to Yango Dark</string>
+    <string name="feedback_theme_locked">Theme locked to Lumora Dark</string>
 
     <!-- Parental -->
     <string name="parental_title">Parental Controls</string>

@@ -32,6 +32,7 @@ import com.iptvcinema.tv.core.model.catalog.FeaturedCatalogContent
 import com.iptvcinema.tv.core.parental.ParentalGate
 import com.iptvcinema.tv.core.player.PlaybackSessionTracker
 import com.iptvcinema.tv.core.util.AppStrings
+import com.iptvcinema.tv.core.util.removeContinueWatching
 import com.iptvcinema.tv.core.util.RemainingWatchTimeFormatter
 import com.iptvcinema.tv.core.util.SyncStatusFormatter
 import com.iptvcinema.tv.R
@@ -287,6 +288,15 @@ class HomeViewModel @Inject constructor(
 
     fun refreshContinueWatching() {
         watchHistoryRepository.invalidate()
+    }
+
+    fun removeContinueWatching(card: HomeContentCard) {
+        viewModelScope.launch {
+            val profileId = appSessionRepository.sessionState.first().currentProfileId ?: return@launch
+            runCatching {
+                watchHistoryRepository.removeContinueWatching(profileId, card)
+            }
+        }
     }
 
     fun refreshCurrentSource() {

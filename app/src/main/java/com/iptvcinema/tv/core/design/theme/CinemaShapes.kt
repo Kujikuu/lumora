@@ -10,4 +10,6 @@ object CinemaShapes {
     val Medium = RoundedCornerShape(6.dp)
     val Large = RoundedCornerShape(8.dp)
     val XLarge = RoundedCornerShape(12.dp)
+    /** Fully rounded ends for buttons, chips, and pill controls. */
+    val Pill = RoundedCornerShape(percent = 50)
 }

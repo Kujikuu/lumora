@@ -1455,14 +1455,15 @@ fun SearchKeyboard(
                             }
                             onKeyPress(output)
                         },
-                        shape = CinemaShapes.XLarge,
+                        shape = CinemaShapes.Pill,
+                        focusScale = 1.02f,
                     ) { focused ->
                         Box(
                             modifier = Modifier
-                                .size(width = keyWidth, height = keyHeight)
+                                .fillMaxSize()
                                 .background(
                                     if (focused) CinemaColors.White else CinemaColors.Background,
-                                    CinemaShapes.XLarge,
+                                    CinemaShapes.Pill,
                                 ),
                             contentAlignment = Alignment.Center,
                         ) {

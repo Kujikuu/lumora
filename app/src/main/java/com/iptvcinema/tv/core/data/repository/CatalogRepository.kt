@@ -130,16 +130,11 @@ class CatalogRepository @Inject constructor(
                 } else {
                     combine(
                         catalogDaoFacade.movies.observeFeatured(sourceId, 12),
-                        catalogDaoFacade.movies.observeRecentlyAdded(sourceId, 5),
+                        catalogDaoFacade.movies.observeRecentlyAdded(sourceId, 12),
                         catalogDaoFacade.series.observeFeatured(sourceId, 8),
                         catalogDaoFacade.channels.observeFeatured(sourceId, 8),
-                        catalogDaoFacade.syncState.observe(sourceId),
-                    ) { movies, heroMovies, series, channels, syncState ->
+                    ) { movies, heroMovies, series, channels ->
                         if (movies.isEmpty() && heroMovies.isEmpty() && series.isEmpty() &&
-                            channels.isEmpty() && syncState == null
-                        ) {
-                            CatalogBrowseState(CatalogLoadState.Loading)
-                        } else if (movies.isEmpty() && heroMovies.isEmpty() && series.isEmpty() &&
                             channels.isEmpty()
                         ) {
                             CatalogBrowseState(CatalogLoadState.Empty, message = appStrings.get(R.string.msg_no_content_synced))
@@ -152,12 +147,12 @@ class CatalogRepository @Inject constructor(
                                 loadState = CatalogLoadState.Ready,
                                 items = listOf(
                                     FeaturedCatalogContent(
-                                        heroMovies = domainHeroMovies,
+                                        heroMovies = domainHeroMovies.take(5),
                                         continueWatchingMovies = domainMovies.take(6),
                                         popularMovies = domainMovies.take(8),
-                                        trendingMovies = domainMovies.drop(1).take(8).ifEmpty { domainMovies },
+                                        trendingMovies = domainMovies.drop(1).take(10).ifEmpty { domainMovies.take(10) },
                                         liveChannels = domainChannels,
-                                        newReleaseMovies = domainMovies.takeLast(6).ifEmpty { domainMovies },
+                                        newReleaseMovies = domainHeroMovies.ifEmpty { domainMovies.take(12) },
                                         featuredSeries = domainSeries,
                                     ),
                                 ),
@@ -791,7 +786,7 @@ class CatalogRepository @Inject constructor(
                 genres = movie.genres,
             )
         },
-        trendingMovies = FakeDataProvider.movies.take(8).map { movie ->
+        trendingMovies = FakeDataProvider.movies.take(10).map { movie ->
             com.iptvcinema.tv.core.model.catalog.CatalogMovie(
                 id = movie.id,
                 sourceId = "demo",

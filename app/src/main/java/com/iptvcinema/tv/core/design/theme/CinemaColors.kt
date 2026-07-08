@@ -9,10 +9,10 @@ object CinemaColors {
     val SurfaceSoft = Color(0xFF151515)
     val SurfaceGlass = Color(0xD9151515)
 
-    val Accent = Color(0xFFA52CFF)
-    val AccentSoft = Color(0xFFC86BFF)
-    val AccentDeep = Color(0xFF7D1CD8)
-    val AccentGlow = Color(0xFFA52CFF)
+    val Accent = Color(0xFFE70302)
+    val AccentSoft = Color(0xFFFF5A59)
+    val AccentDeep = Color(0xFFB80201)
+    val AccentGlow = Color(0xFFE70302)
 
     val Secondary = Color(0xFFFF9900)
     val SecondarySoft = Color(0xFFFFB13D)

@@ -87,7 +87,6 @@ fun FocusableCinemaCard(
                 scaleX = scale
                 scaleY = scale
             }
-            .clip(shape)
             .then(
                 if (borderWidth > 0.dp) {
                     Modifier.border(width = borderWidth, color = borderColor, shape = shape)
@@ -95,6 +94,7 @@ fun FocusableCinemaCard(
                     Modifier
                 },
             )
+            .clip(shape)
             .semantics {
                 role = Role.Button
                 contentDescription?.let { this.contentDescription = it }

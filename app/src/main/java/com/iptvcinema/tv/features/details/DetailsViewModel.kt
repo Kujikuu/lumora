@@ -24,6 +24,7 @@ import com.iptvcinema.tv.core.player.EpisodeCatalogRepository
 import com.iptvcinema.tv.core.player.WatchHistoryResumePolicy
 import com.iptvcinema.tv.core.util.AppStrings
 import com.iptvcinema.tv.core.util.CastParser
+import com.iptvcinema.tv.core.util.RatingFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -355,7 +356,7 @@ private fun CatalogMovie.toMovieItem(): MovieItem = MovieItem(
     title = title,
     year = year ?: 0,
     runtimeMinutes = durationMinutes ?: 0,
-    rating = rating.orEmpty(),
+    rating = RatingFormatter.formatForDisplay(rating).orEmpty(),
     plot = plot.orEmpty(),
     genres = genres,
     is4K = false,
@@ -372,7 +373,9 @@ private fun CatalogSeries.toSeriesItem(
     id = id,
     title = title,
     year = year ?: 0,
-    rating = ratingOverride?.takeIf { it.isNotBlank() } ?: rating.orEmpty(),
+    rating = RatingFormatter.formatForDisplay(
+        ratingOverride?.takeIf { it.isNotBlank() } ?: rating,
+    ).orEmpty(),
     plot = plotOverride?.takeIf { it.isNotBlank() } ?: plot.orEmpty(),
     genres = genres,
     seasonCount = seasons.size,

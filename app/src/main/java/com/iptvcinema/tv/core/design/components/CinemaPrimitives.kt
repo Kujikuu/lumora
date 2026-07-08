@@ -9,19 +9,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.iptvcinema.tv.R
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
+import com.iptvcinema.tv.core.design.theme.rememberAppFontFamily
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -29,13 +26,7 @@ fun CinemaSerifTitle(
     text: String,
     modifier: Modifier = Modifier,
 ) {
-    val configuration = LocalConfiguration.current
-    val isArabic = configuration.locales[0].language == "ar"
-    val titleFont = if (isArabic) {
-        FontFamily(Font(R.font.noto_sans_arabic))
-    } else {
-        FontFamily.SansSerif
-    }
+    val titleFont = rememberAppFontFamily()
     Text(
         text = text,
         modifier = Modifier

@@ -77,8 +77,9 @@ fun SettingsRow(
         modifier = modifier.fillMaxWidth(),
         onClick = onClick,
         enabled = enabled,
-        shape = CinemaShapes.XLarge,
+        shape = CinemaShapes.Pill,
         defaultBorderWidth = 0.dp,
+        focusScale = 1.02f,
     ) { focused ->
         val rowBackground = when {
             !enabled -> CinemaColors.SurfaceSoft.copy(alpha = 0.5f)
@@ -95,7 +96,7 @@ fun SettingsRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 92.dp)
-                .background(rowBackground, CinemaShapes.XLarge)
+                .background(rowBackground, CinemaShapes.Pill)
                 .padding(horizontal = 38.dp, vertical = 22.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,

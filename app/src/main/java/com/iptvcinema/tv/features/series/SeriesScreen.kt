@@ -11,6 +11,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -27,12 +28,14 @@ import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
+import com.iptvcinema.tv.core.design.components.ContinueWatchingMenuDialog
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
 import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
+import com.iptvcinema.tv.core.navigation.openContinueWatchingDetails
 import com.iptvcinema.tv.core.navigation.rememberCatalogStateCallbacks
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
 import com.iptvcinema.tv.features.catalog.CatalogBrowseContent
@@ -57,6 +60,7 @@ fun SeriesScreen(
     val categories = uiState.categories
     val sortOptions = rememberCatalogSortOptions()
     val selectedSortIndex = catalogSortIndex(uiState.sortOption)
+    var continueMenuCard by remember { mutableStateOf<HomeContentCard?>(null) }
 
     var selectedFilter by remember(initialFilter, focusState.focusIndex, categories) {
         mutableIntStateOf(
@@ -106,6 +110,12 @@ fun SeriesScreen(
         navController = navController,
         selectedNavItem = NavItem.Series,
     ) {
+        ContinueWatchingMenuDialog(
+            card = continueMenuCard,
+            onDismiss = { continueMenuCard = null },
+            onViewDetails = { card -> openContinueWatchingDetails(navController, card) },
+            onRemove = viewModel::removeContinueWatching,
+        )
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -169,6 +179,7 @@ fun SeriesScreen(
                     onContinueCardClick = { card -> navigateSeriesCardToPlayer(navController, card) },
                     onContinueAddToList = viewModel::toggleFavorite,
                     onContinueFavorite = viewModel::toggleFavorite,
+                    onContinueCardLongClick = { card -> continueMenuCard = card },
                     watchNowFocus = watchNowFocus,
                     continueWatchingFocus = continueWatchingFocus,
                     categoryFocus = categoryFocus,

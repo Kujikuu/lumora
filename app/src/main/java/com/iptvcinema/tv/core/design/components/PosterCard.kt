@@ -168,7 +168,8 @@ fun PosterCard(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = CinemaSpacing.CardGap, vertical = 7.dp),
+                .padding(horizontal = CinemaSpacing.CardGap)
+                .padding(top = CinemaSpacing.CardTitleTopGap, bottom = 4.dp),
         )
     }
 }
