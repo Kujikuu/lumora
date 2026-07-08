@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.ViewCarousel
@@ -239,12 +238,6 @@ fun DetailHero(
                     text = resolvedWatchLaterLabel,
                     variant = CinemaButtonVariant.SecondaryDark,
                     icon = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                    onClick = onFavorite,
-                )
-                CinemaButton(
-                    text = "",
-                    variant = CinemaButtonVariant.Icon,
-                    icon = Icons.Default.ThumbUp,
                     onClick = onFavorite,
                 )
             }
