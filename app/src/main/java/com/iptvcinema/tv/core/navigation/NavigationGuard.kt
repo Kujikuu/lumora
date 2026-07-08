@@ -38,6 +38,14 @@ fun NavController.navigateMainShellTab(route: String) {
     }
 }
 
+fun NavController.navigateToLiveChannel(channelId: String) {
+    navigate(AppRoute.liveTv(channelId)) {
+        popUpTo(AppRoute.HOME) { saveState = true }
+        launchSingleTop = true
+        restoreState = false
+    }
+}
+
 enum class ProfileSelectionMode {
     Onboarding,
     SwitchProfile,

@@ -110,6 +110,8 @@ fun LiveTvScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val playerState by viewModel.playerState.collectAsState()
+    val activeCategoryName by viewModel.activeCategoryName.collectAsState()
+    val isResolvingChannelSelection by viewModel.isResolvingChannelSelection.collectAsState()
     val showFeedback = rememberPrototypeFeedback()
     val feedbackAddedToMyList = stringResource(R.string.feedback_added_to_mylist)
     val feedbackRemovedFromMyList = stringResource(R.string.feedback_removed_from_mylist)
@@ -187,7 +189,8 @@ fun LiveTvScreen(
         )
     }
 
-    LaunchedEffect(categories.getOrNull(selectedCategory)) {
+    LaunchedEffect(categories.getOrNull(selectedCategory), isResolvingChannelSelection) {
+        if (isResolvingChannelSelection) return@LaunchedEffect
         viewModel.selectCategory(categories.getOrNull(selectedCategory))
     }
 
@@ -195,11 +198,17 @@ fun LiveTvScreen(
         viewModel.setFullGuideOpen(initialOpenGuide)
     }
 
-    LaunchedEffect(initialChannelId, uiState.channels) {
-        if (!initialChannelId.isNullOrBlank() && uiState.channels.isNotEmpty()) {
-            val index = uiState.channels.indexOfFirst { it.id == initialChannelId }
+    LaunchedEffect(initialChannelId) {
+        if (!initialChannelId.isNullOrBlank()) {
+            viewModel.selectChannelById(initialChannelId)
+        }
+    }
+
+    LaunchedEffect(activeCategoryName, categories) {
+        activeCategoryName?.let { categoryName ->
+            val index = categories.indexOfFirst { it.equals(categoryName, ignoreCase = true) }
             if (index >= 0) {
-                selectChannelAt(index)
+                selectedCategory = index
             }
         }
     }

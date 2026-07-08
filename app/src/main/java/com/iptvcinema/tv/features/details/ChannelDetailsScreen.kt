@@ -34,6 +34,7 @@ import com.iptvcinema.tv.core.design.components.SkeletonDetailHero
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.ChannelItem
 import com.iptvcinema.tv.core.navigation.AppRoute
+import com.iptvcinema.tv.core.navigation.navigateToLiveChannel
 import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
 import com.iptvcinema.tv.core.navigation.PopBackHandler
@@ -133,7 +134,7 @@ fun ChannelDetailsScreen(
                             text = openInLiveTvLabel,
                             variant = CinemaButtonVariant.Ghost,
                             onClick = {
-                                navController.navigate(AppRoute.liveTv(uiState.channelId))
+                                navController.navigateToLiveChannel(uiState.channelId)
                             },
                         )
                     }

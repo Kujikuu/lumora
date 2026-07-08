@@ -39,7 +39,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.SharingStarted
 
 data class LiveTvUiState(
     val loadState: CatalogLoadState = CatalogLoadState.Loading,
@@ -101,6 +104,7 @@ class LiveTvViewModel @Inject constructor(
     private val epgPrograms = MutableStateFlow<List<EpgProgram>>(emptyList())
     private val favoriteChannelIds = MutableStateFlow<Set<String>>(emptySet())
     private val fullGuideOpen = MutableStateFlow(false)
+    private val pendingChannelId = MutableStateFlow<String?>(null)
     private var currentParentalControls: com.iptvcinema.tv.core.model.ParentalControls? = null
     private val browseState = MutableStateFlow(
         LiveTvBrowseSlice(
@@ -114,6 +118,10 @@ class LiveTvViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LiveTvUiState())
     val uiState: StateFlow<LiveTvUiState> = _uiState.asStateFlow()
     val playerState: StateFlow<PlayerUiState> = playerManager.state
+    val activeCategoryName: StateFlow<String?> = selectedCategory.asStateFlow()
+    val isResolvingChannelSelection: StateFlow<Boolean> = pendingChannelId
+        .map { it != null }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private var epgLoadJob: Job? = null
     private var clockJob: Job? = null
@@ -172,19 +180,35 @@ class LiveTvViewModel @Inject constructor(
                 currentParentalControls = result.controls
                 favoriteChannelIds.value = result.favoriteChannelIds
                 val slice = result.slice
-                if (slice.loadState == CatalogLoadState.Ready && slice.channels.isNotEmpty()) {
-                    val previousChannelId = selectedChannel.value?.id
-                    val resolvedChannel = selectedChannel.value?.takeIf { selected ->
-                        slice.channels.any { it.id == selected.id }
-                    } ?: slice.channels.firstOrNull()
-                    selectedChannel.value = resolvedChannel
-                    resolvedChannel?.id?.let { channelId ->
-                        if (channelId != previousChannelId || activePlaybackChannelId == null) {
-                            startPlayback(channelId)
-                        }
+                val pending = pendingChannelId.value
+                val matchedPending = pending?.let { channelId ->
+                    slice.channels.find { it.id == channelId }
+                }
+                if (matchedPending != null) {
+                    selectedChannel.value = matchedPending
+                    if (activePlaybackChannelId != matchedPending.id) {
+                        startPlayback(matchedPending.id)
                     }
-                } else if (slice.channels.isEmpty()) {
-                    selectedChannel.value = null
+                    pendingChannelId.value = null
+                } else if (!pending.isNullOrBlank() && slice.loadState == CatalogLoadState.Ready) {
+                    val channelId = pending
+                    pendingChannelId.value = null
+                    startPlayback(channelId)
+                } else if (pending.isNullOrBlank()) {
+                    if (slice.loadState == CatalogLoadState.Ready && slice.channels.isNotEmpty()) {
+                        val previousChannelId = selectedChannel.value?.id
+                        val resolvedChannel = selectedChannel.value?.takeIf { selected ->
+                            slice.channels.any { it.id == selected.id }
+                        } ?: slice.channels.firstOrNull()
+                        selectedChannel.value = resolvedChannel
+                        resolvedChannel?.id?.let { channelId ->
+                            if (channelId != previousChannelId || activePlaybackChannelId == null) {
+                                startPlayback(channelId)
+                            }
+                        }
+                    } else if (slice.channels.isEmpty()) {
+                        selectedChannel.value = null
+                    }
                 }
                 refreshEpg()
             }
@@ -363,8 +387,33 @@ class LiveTvViewModel @Inject constructor(
 
     fun selectChannelById(channelId: String?) {
         if (channelId.isNullOrBlank()) return
-        val channel = browseState.value.channels.find { it.id == channelId } ?: return
-        onChannelSelected(channel)
+        pendingChannelId.value = channelId
+        viewModelScope.launch {
+            resolveCategoryForChannel(channelId)
+        }
+    }
+
+    private suspend fun resolveCategoryForChannel(channelId: String) {
+        val session = appSessionRepository.sessionState.first()
+        if (session.isDemoMode) {
+            val category = FakeDataProvider.liveCategories.firstOrNull { categoryName ->
+                FakeDataProvider.channelsForCategory(categoryName).any { it.id == channelId }
+            }
+            selectCategory(category)
+            return
+        }
+        val sourceId = session.currentSourceId
+        if (sourceId == null) {
+            pendingChannelId.value = null
+            return
+        }
+        val catalogChannel = catalogRepository.getChannel(sourceId, channelId)
+        if (catalogChannel != null) {
+            selectCategory(catalogChannel.categoryName)
+        } else {
+            pendingChannelId.value = null
+            startPlayback(channelId)
+        }
     }
 
     fun onProgramFocused(program: EpgProgram) {

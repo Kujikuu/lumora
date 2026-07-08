@@ -621,8 +621,10 @@ class CatalogRepository @Inject constructor(
         }
         return catalogDaoFacade.categories.observeByType(sourceId, contentType.name).flatMapLatest { categories ->
             val categoryNames = categories.map { it.name }
-            val selectedCategory = categories.firstOrNull { it.name == categoryName }
-                ?: categories.firstOrNull()
+            val selectedCategory = when {
+                categoryName.isNullOrBlank() -> categories.firstOrNull()
+                else -> categories.firstOrNull { it.name.equals(categoryName, ignoreCase = true) }
+            } ?: categories.firstOrNull()
             val channelFlow = if (selectedCategory == null) {
                 catalogDaoFacade.channels.observeAll(sourceId)
             } else {

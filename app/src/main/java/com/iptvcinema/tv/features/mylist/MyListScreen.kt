@@ -63,6 +63,7 @@ import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
 import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
+import com.iptvcinema.tv.core.navigation.navigateToLiveChannel
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
 import kotlinx.coroutines.launch
 
@@ -170,7 +171,7 @@ fun MyListScreen(
                                 contentStart = contentStart,
                                 firstItemFocusRequester = if (state.watchLater.isEmpty()) channelsFocus else null,
                                 onChannelClick = { channel ->
-                                    navController.navigate(AppRoute.liveTv(channel.contentId))
+                                    navController.navigateToLiveChannel(channel.contentId)
                                 },
                                 onRemoveChannel = { channel ->
                                     viewModel.removeFavorite(channel.favorite)
@@ -396,6 +397,6 @@ private fun openFavorite(navController: NavController, favorite: FavoriteItem) {
         FavoriteContentType.MOVIE -> navController.navigate(AppRoute.movieDetails(favorite.contentId))
         FavoriteContentType.SERIES, FavoriteContentType.EPISODE ->
             navController.navigate(AppRoute.seriesDetails(favorite.contentId))
-        FavoriteContentType.CHANNEL -> navController.navigate(AppRoute.liveTv(favorite.contentId))
+        FavoriteContentType.CHANNEL -> navController.navigateToLiveChannel(favorite.contentId)
     }
 }
