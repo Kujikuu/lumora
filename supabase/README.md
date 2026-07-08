@@ -17,6 +17,10 @@ Phase 5 connects the Android TV app to Supabase Auth, syncs user data, and enabl
    - [`migrations/001_initial_schema.sql`](migrations/001_initial_schema.sql)
    - [`migrations/002_fix_activation_rls.sql`](migrations/002_fix_activation_rls.sql)
    - [`migrations/003_activation_expires_server_default.sql`](migrations/003_activation_expires_server_default.sql)
+   - [`migrations/004_watch_history_series_id.sql`](migrations/004_watch_history_series_id.sql)
+   - [`migrations/005_harden_activation_and_indexes.sql`](migrations/005_harden_activation_and_indexes.sql)
+   - [`migrations/006_activation_housekeeping.sql`](migrations/006_activation_housekeeping.sql)
+   - [`migrations/007_enable_realtime_user_data.sql`](migrations/007_enable_realtime_user_data.sql)
 
 ## 2. Auth providers
 

@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.core.data.repository.supabase
 
+import com.iptvcinema.tv.core.data.local.CloudUserDataCache
 import com.iptvcinema.tv.core.data.local.LocalCredentialsStore
 import com.iptvcinema.tv.core.data.repository.PlaylistSourcesRepository
 import com.iptvcinema.tv.core.model.M3uCredentials
@@ -27,18 +28,48 @@ class SupabasePlaylistSourcesRepository @Inject constructor(
     private val supabaseClient: SupabaseClient,
     private val localCredentialsStore: LocalCredentialsStore,
     private val cloudCredentialsCipher: CloudCredentialsCipher,
+    private val cloudUserDataCache: CloudUserDataCache,
 ) : PlaylistSourcesRepository {
+    private var cachedSources: List<PlaylistSourceRecord>? = null
+    private var cachedSourcesAtMs: Long = 0L
+
     override suspend fun getSources(): List<PlaylistSourceRecord> {
         val userId = requireUserId()
-        return supabaseClient.from(TABLE)
-            .select(Columns.ALL) {
+        val now = System.currentTimeMillis()
+        cachedSources?.takeIf { now - cachedSourcesAtMs <= SOURCE_CACHE_TTL_MS }?.let { return it }
+
+        val remote = supabaseClient.from(TABLE)
+            .select(
+                Columns.list(
+                    COLUMN_ID,
+                    COLUMN_USER_ID,
+                    "name",
+                    "type",
+                    "server_url",
+                    "playlist_url",
+                    "epg_url",
+                    "is_active",
+                    "status",
+                    "last_synced_at",
+                ),
+            ) {
                 filter {
                     eq(COLUMN_USER_ID, userId)
                 }
             }
             .decodeList<PlaylistSourceDto>()
             .map { it.toDomain() }
+
+        cachedSources = remote
+        cachedSourcesAtMs = now
+        cloudUserDataCache.savePlaylistSources(userId, remote)
+        return remote
     }
+
+    suspend fun getSourcesCached(userId: String): List<PlaylistSourceRecord> =
+        runCatching { getSources() }.getOrElse {
+            cloudUserDataCache.getPlaylistSources(userId).orEmpty()
+        }
 
     override suspend fun saveXtreamSource(credentials: XtreamCredentials): PlaylistSourceRecord {
         val userId = requireUserId()
@@ -58,6 +89,7 @@ class SupabasePlaylistSourcesRepository @Inject constructor(
             .decodeSingle<PlaylistSourceDto>()
         localCredentialsStore.saveXtreamCredentials(saved.id, credentials)
         uploadEncryptedCredentials(saved.id, userId, credentials)
+        invalidateSourceCache()
         return saved.toDomain()
     }
 
@@ -96,6 +128,7 @@ class SupabasePlaylistSourcesRepository @Inject constructor(
                 }
             }
         localCredentialsStore.saveXtreamCredentials(sourceId, credentials)
+        invalidateSourceCache()
         return getSources().first { it.id == sourceId }
     }
 
@@ -118,6 +151,7 @@ class SupabasePlaylistSourcesRepository @Inject constructor(
             .decodeSingle<PlaylistSourceDto>()
         localCredentialsStore.saveM3uCredentials(saved.id, credentials)
         uploadEncryptedM3uCredentials(saved.id, userId, credentials)
+        invalidateSourceCache()
         return saved.toDomain()
     }
 
@@ -137,6 +171,7 @@ class SupabasePlaylistSourcesRepository @Inject constructor(
             }
             .decodeSingle<PlaylistSourceDto>()
             .toDomain()
+            .also { invalidateSourceCache() }
     }
 
     override suspend fun setActiveSource(sourceId: String) {
@@ -149,6 +184,7 @@ class SupabasePlaylistSourcesRepository @Inject constructor(
                     eq(COLUMN_USER_ID, userId)
                 }
             }
+        invalidateSourceCache()
     }
 
     override suspend fun deleteSource(sourceId: String) {
@@ -161,6 +197,7 @@ class SupabasePlaylistSourcesRepository @Inject constructor(
                 }
             }
         localCredentialsStore.removeCredentials(sourceId)
+        invalidateSourceCache()
     }
 
     override suspend fun updateSyncStatus(
@@ -181,6 +218,7 @@ class SupabasePlaylistSourcesRepository @Inject constructor(
                     eq(COLUMN_USER_ID, userId)
                 }
             }
+        invalidateSourceCache()
     }
 
     override suspend fun ensureLocalCredentials(source: PlaylistSourceRecord) {
@@ -275,6 +313,11 @@ class SupabasePlaylistSourcesRepository @Inject constructor(
         )
     }
 
+    private fun invalidateSourceCache() {
+        cachedSources = null
+        cachedSourcesAtMs = 0L
+    }
+
     private suspend fun deactivateAllSources(userId: String) {
         supabaseClient.from(TABLE)
             .update(PlaylistSourceActiveUpdateDto(isActive = false)) {
@@ -327,6 +370,7 @@ class SupabasePlaylistSourcesRepository @Inject constructor(
         private const val TABLE = "playlist_sources"
         private const val COLUMN_ID = "id"
         private const val COLUMN_USER_ID = "user_id"
+        private const val SOURCE_CACHE_TTL_MS = 30_000L
 
         internal fun matchesXtreamSource(
             serverUrl: String?,

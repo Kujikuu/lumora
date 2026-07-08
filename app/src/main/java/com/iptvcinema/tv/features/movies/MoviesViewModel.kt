@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 data class MoviesUiState(
@@ -80,13 +81,12 @@ class MoviesViewModel @Inject constructor(
                 appSessionRepository.sessionState,
                 selectedCategory,
                 selectedSort,
-            ) { session, categoryName, sortOption ->
-                Triple(session, categoryName, sortOption)
-            }.flatMapLatest { (session, categoryName, sortOption) ->
+                userSettingsRepository.observeSettings().map { it?.continueWatchingEnabled ?: true },
+            ) { session, categoryName, sortOption, continueWatchingEnabled ->
+                Triple(session, categoryName, sortOption) to continueWatchingEnabled
+            }.flatMapLatest { (triple, continueWatchingEnabled) ->
+                val (session, categoryName, sortOption) = triple
                 val profileId = session.currentProfileId
-                val continueWatchingEnabled = runCatching {
-                    userSettingsRepository.getSettings()?.continueWatchingEnabled
-                }.getOrNull() ?: true
                 val controlsFlow = profileId?.let { parentalControlsRepository.observeControls(it) }
                     ?: flowOf(null)
                 val historyFlow = if (profileId != null && continueWatchingEnabled) {
@@ -172,6 +172,7 @@ class MoviesViewModel @Inject constructor(
                             title = display.title,
                             subtitle = display.subtitle,
                             imageUrl = display.posterUrl,
+                            backdropUrl = display.backdropUrl,
                             progress = progress,
                             isFavorite = bundle.favorites.isFavorite(item.contentId, FavoriteContentType.MOVIE),
                             primaryAction = HomeCardAction.ContinueWatching,
@@ -250,6 +251,7 @@ class MoviesViewModel @Inject constructor(
                     title = card.title,
                     posterUrl = card.imageUrl,
                     sourceId = session.currentSourceId,
+                    currentlyFavorite = card.isFavorite,
                 )
                 updateCardFavoriteState(card.contentId, card.toFavoriteContentType(), isFavorite)
             }

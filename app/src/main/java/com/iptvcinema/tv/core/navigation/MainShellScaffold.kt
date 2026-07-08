@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.components.AccountDegradedBanner
 import com.iptvcinema.tv.core.design.components.CinemaScreen
 
@@ -27,6 +29,11 @@ fun MainShellScaffold(
     content: @Composable () -> Unit,
 ) {
     val isCloudDegraded by sessionViewModel.isCloudDegraded.collectAsState()
+    val accountDisplayName by sessionViewModel.accountDisplayName.collectAsState()
+    val activeProfileName by sessionViewModel.activeProfileName.collectAsState()
+    val navProfileTitle = activeProfileName
+        ?: accountDisplayName.ifBlank { stringResource(R.string.nav_profile_guest) }
+    val navProfileSubtitle = stringResource(R.string.nav_switch_profile)
     // The left navigation rail now covers Favorites/Search/etc., so the legacy
     // bottom browse footer is redundant chrome. Keep it off for a cleaner,
     // more cinematic layout that gives content rails more vertical room.
@@ -46,6 +53,8 @@ fun MainShellScaffold(
         onProfileClick = {
             navController.navigate(AppRoute.profileSelection(ProfileSelectionMode.SwitchProfile))
         },
+        navProfileTitle = navProfileTitle,
+        navProfileSubtitle = navProfileSubtitle,
         showBrowseFooter = showBrowseFooter,
         onFavoritesClick = { shellNavigate(navController, AppRoute.MY_LIST) },
         onRecentlyAddedClick = { shellNavigate(navController, AppRoute.movies()) },
@@ -54,7 +63,7 @@ fun MainShellScaffold(
     ) {
         Column {
             if (isCloudDegraded) {
-                AccountDegradedBanner()
+                AccountDegradedBanner(onRetry = sessionViewModel::retryCloudSync)
             }
             content()
         }

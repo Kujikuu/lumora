@@ -18,13 +18,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,26 +53,14 @@ fun Top10Rail(
     onCardClick: (HomeContentCard) -> Unit,
     modifier: Modifier = Modifier,
     firstItemFocusRequester: FocusRequester? = null,
+    onEnteringRail: suspend () -> Unit = {},
+    parentHandlesVerticalScroll: Boolean = false,
 ) {
     val listState = rememberLazyListState()
     val sectionBringIntoViewRequester = remember(title) { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
-    val shellImmersion = LocalShellImmersion.current
     val contentStart = shellContentStart()
-    var focusedItemIndex by remember(title) { mutableIntStateOf(0) }
-
-    LaunchedEffect(listState, shellImmersion) {
-        if (shellImmersion == null) return@LaunchedEffect
-        snapshotFlow {
-            Triple(
-                listState.firstVisibleItemIndex,
-                listState.firstVisibleItemScrollOffset,
-                focusedItemIndex,
-            )
-        }.collect { (_, _, index) ->
-            shellImmersion.updateRailScroll(listState, index)
-        }
-    }
+    var hadFocusInRail by remember(title) { mutableStateOf(false) }
 
     androidx.compose.foundation.layout.Column(
         modifier = modifier
@@ -98,7 +84,8 @@ fun Top10Rail(
             state = listState,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(216.dp),
+                .height(216.dp)
+                .onFocusChanged { if (!it.hasFocus) hadFocusInRail = false },
             contentPadding = PaddingValues(
                 start = contentStart,
                 end = CinemaSpacing.ScreenPadding,
@@ -121,17 +108,18 @@ fun Top10Rail(
                         )
                         .onFocusChanged { focus ->
                             if (focus.isFocused) {
-                                focusedItemIndex = index
-                                shellImmersion?.updateRailImmersion(
-                                    hasRailFocus = true,
-                                    focusedItemIndex = index,
-                                    listState = listState,
-                                )
                                 scope.launch {
-                                sectionBringIntoViewRequester.bringIntoView()
-                                listState.scrollToItem(index)
+                                    val enteringRail = !hadFocusInRail
+                                    hadFocusInRail = true
+                                    if (enteringRail) {
+                                        onEnteringRail()
+                                        if (!parentHandlesVerticalScroll) {
+                                            sectionBringIntoViewRequester.bringIntoView()
+                                        }
+                                    }
+                                    listState.animateToFocusedItem(index)
+                                }
                             }
-                        }
                     },
                 )
             }

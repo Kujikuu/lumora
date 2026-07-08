@@ -10,7 +10,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.runtime.Composable
@@ -24,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -48,6 +50,8 @@ import com.iptvcinema.tv.core.design.components.ErrorState
 import com.iptvcinema.tv.core.design.components.FocusableCinemaCard
 import com.iptvcinema.tv.core.design.components.PosterCardData
 import com.iptvcinema.tv.core.design.components.SkeletonPosterGrid
+import com.iptvcinema.tv.core.design.components.animateToFocusedItem
+import com.iptvcinema.tv.core.design.components.shellContentStart
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
@@ -71,6 +75,7 @@ fun MyListScreen(
     val contentFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("my_list")
     val scope = rememberCoroutineScope()
+    val contentStart = shellContentStart()
 
     val exitRailToContent: () -> Unit = {
         scope.launch {
@@ -146,25 +151,42 @@ fun MyListScreen(
                                 color = CinemaColors.White,
                                 fontWeight = FontWeight.Medium,
                             ),
-                            modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
+                            modifier = Modifier.padding(start = contentStart),
                         )
+                        val listState = rememberLazyListState()
                         LazyRow(
+                            state = listState,
                             contentPadding = PaddingValues(
-                                start = CinemaSpacing.ContentStart,
+                                start = contentStart,
                                 end = CinemaSpacing.ScreenPadding,
                             ),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             item {
                                 AllAddedCard(
-                                    modifier = Modifier.focusRequester(contentFocus),
+                                    modifier = Modifier
+                                        .focusRequester(contentFocus)
+                                        .onFocusChanged { focusState ->
+                                            if (focusState.isFocused) {
+                                                scope.launch {
+                                                    listState.animateToFocusedItem(0)
+                                                }
+                                            }
+                                        },
                                 )
                             }
-                            items(state.favorites, key = { it.id }) { favorite ->
+                            itemsIndexed(state.favorites, key = { _, favorite -> favorite.id }) { index, favorite ->
                                 MyCollectionTile(
                                     data = favorite.toPosterCardData(),
                                     onClick = { openFavorite(navController, favorite) },
                                     onLongClick = { viewModel.removeFavorite(favorite) },
+                                    modifier = Modifier.onFocusChanged { focusState ->
+                                        if (focusState.isFocused) {
+                                            scope.launch {
+                                                listState.animateToFocusedItem(index + 1)
+                                            }
+                                        }
+                                    },
                                 )
                             }
                         }
@@ -218,9 +240,10 @@ private fun MyCollectionTile(
     data: PosterCardData,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     FocusableCinemaCard(
-        modifier = Modifier
+        modifier = modifier
             .width(245.dp)
             .height(141.dp),
         onClick = onClick,

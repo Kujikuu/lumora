@@ -47,8 +47,19 @@ class PlayerManager @Inject constructor(
     private var playbackGeneration: Int = 0
     private var pendingErrorMessage: String? = null
     private var pendingErrorCode: String? = null
+    private var playbackPreferences: PlaybackPreferences? = null
+    private var userOverrodeAudio = false
+    private var userOverrodeSubtitles = false
 
     fun getExoPlayer(): ExoPlayer = ensurePlayer()
+
+    fun applyPlaybackPreferences(preferences: PlaybackPreferences) {
+        playbackPreferences = preferences
+        player?.let { exoPlayer ->
+            applyQualityCap(exoPlayer, preferences.streamingQuality)
+            applyDefaultTracksIfNeeded(exoPlayer)
+        }
+    }
 
     fun play(request: PlaybackRequest, startPositionMs: Long = 0L, isXtreamSource: Boolean = false) {
         retryJob?.cancel()
@@ -56,6 +67,8 @@ class PlayerManager @Inject constructor(
         pendingErrorMessage = null
         pendingErrorCode = null
         playbackGeneration++
+        userOverrodeAudio = false
+        userOverrodeSubtitles = false
         playInternal(request, startPositionMs, isXtreamSource, playbackGeneration)
     }
 
@@ -191,11 +204,21 @@ class PlayerManager @Inject constructor(
             .build()
             .also { exoPlayer ->
                 exoPlayer.addListener(playerListener)
+                playbackPreferences?.let { applyQualityCap(exoPlayer, it.streamingQuality) }
                 player = exoPlayer
             }
     }
 
-    private fun selectAudioTrack(index: Int) {
+    @OptIn(UnstableApi::class)
+    private fun applyQualityCap(exoPlayer: ExoPlayer, quality: String) {
+        val maxHeight = PlaybackPreferencesApplier.maxVideoHeight(quality) ?: Int.MAX_VALUE
+        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+            .buildUpon()
+            .setMaxVideoSize(Int.MAX_VALUE, maxHeight)
+            .build()
+    }
+
+    private fun selectAudioTrack(index: Int, fromUser: Boolean = true) {
         val exoPlayer = player ?: return
         val track = _state.value.audioTracks.getOrNull(index) ?: return
         val groups = exoPlayer.currentTracks.groups
@@ -206,10 +229,11 @@ class PlayerManager @Inject constructor(
             .addOverride(TrackSelectionOverride(group.mediaTrackGroup, track.trackIndex))
             .build()
         trackedAudioGroupIndex = track.groupIndex
+        if (fromUser) userOverrodeAudio = true
         _state.update { it.copy(selectedAudioIndex = index) }
     }
 
-    private fun selectSubtitleTrack(index: Int) {
+    private fun selectSubtitleTrack(index: Int, fromUser: Boolean = true) {
         val exoPlayer = player ?: return
         val track = _state.value.subtitleTracks.getOrNull(index) ?: return
         val groups = exoPlayer.currentTracks.groups
@@ -221,16 +245,18 @@ class PlayerManager @Inject constructor(
             .addOverride(TrackSelectionOverride(group.mediaTrackGroup, track.trackIndex))
             .build()
         trackedSubtitleGroupIndex = track.groupIndex
+        if (fromUser) userOverrodeSubtitles = true
         _state.update { it.copy(selectedSubtitleIndex = index) }
     }
 
-    private fun disableSubtitles() {
+    private fun disableSubtitles(fromUser: Boolean = true) {
         val exoPlayer = player ?: return
         exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
             .buildUpon()
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
             .build()
         trackedSubtitleGroupIndex = -1
+        if (fromUser) userOverrodeSubtitles = true
         _state.update { it.copy(selectedSubtitleIndex = -1) }
     }
 
@@ -251,6 +277,7 @@ class PlayerManager @Inject constructor(
                             label = label,
                             groupIndex = groupIndex,
                             trackIndex = trackIndex,
+                            language = format.language?.takeIf { it.isNotBlank() },
                         )
                     }
                 }
@@ -265,6 +292,7 @@ class PlayerManager @Inject constructor(
                             label = label,
                             groupIndex = groupIndex,
                             trackIndex = trackIndex,
+                            language = format.language?.takeIf { it.isNotBlank() },
                         )
                     }
                 }
@@ -276,6 +304,34 @@ class PlayerManager @Inject constructor(
                 subtitleTracks = subtitleTracks,
                 qualityLabel = extractQualityLabel(exoPlayer),
             )
+        }
+        applyDefaultTracksIfNeeded(exoPlayer)
+    }
+
+    private fun applyDefaultTracksIfNeeded(exoPlayer: ExoPlayer) {
+        val prefs = playbackPreferences ?: return
+        val audioTracks = _state.value.audioTracks
+        val subtitleTracks = _state.value.subtitleTracks
+        if (!userOverrodeAudio && audioTracks.isNotEmpty()) {
+            val mediaTracks = audioTracks.map { MediaTrackOption(it.index, it.label, it.language) }
+            PlaybackPreferencesApplier.selectAudioTrackIndex(mediaTracks, prefs.defaultAudioLanguage)
+                ?.takeIf { it != _state.value.selectedAudioIndex }
+                ?.let { selectAudioTrack(it, fromUser = false) }
+        }
+        if (!userOverrodeSubtitles) {
+            if (!prefs.subtitlesEnabled) {
+                if (_state.value.selectedSubtitleIndex != -1) {
+                    disableSubtitles(fromUser = false)
+                }
+            } else {
+                val mediaTracks = subtitleTracks.map { MediaTrackOption(it.index, it.label, it.language) }
+                PlaybackPreferencesApplier.selectSubtitleTrackIndex(
+                    tracks = mediaTracks,
+                    preferredLanguage = prefs.defaultSubtitleLanguage,
+                    subtitlesEnabled = true,
+                )?.takeIf { it != _state.value.selectedSubtitleIndex }
+                    ?.let { selectSubtitleTrack(it, fromUser = false) }
+            }
         }
     }
 

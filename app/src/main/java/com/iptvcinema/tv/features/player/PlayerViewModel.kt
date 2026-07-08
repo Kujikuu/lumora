@@ -26,6 +26,7 @@ import com.iptvcinema.tv.core.player.PlaybackRepository
 import com.iptvcinema.tv.core.player.PlaybackRequest
 import com.iptvcinema.tv.core.player.PlaybackResolveResult
 import com.iptvcinema.tv.core.player.PlaybackSessionTracker
+import com.iptvcinema.tv.core.player.PlaybackPreferences
 import com.iptvcinema.tv.core.player.PlayerCommand
 import com.iptvcinema.tv.core.player.PlayerManager
 import com.iptvcinema.tv.core.player.PlayerUiState
@@ -127,6 +128,7 @@ class PlayerViewModel @Inject constructor(
             userSettingsRepository.observeSettings().collect { settings ->
                 continueWatchingEnabled = settings?.continueWatchingEnabled ?: true
                 autoplayNextEpisode = settings?.autoplayNextEpisode ?: true
+                playerManager.applyPlaybackPreferences(PlaybackPreferences.fromUserSettings(settings))
             }
         }
         viewModelScope.launch {

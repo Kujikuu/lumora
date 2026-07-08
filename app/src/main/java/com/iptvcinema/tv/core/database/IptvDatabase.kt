@@ -17,6 +17,12 @@ import com.iptvcinema.tv.core.database.entity.LocalMovieEntity
 import com.iptvcinema.tv.core.database.entity.LocalProgramEntity
 import com.iptvcinema.tv.core.database.entity.LocalSeriesEntity
 import com.iptvcinema.tv.core.database.entity.LocalSourceSyncStateEntity
+import com.iptvcinema.tv.core.database.dao.UserDataCacheDao
+import com.iptvcinema.tv.core.database.entity.CachedFavoriteEntity
+import com.iptvcinema.tv.core.database.entity.CachedParentalControlsEntity
+import com.iptvcinema.tv.core.database.entity.CachedPlaylistSourceEntity
+import com.iptvcinema.tv.core.database.entity.CachedUserSettingsEntity
+import com.iptvcinema.tv.core.database.entity.CachedWatchHistoryEntity
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,8 +35,13 @@ import javax.inject.Singleton
         LocalEpisodeEntity::class,
         LocalProgramEntity::class,
         LocalSourceSyncStateEntity::class,
+        CachedFavoriteEntity::class,
+        CachedWatchHistoryEntity::class,
+        CachedUserSettingsEntity::class,
+        CachedParentalControlsEntity::class,
+        CachedPlaylistSourceEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = false,
 )
 abstract class IptvDatabase : RoomDatabase() {
@@ -41,6 +52,7 @@ abstract class IptvDatabase : RoomDatabase() {
     abstract fun episodeDao(): EpisodeDao
     abstract fun programDao(): ProgramDao
     abstract fun syncStateDao(): SyncStateDao
+    abstract fun userDataCacheDao(): UserDataCacheDao
 }
 
 @Singleton

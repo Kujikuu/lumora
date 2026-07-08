@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
@@ -41,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,12 +80,14 @@ import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.CinemaAsyncImage
+import com.iptvcinema.tv.core.design.components.animateToFocusedItem
 import com.iptvcinema.tv.core.design.components.CinemaScreen
 import com.iptvcinema.tv.core.design.components.FocusableCinemaCard
 import com.iptvcinema.tv.core.design.components.PlayerBufferingOverlay
 import com.iptvcinema.tv.core.design.components.PlayerRebufferOverlay
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
+import kotlinx.coroutines.launch
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.ChannelItem
 import com.iptvcinema.tv.core.model.EpgProgram
@@ -604,8 +608,14 @@ private fun LiveCategoryRow(
     onSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    var hadFocusInRow by remember(items) { mutableStateOf(false) }
+
     LazyRow(
+        state = listState,
         modifier = modifier
+            .onFocusChanged { if (!it.hasFocus) hadFocusInRow = false }
             .clip(CinemaShapes.XLarge)
             .background(CinemaColors.SurfaceSoft.copy(alpha = 0.86f))
             .padding(horizontal = 17.dp, vertical = 12.dp),
@@ -631,7 +641,15 @@ private fun LiveCategoryRow(
                 )
                 FocusableCinemaCard(
                     modifier = Modifier
-                        .size(63.dp),
+                        .size(63.dp)
+                        .onFocusChanged { focusState ->
+                            if (focusState.isFocused) {
+                                scope.launch {
+                                    hadFocusInRow = true
+                                    listState.animateToFocusedItem(index)
+                                }
+                            }
+                        },
                     onClick = { onSelected(index) },
                     shape = CircleShape,
                     focusedBorderWidth = 0.dp,

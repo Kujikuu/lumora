@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,14 +82,18 @@ fun CinemaNavRail(
     onSearchClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onProfileClick: () -> Unit,
+    navProfileTitle: String,
+    navProfileSubtitle: String,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
+    onNavHandoffStart: () -> Unit = {},
+    onRailFocusExit: () -> Unit = {},
     onExitRight: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val width by animateDpAsState(
         targetValue = if (expanded) RailExpandedWidth else RailCollapsedWidth,
-        animationSpec = tween(durationMillis = 200),
+        animationSpec = tween(durationMillis = TvScrollMotion.SHELL_MS),
         label = "railWidth",
     )
 
@@ -100,6 +105,13 @@ fun CinemaNavRail(
         RailEntry(NavItem.LiveTv, Icons.Default.LiveTv) { onNavigate(NavItem.LiveTv) },
         RailEntry(NavItem.MyList, Icons.Default.Bookmarks) { onNavigate(NavItem.MyList) },
     )
+
+    fun performNavAction(action: () -> Unit) {
+        onNavHandoffStart()
+        onExpandedChange(false)
+        action()
+        onExitRight?.invoke()
+    }
 
     Column(
         modifier = modifier
@@ -127,7 +139,14 @@ fun CinemaNavRail(
                 }
             }
             .focusGroup()
-            .onFocusChanged { onExpandedChange(it.hasFocus) }
+            .onFocusChanged { focusState ->
+                if (!focusState.hasFocus) {
+                    onRailFocusExit()
+                    onExpandedChange(false)
+                } else {
+                    onExpandedChange(true)
+                }
+            }
             .padding(vertical = 30.dp, horizontal = 6.dp),
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -169,7 +188,7 @@ fun CinemaNavRail(
                 icon = entry.icon,
                 selected = entry.navItem == selected,
                 expanded = expanded,
-                onClick = entry.onClick,
+                onClick = { performNavAction(entry.onClick) },
             )
         }
 
@@ -179,7 +198,7 @@ fun CinemaNavRail(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = CinemaSpacing.NavRailItemMinHeight),
-            onClick = onProfileClick,
+            onClick = { performNavAction(onProfileClick) },
             shape = CinemaShapes.XLarge,
             focusedBorderWidth = 0.dp,
             contentDescription = stringResource(R.string.nav_profile),
@@ -207,7 +226,7 @@ fun CinemaNavRail(
                 AnimatedVisibility(visible = expanded) {
                     Column(modifier = Modifier.padding(end = 12.dp)) {
                         Text(
-                            text = stringResource(R.string.nav_profile_name),
+                            text = navProfileTitle,
                             maxLines = 1,
                             style = MaterialTheme.typography.titleSmall.copy(
                                 color = CinemaColors.White,
@@ -215,7 +234,7 @@ fun CinemaNavRail(
                             ),
                         )
                         Text(
-                            text = stringResource(R.string.nav_switch_accounts),
+                            text = navProfileSubtitle,
                             maxLines = 1,
                             style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
                         )
@@ -309,6 +328,8 @@ fun CinemaScreen(
     onSearchClick: (() -> Unit)? = null,
     onSettingsClick: (() -> Unit)? = null,
     onProfileClick: (() -> Unit)? = null,
+    navProfileTitle: String? = null,
+    navProfileSubtitle: String? = null,
     showBrowseFooter: Boolean = false,
     onFavoritesClick: (() -> Unit)? = null,
     onRecentlyAddedClick: (() -> Unit)? = null,
@@ -320,12 +341,25 @@ fun CinemaScreen(
     val showRail = showTopNav && selectedNavItem != null && onNavigate != null
     val shellImmersion = remember { ShellImmersionState() }
     var railExpanded by remember { mutableStateOf(false) }
+    var suppressRailExpansion by remember { mutableStateOf(false) }
     val hideNavRail = shellImmersion.hideNavRail
     val scrimAlpha by animateFloatAsState(
         targetValue = if (railExpanded && !hideNavRail) 0.4f else 0f,
-        animationSpec = tween(durationMillis = 200),
+        animationSpec = tween(durationMillis = TvScrollMotion.SHELL_MS),
         label = "railScrim",
     )
+
+    fun setRailExpanded(expanded: Boolean) {
+        if (expanded && suppressRailExpansion) return
+        railExpanded = expanded
+        if (expanded) shellImmersion.showNavRail()
+    }
+
+    LaunchedEffect(selectedNavItem) {
+        suppressRailExpansion = true
+        railExpanded = false
+        shellImmersion.showNavRail()
+    }
 
     CompositionLocalProvider(LocalShellImmersion provides shellImmersion) {
         Box(
@@ -356,8 +390,8 @@ fun CinemaScreen(
 
                 AnimatedVisibility(
                     visible = !hideNavRail,
-                    enter = fadeIn(tween(180)) + expandHorizontally(tween(200), expandFrom = Alignment.Start),
-                    exit = fadeOut(tween(140)) + shrinkHorizontally(tween(180), shrinkTowards = Alignment.Start),
+                    enter = fadeIn(tween(TvScrollMotion.SHELL_MS)) + expandHorizontally(tween(TvScrollMotion.SHELL_MS), expandFrom = Alignment.Start),
+                    exit = fadeOut(tween(TvScrollMotion.SHELL_MS - 40)) + shrinkHorizontally(tween(TvScrollMotion.SHELL_MS - 20), shrinkTowards = Alignment.Start),
                     modifier = Modifier
                         .align(Alignment.CenterStart)
                         .zIndex(2f),
@@ -368,11 +402,12 @@ fun CinemaScreen(
                         onSearchClick = onSearchClick ?: { onNavigate(NavItem.Search) },
                         onSettingsClick = onSettingsClick ?: { onNavigate(NavItem.Settings) },
                         onProfileClick = onProfileClick ?: { onNavigate(NavItem.Profile) },
+                        navProfileTitle = navProfileTitle.orEmpty(),
+                        navProfileSubtitle = navProfileSubtitle.orEmpty(),
                         expanded = railExpanded,
-                        onExpandedChange = { expanded ->
-                            railExpanded = expanded
-                            if (expanded) shellImmersion.showNavRail()
-                        },
+                        onExpandedChange = ::setRailExpanded,
+                        onNavHandoffStart = { suppressRailExpansion = true },
+                        onRailFocusExit = { suppressRailExpansion = false },
                         onExitRight = onRailExitRight,
                     )
                 }

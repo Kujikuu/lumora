@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.core.design.components
 
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,19 +14,18 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -50,10 +50,13 @@ fun FocusAwareContentRail(
     countLabel: String? = null,
     firstItemFocusRequester: FocusRequester? = null,
     onItemFocused: (HomeContentCard?) -> Unit = {},
+    onEnteringRail: suspend () -> Unit = {},
+    parentHandlesVerticalScroll: Boolean = false,
     sectionId: String? = null,
     focusedItemIndex: Int = -1,
     onFocusedItemIndexChange: (Int) -> Unit = {},
     onCardLongClick: ((HomeContentCard) -> Unit)? = null,
+    stableContentStart: Boolean = false,
 ) {
     val listState = rememberLazyListState()
     val sectionBringIntoViewRequester = remember(title) { BringIntoViewRequester() }
@@ -62,25 +65,17 @@ fun FocusAwareContentRail(
     val focusOverflow = CinemaSpacing.FocusScaleOverflow
     var hadFocusInRail by remember(title) { mutableStateOf(false) }
     var focusedItemIndex by remember(title) { mutableIntStateOf(0) }
-    val shellImmersion = LocalShellImmersion.current
-    val contentStart = shellContentStart()
-
-    LaunchedEffect(listState, shellImmersion) {
-        if (shellImmersion == null) return@LaunchedEffect
-        snapshotFlow {
-            Triple(
-                listState.firstVisibleItemIndex,
-                listState.firstVisibleItemScrollOffset,
-                focusedItemIndex,
-            )
-        }.collect { (_, _, index) ->
-            shellImmersion.updateRailScroll(listState, index)
-        }
-    }
+    val contentStart = if (stableContentStart) CinemaSpacing.ContentStart else shellContentStart()
 
     Column(
         modifier = modifier
-            .bringIntoViewRequester(sectionBringIntoViewRequester)
+            .then(
+                if (!parentHandlesVerticalScroll) {
+                    Modifier.bringIntoViewRequester(sectionBringIntoViewRequester)
+                } else {
+                    Modifier
+                },
+            )
             .padding(bottom = CinemaSpacing.CardGap),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -114,8 +109,9 @@ fun FocusAwareContentRail(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(railHeight + focusOverflow)
+                .graphicsLayer { clip = true }
                 .padding(vertical = focusOverflow / 2)
-                .onFocusChanged { if (!it.hasFocus) hadFocusInRail = false },
+                .focusGroup(),
             contentPadding = PaddingValues(
                 start = contentStart,
                 end = CinemaSpacing.ScreenPadding,
@@ -140,18 +136,16 @@ fun FocusAwareContentRail(
                             focusedItemIndex = index
                             onItemFocused(item)
                             onFocusedItemIndexChange(index)
-                            shellImmersion?.updateRailImmersion(
-                                hasRailFocus = true,
-                                focusedItemIndex = index,
-                                listState = listState,
-                            )
                             scope.launch {
                                 val enteringRail = !hadFocusInRail
                                 hadFocusInRail = true
                                 if (enteringRail) {
-                                    sectionBringIntoViewRequester.bringIntoView()
+                                    onEnteringRail()
+                                    if (!parentHandlesVerticalScroll) {
+                                        sectionBringIntoViewRequester.bringIntoView()
+                                    }
                                 }
-                                listState.scrollToItem(index)
+                                listState.animateToFocusedItem(index)
                             }
                         }
                     },

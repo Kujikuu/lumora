@@ -45,6 +45,7 @@ fun FocusAwareChannelRail(
     val sectionBringIntoViewRequester = remember(title) { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
     var hadFocusInRail by remember(title) { mutableStateOf(false) }
+    val contentStart = shellContentStart()
 
     Column(
         modifier = modifier
@@ -56,7 +57,7 @@ fun FocusAwareChannelRail(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    start = CinemaSpacing.NavRailWidth + 16.dp,
+                    start = contentStart,
                     end = CinemaSpacing.ScreenPadding,
                 ),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -83,7 +84,7 @@ fun FocusAwareChannelRail(
                 .fillMaxWidth()
                 .onFocusChanged { if (!it.hasFocus) hadFocusInRail = false },
             contentPadding = PaddingValues(
-                start = CinemaSpacing.NavRailWidth + 16.dp,
+                start = contentStart,
                 end = CinemaSpacing.ScreenPadding,
             ),
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
@@ -109,7 +110,7 @@ fun FocusAwareChannelRail(
                                     if (enteringRail) {
                                         sectionBringIntoViewRequester.bringIntoView()
                                     }
-                                    listState.scrollToItem(index)
+                                    listState.animateToFocusedItem(index)
                                 }
                             }
                         },

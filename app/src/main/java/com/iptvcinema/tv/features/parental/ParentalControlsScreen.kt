@@ -32,6 +32,7 @@ import com.iptvcinema.tv.core.design.components.CinemaButtonVariant
 import com.iptvcinema.tv.core.design.components.ProfileChip
 import com.iptvcinema.tv.core.design.components.RatingRestrictionSelector
 import com.iptvcinema.tv.core.design.components.SettingsMenu
+import com.iptvcinema.tv.core.design.components.SettingsMenuItem
 import com.iptvcinema.tv.core.design.components.SettingsToggle
 import com.iptvcinema.tv.core.design.components.SkeletonProfileRow
 import com.iptvcinema.tv.core.design.theme.CinemaColors
@@ -127,7 +128,7 @@ fun ParentalControlsScreen(
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap)) {
             SettingsMenu(
-                items = sectionLabels,
+                items = sectionLabels.map { SettingsMenuItem(label = it) },
                 selectedIndex = sections.indexOf(SettingsSection.ParentalControls),
                 onSelected = { index ->
                     if (sections[index] != SettingsSection.ParentalControls) {

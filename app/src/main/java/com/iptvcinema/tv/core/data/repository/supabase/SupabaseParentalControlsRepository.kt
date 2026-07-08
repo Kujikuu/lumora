@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.core.data.repository.supabase
 
+import com.iptvcinema.tv.core.data.local.CloudUserDataCache
 import com.iptvcinema.tv.core.data.repository.ParentalControlsRepository
 import com.iptvcinema.tv.core.model.ParentalControls
 import com.iptvcinema.tv.core.supabase.dto.ParentalControlsDto
@@ -11,7 +12,11 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -19,10 +24,32 @@ import kotlinx.serialization.Serializable
 @Singleton
 class SupabaseParentalControlsRepository @Inject constructor(
     private val supabaseClient: SupabaseClient,
+    private val cloudUserDataCache: CloudUserDataCache,
 ) : ParentalControlsRepository {
+    private val refreshTrigger = MutableSharedFlow<Unit>(
+        replay = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+
+    init {
+        refreshTrigger.tryEmit(Unit)
+    }
+
     override fun observeControls(profileId: String): Flow<ParentalControls?> = flow {
-        // Network read: degrade to null instead of crashing on expired JWT / offline.
-        emit(runCatching { getControls(profileId) }.getOrNull())
+        cloudUserDataCache.getParentalControls(profileId)?.let { emit(it) }
+        emitAll(
+            refreshTrigger.flatMapLatest {
+                flow {
+                    val controls = runCatching { getControls(profileId) }
+                        .onSuccess { control ->
+                            control?.let { cloudUserDataCache.saveParentalControls(it) }
+                        }
+                        .getOrNull()
+                        ?: cloudUserDataCache.getParentalControls(profileId)
+                    emit(controls)
+                }
+            },
+        )
     }
 
     override suspend fun getControls(profileId: String): ParentalControls? {
@@ -36,6 +63,7 @@ class SupabaseParentalControlsRepository @Inject constructor(
             }
             .decodeSingleOrNull<ParentalControlsDto>()
             ?.toDomain()
+            ?.also { cloudUserDataCache.saveParentalControls(it) }
     }
 
     override suspend fun updateControls(controls: ParentalControls) {
@@ -47,6 +75,8 @@ class SupabaseParentalControlsRepository @Inject constructor(
                     eq(COLUMN_USER_ID, userId)
                 }
             }
+        cloudUserDataCache.saveParentalControls(controls)
+        refreshTrigger.emit(Unit)
     }
 
     override suspend fun ensureControls(profileId: String): ParentalControls {
@@ -56,12 +86,15 @@ class SupabaseParentalControlsRepository @Inject constructor(
                 userId = userId,
                 profileId = profileId,
             )
-            supabaseClient.from(TABLE)
+            val created = supabaseClient.from(TABLE)
                 .insert(insert) {
                     select(Columns.ALL)
                 }
                 .decodeSingle<ParentalControlsDto>()
                 .toDomain()
+            cloudUserDataCache.saveParentalControls(created)
+            refreshTrigger.emit(Unit)
+            created
         }
     }
 

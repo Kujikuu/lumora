@@ -49,6 +49,7 @@ fun MoodCategoryRow(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     var hadFocusInRow by remember(title) { mutableStateOf(false) }
+    val contentStart = shellContentStart()
     val tileStridePx = remember(density) {
         with(density) { (CinemaSpacing.MoodTileSize + CinemaSpacing.RailGap).roundToPx() }
     }
@@ -66,7 +67,7 @@ fun MoodCategoryRow(
                 color = CinemaColors.TextPrimary,
             ),
             modifier = Modifier.padding(
-                start = CinemaSpacing.NavRailWidth + 16.dp,
+                start = contentStart,
                 end = CinemaSpacing.ScreenPadding,
             ),
         )
@@ -76,7 +77,7 @@ fun MoodCategoryRow(
                 .horizontalScroll(scrollState)
                 .onFocusChanged { if (!it.hasFocus) hadFocusInRow = false }
                 .padding(
-                    start = CinemaSpacing.NavRailWidth + 16.dp,
+                    start = contentStart,
                     end = CinemaSpacing.ScreenPadding,
                 ),
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
@@ -93,7 +94,7 @@ fun MoodCategoryRow(
                                     if (enteringRow) {
                                         sectionBringIntoViewRequester.bringIntoView()
                                     }
-                                    scrollState.scrollTo((index * tileStridePx).coerceAtLeast(0))
+                                    scrollState.animateScrollToValue((index * tileStridePx).coerceAtLeast(0))
                                 }
                             }
                         },

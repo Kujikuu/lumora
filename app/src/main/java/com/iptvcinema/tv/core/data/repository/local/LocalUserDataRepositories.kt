@@ -106,6 +106,7 @@ class LocalFavoritesRepository @Inject constructor() : FavoritesRepository {
         title: String,
         posterUrl: String?,
         sourceId: String?,
+        currentlyFavorite: Boolean?,
     ): Boolean = mutex.withLock {
         val favorites = favoritesByProfile.getOrPut(profileId) { mutableListOf() }
         val existingIndex = favorites.indexOfFirst {
@@ -263,8 +264,8 @@ class LocalUserSettingsRepository @Inject constructor() : UserSettingsRepository
             autoplayNextEpisode = true,
             continueWatchingEnabled = true,
             skipIntroEnabled = false,
-            streamingQuality = "auto",
-            theme = "dark",
+            streamingQuality = "AUTO",
+            theme = "DARK_CINEMA",
         )
     }
 }

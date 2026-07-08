@@ -13,6 +13,8 @@ import com.iptvcinema.tv.core.model.SeriesItem
 import com.iptvcinema.tv.core.model.SourceStatus
 import com.iptvcinema.tv.core.model.SourceType
 import com.iptvcinema.tv.core.model.WatchHistoryContentType
+import com.iptvcinema.tv.core.catalog.resolveEpisodeContinueWatchingBackdropUrl
+import com.iptvcinema.tv.core.catalog.resolveEpisodeContinueWatchingPosterUrl
 import com.iptvcinema.tv.core.model.WatchHistoryItem
 import com.iptvcinema.tv.core.model.catalog.CatalogChannel
 import com.iptvcinema.tv.core.model.catalog.CatalogContentType
@@ -55,6 +57,7 @@ data class WatchHistoryCardDisplay(
     val title: String,
     val subtitle: String? = null,
     val posterUrl: String? = null,
+    val backdropUrl: String? = null,
 )
 
 data class CatalogSearchResults(
@@ -473,18 +476,21 @@ class CatalogRepository @Inject constructor(
         if (isDemoMode) {
             return resolveDemoWatchHistoryCardDisplay(item)
         }
+        val catalogSourceId = item.sourceId?.takeIf { it.isNotBlank() } ?: sourceId
         return when (item.contentType) {
             WatchHistoryContentType.MOVIE -> {
-                val movie = sourceId?.let { getMovie(it, item.contentId) }
+                val movie = catalogSourceId?.let { getMovie(it, item.contentId) }
                 WatchHistoryCardDisplay(
                     title = movie?.title?.takeIf { it.isNotBlank() } ?: item.title,
                     subtitle = null,
-                    posterUrl = item.posterUrl?.takeIf { it.isNotBlank() } ?: movie?.posterUrl,
+                    posterUrl = movie?.posterUrl?.takeIf { it.isNotBlank() }
+                        ?: item.posterUrl?.takeIf { it.isNotBlank() },
+                    backdropUrl = movie?.backdropUrl?.takeIf { it.isNotBlank() },
                 )
             }
             WatchHistoryContentType.EPISODE -> {
-                val episode = sourceId?.let { getEpisode(it, item.contentId) }
-                val series = sourceId?.let { sid ->
+                val episode = catalogSourceId?.let { getEpisode(it, item.contentId) }
+                val series = catalogSourceId?.let { sid ->
                     item.seriesId?.let { seriesId -> getSeries(sid, seriesId) }
                         ?: episode?.seriesId?.let { seriesId -> getSeries(sid, seriesId) }
                 }
@@ -500,17 +506,21 @@ class CatalogRepository @Inject constructor(
                     } else {
                         null
                     },
-                    posterUrl = item.posterUrl?.takeIf { it.isNotBlank() }
-                        ?: episode?.thumbnailUrl?.takeIf { it.isNotBlank() }
-                        ?: series?.posterUrl,
+                    posterUrl = resolveEpisodeContinueWatchingPosterUrl(
+                        seriesPosterUrl = series?.posterUrl,
+                        episodeThumbnailUrl = episode?.thumbnailUrl,
+                        storedPosterUrl = item.posterUrl,
+                    ),
+                    backdropUrl = resolveEpisodeContinueWatchingBackdropUrl(series?.backdropUrl),
                 )
             }
             WatchHistoryContentType.CHANNEL -> {
-                val channel = sourceId?.let { getChannel(it, item.contentId) }
+                val channel = catalogSourceId?.let { getChannel(it, item.contentId) }
                 WatchHistoryCardDisplay(
                     title = channel?.name?.takeIf { it.isNotBlank() } ?: item.title,
                     subtitle = null,
-                    posterUrl = item.posterUrl?.takeIf { it.isNotBlank() } ?: channel?.logoUrl,
+                    posterUrl = channel?.logoUrl?.takeIf { it.isNotBlank() }
+                        ?: item.posterUrl?.takeIf { it.isNotBlank() },
                 )
             }
         }

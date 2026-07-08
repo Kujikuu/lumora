@@ -9,6 +9,7 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.serializer.KotlinXSerializer
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
@@ -45,5 +46,6 @@ object SupabaseModule {
         defaultSerializer = KotlinXSerializer(json)
         install(Auth)
         install(Postgrest)
+        install(Realtime)
     }
 }

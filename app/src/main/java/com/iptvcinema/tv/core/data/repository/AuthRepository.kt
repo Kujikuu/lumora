@@ -6,6 +6,7 @@ interface AuthRepository {
     val isAuthenticated: Flow<Boolean>
     val currentUserId: Flow<String?>
     suspend fun currentUserEmail(): String?
+    suspend fun currentUserDisplayName(): String?
     suspend fun awaitAuthInitialization()
     suspend fun syncSessionToLocal()
     suspend fun importSession(accessToken: String, refreshToken: String)

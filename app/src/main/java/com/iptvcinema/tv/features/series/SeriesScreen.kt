@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,7 +30,7 @@ import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
 import com.iptvcinema.tv.core.design.components.ContinueWatchingMenuDialog
-import com.iptvcinema.tv.core.design.theme.CinemaSpacing
+import com.iptvcinema.tv.core.design.components.catalogContentStart
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
@@ -43,6 +44,7 @@ import com.iptvcinema.tv.features.catalog.CatalogBrowseSections
 import com.iptvcinema.tv.features.catalog.catalogSortFromIndex
 import com.iptvcinema.tv.features.catalog.catalogSortIndex
 import com.iptvcinema.tv.features.catalog.rememberCatalogSortOptions
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -61,6 +63,20 @@ fun SeriesScreen(
     val sortOptions = rememberCatalogSortOptions()
     val selectedSortIndex = catalogSortIndex(uiState.sortOption)
     var continueMenuCard by remember { mutableStateOf<HomeContentCard?>(null) }
+    val scope = rememberCoroutineScope()
+    var restoreCatalogScroll by remember { mutableStateOf<suspend () -> Unit>({}) }
+    val contentStart = catalogContentStart()
+
+    val exitRailToContent: () -> Unit = {
+        scope.launch {
+            val target = when {
+                uiState.continueSeries.isNotEmpty() -> continueWatchingFocus
+                categories.isNotEmpty() -> categoryFocus
+                else -> gridFocus
+            }
+            runCatching { target.requestFocus() }
+        }
+    }
 
     var selectedFilter by remember(initialFilter, focusState.focusIndex, categories) {
         mutableIntStateOf(
@@ -92,6 +108,7 @@ fun SeriesScreen(
             else -> gridFocus
         }
         if (focusState.hasSavedFocus) {
+            restoreCatalogScroll()
             focusState.restoreFocus(target)
         } else {
             focusState.requestInitialFocus(target)
@@ -109,6 +126,7 @@ fun SeriesScreen(
     MainShellScaffold(
         navController = navController,
         selectedNavItem = NavItem.Series,
+        onRailExitRight = exitRailToContent,
     ) {
         ContinueWatchingMenuDialog(
             card = continueMenuCard,
@@ -123,7 +141,7 @@ fun SeriesScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = CinemaSpacing.ContentStart, end = 24.dp),
+                    .padding(start = contentStart, end = 24.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -184,6 +202,7 @@ fun SeriesScreen(
                     continueWatchingFocus = continueWatchingFocus,
                     categoryFocus = categoryFocus,
                     gridFocus = gridFocus,
+                    onRestoreScrollReady = { restoreCatalogScroll = it },
                 )
             }
         }

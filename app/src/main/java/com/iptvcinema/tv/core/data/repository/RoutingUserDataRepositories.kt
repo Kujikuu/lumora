@@ -80,21 +80,30 @@ class RoutingFavoritesRepository @Inject constructor(
         title: String,
         posterUrl: String?,
         sourceId: String?,
+        currentlyFavorite: Boolean?,
     ): Boolean {
         val backend = resolveBackend()
         return runCatching {
-            backend.toggleFavorite(profileId, contentId, contentType, title, posterUrl, sourceId)
-        }.onFailure { cloudAccountStatus.reportCloudReadFailure() }
-            .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
-            .getOrDefault(false)
+            backend.toggleFavorite(
+                profileId,
+                contentId,
+                contentType,
+                title,
+                posterUrl,
+                sourceId,
+                currentlyFavorite,
+            )
+        }.onFailure { cloudAccountStatus.reportCloudWriteFailure() }
+            .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
+            .getOrDefault(currentlyFavorite ?: false)
     }
 
     override suspend fun removeFavorite(profileId: String, favorite: FavoriteItem) {
         val backend = resolveBackend()
         runCatching {
             backend.removeFavorite(profileId, favorite)
-        }.onFailure { cloudAccountStatus.reportCloudReadFailure() }
-            .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
+        }.onFailure { cloudAccountStatus.reportCloudWriteFailure() }
+            .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
     }
 }
 
@@ -153,8 +162,8 @@ class RoutingWatchHistoryRepository @Inject constructor(
                 sourceId,
                 seriesId,
             )
-        }.onFailure { cloudAccountStatus.reportCloudReadFailure() }
-            .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
+        }.onFailure { cloudAccountStatus.reportCloudWriteFailure() }
+            .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
     }
 
     override suspend fun getDistinctSeriesIds(profileId: String): List<String> {
@@ -172,8 +181,8 @@ class RoutingWatchHistoryRepository @Inject constructor(
     ) {
         val backend = resolveBackend()
         runCatching { backend.remove(profileId, contentId, contentType) }
-            .onFailure { cloudAccountStatus.reportCloudReadFailure() }
-            .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
+            .onFailure { cloudAccountStatus.reportCloudWriteFailure() }
+            .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
     }
 
     override fun invalidate() {
@@ -207,8 +216,8 @@ class RoutingUserSettingsRepository @Inject constructor(
     override suspend fun updateSettings(settings: UserSettings) {
         val backend = resolveBackend()
         runCatching { backend.updateSettings(settings) }
-            .onFailure { cloudAccountStatus.reportCloudReadFailure() }
-            .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
+            .onFailure { cloudAccountStatus.reportCloudWriteFailure() }
+            .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
     }
 }
 
@@ -251,15 +260,15 @@ class RoutingParentalControlsRepository @Inject constructor(
     override suspend fun updateControls(controls: ParentalControls) {
         val backend = resolveBackend()
         runCatching { backend.updateControls(controls) }
-            .onFailure { cloudAccountStatus.reportCloudReadFailure() }
-            .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
+            .onFailure { cloudAccountStatus.reportCloudWriteFailure() }
+            .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
     }
 
     override suspend fun ensureControls(profileId: String): ParentalControls {
         val backend = resolveBackend()
         return runCatching { backend.ensureControls(profileId) }
-            .onFailure { cloudAccountStatus.reportCloudReadFailure() }
-            .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
+            .onFailure { cloudAccountStatus.reportCloudWriteFailure() }
+            .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
             .getOrElse { ParentalControlsDefaults.restrictiveFallback(profileId) }
     }
 }

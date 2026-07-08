@@ -15,6 +15,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,14 +37,15 @@ import com.iptvcinema.tv.core.design.components.EmptyState
 import com.iptvcinema.tv.core.design.components.PosterCard
 import com.iptvcinema.tv.core.design.components.SearchKeyboard
 import com.iptvcinema.tv.core.design.components.SearchKeyboardLayout
+import com.iptvcinema.tv.core.design.components.shellContentStart
 import com.iptvcinema.tv.core.design.theme.CinemaColors
-import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
 import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
 import com.iptvcinema.tv.core.navigation.rememberCatalogStateCallbacks
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -56,6 +58,14 @@ fun SearchScreen(
     val focusState = rememberScreenFocusState("search")
     val catalogCallbacks = rememberCatalogStateCallbacks(navController, onRetry = viewModel::retry)
     var keyboardLayout by remember { mutableStateOf(SearchKeyboardLayout.English) }
+    val scope = rememberCoroutineScope()
+    val contentStart = shellContentStart()
+
+    val exitRailToContent: () -> Unit = {
+        scope.launch {
+            runCatching { searchFocus.requestFocus() }
+        }
+    }
 
     MainShellBackHandler(navController = navController, isHomeTab = false)
 
@@ -71,13 +81,14 @@ fun SearchScreen(
     MainShellScaffold(
         navController = navController,
         selectedNavItem = NavItem.Search,
+        onRailExitRight = exitRailToContent,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(
-                    start = CinemaSpacing.ContentStart,
+                    start = contentStart,
                     end = 90.dp,
                     top = 72.dp,
                     bottom = 44.dp,

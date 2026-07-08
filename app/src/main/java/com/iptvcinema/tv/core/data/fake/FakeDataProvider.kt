@@ -138,7 +138,7 @@ object FakeDataProvider {
 
     val settingsSections = listOf(
         "Account", "Subscription", "Playback", "Language",
-        "Parental Controls", "Notifications", "Device Preferences", "About",
+        "Parental Controls", "Device Preferences", "About",
     )
 
     val ratingOptions = listOf("G", "PG", "12+", "16+", "18+")

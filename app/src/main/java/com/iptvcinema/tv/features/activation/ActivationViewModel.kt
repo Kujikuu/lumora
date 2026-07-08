@@ -10,12 +10,15 @@ import com.iptvcinema.tv.core.datastore.StartupDestination
 import com.iptvcinema.tv.core.datastore.StartupSessionBootstrap
 import com.iptvcinema.tv.core.model.ActivationSessionStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Duration
+import java.time.Instant
 import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 sealed interface ActivationUiState {
@@ -24,6 +27,8 @@ sealed interface ActivationUiState {
         val code: String,
         val qrUrl: String,
         val statusMessage: String,
+        val expiresAt: Instant?,
+        val remainingSeconds: Long?,
     ) : ActivationUiState
     data object Succeeded : ActivationUiState
     data class Error(val message: String) : ActivationUiState
@@ -40,7 +45,9 @@ class ActivationViewModel @Inject constructor(
 
     private var sessionId: String? = null
     private var activationCode: String? = null
+    private var sessionExpiresAt: Instant? = null
     private var pollingJob: Job? = null
+    private var countdownJob: Job? = null
 
     init {
         startActivation()
@@ -48,6 +55,7 @@ class ActivationViewModel @Inject constructor(
 
     fun startActivation() {
         pollingJob?.cancel()
+        countdownJob?.cancel()
         viewModelScope.launch {
             _uiState.value = ActivationUiState.Loading
             if (!authRepository.isConfigured()) {
@@ -55,6 +63,8 @@ class ActivationViewModel @Inject constructor(
                     code = "DEV-MODE",
                     qrUrl = "${BuildConfig.ACTIVATION_LINK_BASE}?activation=DEV-MODE",
                     statusMessage = "Supabase not configured. Use Enter Account for local demo auth.",
+                    expiresAt = null,
+                    remainingSeconds = null,
                 )
                 return@launch
             }
@@ -63,11 +73,12 @@ class ActivationViewModel @Inject constructor(
                 val session = deviceActivationRepository.createSession(deviceName)
                 sessionId = session.id
                 activationCode = session.code
-                _uiState.value = ActivationUiState.Ready(
+                sessionExpiresAt = session.expiresAt
+                updateReadyState(
                     code = session.code,
-                    qrUrl = deviceActivationRepository.buildActivationUrl(session.code),
-                    statusMessage = "Waiting for approval…",
+                    statusMessage = waitingMessage(session.expiresAt),
                 )
+                startCountdown(session.expiresAt)
                 pollForApproval(session.id, session.code)
             }.onFailure { error ->
                 _uiState.value = ActivationUiState.Error(
@@ -103,9 +114,8 @@ class ActivationViewModel @Inject constructor(
                     onComplete(destination)
                 },
                 onFailure = { error ->
-                    _uiState.value = ActivationUiState.Ready(
+                    updateReadyState(
                         code = code,
-                        qrUrl = deviceActivationRepository.buildActivationUrl(code),
                         statusMessage = error.message ?: "Activation failed. Approve the code on your phone first.",
                     )
                 },
@@ -123,16 +133,35 @@ class ActivationViewModel @Inject constructor(
         }
     }
 
+    private fun startCountdown(expiresAt: Instant?) {
+        countdownJob?.cancel()
+        if (expiresAt == null) return
+        countdownJob = viewModelScope.launch {
+            while (isActive) {
+                val code = activationCode ?: return@launch
+                val remaining = remainingSeconds(expiresAt)
+                if (remaining <= 0L) {
+                    updateReadyState(code = code, statusMessage = "Code expired. Generating a new code…")
+                    break
+                }
+                updateReadyState(code = code, statusMessage = waitingMessage(expiresAt))
+                delay(COUNTDOWN_TICK_MS)
+            }
+        }
+    }
+
     private fun pollForApproval(sessionId: String, code: String) {
         pollingJob = viewModelScope.launch {
-            while (true) {
-                delay(POLL_INTERVAL_MS)
+            var pollDelayMs = INITIAL_POLL_INTERVAL_MS
+            while (isActive) {
+                delay(pollDelayMs)
+                pollDelayMs = (pollDelayMs + POLL_BACKOFF_STEP_MS).coerceAtMost(MAX_POLL_INTERVAL_MS)
                 val session = deviceActivationRepository.getSession(sessionId) ?: continue
+                sessionExpiresAt = session.expiresAt
                 when (session.status) {
                     ActivationSessionStatus.APPROVED -> {
-                        _uiState.value = ActivationUiState.Ready(
+                        updateReadyState(
                             code = code,
-                            qrUrl = deviceActivationRepository.buildActivationUrl(code),
                             statusMessage = "Approved. Signing in…",
                         )
                         val result = deviceActivationRepository.exchangeForAuthSession(code)
@@ -144,9 +173,8 @@ class ActivationViewModel @Inject constructor(
                                 if (authRepository.hasActiveSession()) {
                                     _uiState.value = ActivationUiState.Succeeded
                                 } else {
-                                    _uiState.value = ActivationUiState.Ready(
+                                    updateReadyState(
                                         code = code,
-                                        qrUrl = deviceActivationRepository.buildActivationUrl(code),
                                         statusMessage = error.message ?: "Sign-in failed. Press Enter Account to retry.",
                                     )
                                 }
@@ -162,18 +190,57 @@ class ActivationViewModel @Inject constructor(
                         }
                         return@launch
                     }
-                    ActivationSessionStatus.PENDING -> Unit
+                    ActivationSessionStatus.PENDING -> {
+                        updateReadyState(code = code, statusMessage = waitingMessage(session.expiresAt))
+                    }
                 }
             }
         }
     }
 
+    private fun updateReadyState(code: String, statusMessage: String) {
+        val expiresAt = sessionExpiresAt
+        _uiState.value = ActivationUiState.Ready(
+            code = code,
+            qrUrl = deviceActivationRepository.buildActivationUrl(code),
+            statusMessage = statusMessage,
+            expiresAt = expiresAt,
+            remainingSeconds = expiresAt?.let(::remainingSeconds),
+        )
+    }
+
+    private fun waitingMessage(expiresAt: Instant?): String {
+        val remaining = expiresAt?.let(::remainingSeconds)
+        return if (remaining != null && remaining > 0L) {
+            "Waiting for approval… Code expires in ${formatRemaining(remaining)}"
+        } else {
+            "Waiting for approval…"
+        }
+    }
+
+    private fun remainingSeconds(expiresAt: Instant): Long =
+        Duration.between(Instant.now(), expiresAt).seconds.coerceAtLeast(0L)
+
+    private fun formatRemaining(totalSeconds: Long): String {
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return if (minutes > 0) {
+            "${minutes}m ${seconds}s"
+        } else {
+            "${seconds}s"
+        }
+    }
+
     override fun onCleared() {
         pollingJob?.cancel()
+        countdownJob?.cancel()
         super.onCleared()
     }
 
     companion object {
-        private const val POLL_INTERVAL_MS = 3_000L
+        private const val INITIAL_POLL_INTERVAL_MS = 2_000L
+        private const val POLL_BACKOFF_STEP_MS = 2_000L
+        private const val MAX_POLL_INTERVAL_MS = 8_000L
+        private const val COUNTDOWN_TICK_MS = 1_000L
     }
 }

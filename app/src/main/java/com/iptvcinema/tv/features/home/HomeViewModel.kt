@@ -51,6 +51,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 data class HomeUiState(
@@ -107,13 +108,11 @@ class HomeViewModel @Inject constructor(
             combine(
                 catalogRepository.observeHomeContent(),
                 appSessionRepository.sessionState,
-            ) { catalogState, session ->
-                catalogState to session
-            }.flatMapLatest { (catalogState, session) ->
+                userSettingsRepository.observeSettings().map { it?.continueWatchingEnabled ?: true },
+            ) { catalogState, session, continueWatchingEnabled ->
+                Triple(catalogState, session, continueWatchingEnabled)
+            }.flatMapLatest { (catalogState, session, continueWatchingEnabled) ->
                 val profileId = session.currentProfileId
-                val continueWatchingEnabled = runCatching {
-                    userSettingsRepository.getSettings()?.continueWatchingEnabled
-                }.getOrNull() ?: true
                 val controlsFlow = profileId?.let { parentalControlsRepository.observeControls(it) } ?: flowOf(null)
                 val continueWatchingFlow = if (profileId != null && continueWatchingEnabled) {
                     watchHistoryRepository.observeContinueWatching(profileId, limit = 10)
@@ -173,6 +172,7 @@ class HomeViewModel @Inject constructor(
                             title = display.title,
                             subtitle = display.subtitle,
                             imageUrl = display.posterUrl,
+                            backdropUrl = display.backdropUrl,
                             progress = progress,
                             remainingTimeLabel = remainingTimeLabel,
                             isFavorite = favorites.isFavorite(item.contentId, favoriteType),
@@ -325,6 +325,7 @@ class HomeViewModel @Inject constructor(
                     title = card.title,
                     posterUrl = card.imageUrl,
                     sourceId = session.currentSourceId,
+                    currentlyFavorite = card.isFavorite,
                 )
                 updateCardFavoriteState(card.contentId, contentType, isFavorite)
                 onResult(isFavorite)
@@ -344,6 +345,7 @@ class HomeViewModel @Inject constructor(
                     title = movie.title,
                     posterUrl = movie.imageUrl,
                     sourceId = session.currentSourceId,
+                    currentlyFavorite = movie.isFavorite,
                 )
                 _uiState.value = _uiState.value.copy(
                     heroMovies = _uiState.value.heroMovies.map {

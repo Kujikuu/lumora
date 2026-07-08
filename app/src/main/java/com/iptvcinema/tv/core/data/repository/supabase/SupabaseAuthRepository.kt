@@ -3,6 +3,7 @@ package com.iptvcinema.tv.core.data.repository.supabase
 import com.iptvcinema.tv.BuildConfig
 import com.iptvcinema.tv.core.data.repository.AuthRepository
 import com.iptvcinema.tv.core.datastore.AppSessionRepository
+import com.iptvcinema.tv.core.util.AccountDisplayNameResolver
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.status.SessionStatus
@@ -27,6 +28,15 @@ class SupabaseAuthRepository @Inject constructor(
 
     override suspend fun currentUserEmail(): String? =
         supabaseClient.auth.currentSessionOrNull()?.user?.email
+
+    override suspend fun currentUserDisplayName(): String? {
+        val user = supabaseClient.auth.currentSessionOrNull()?.user ?: return null
+        val metadata = user.userMetadata?.mapValues { (_, value) -> value } ?: emptyMap()
+        return AccountDisplayNameResolver.resolve(
+            email = user.email,
+            metadata = metadata,
+        )
+    }
 
     override suspend fun awaitAuthInitialization() {
         if (!isConfigured()) return

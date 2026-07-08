@@ -34,6 +34,7 @@ data class TrackOption(
     val label: String,
     val groupIndex: Int,
     val trackIndex: Int,
+    val language: String? = null,
 )
 
 data class PlayerUiState(

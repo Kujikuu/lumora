@@ -2,6 +2,33 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
 
 const ACTIVATION_CODE_RE = /^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{2}$/;
+const MAX_ATTEMPTS_PER_WINDOW = 10;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function clientIp(req: Request): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    ?? req.headers.get("cf-connecting-ip")
+    ?? "unknown";
+}
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now();
+  const bucket = rateLimitBuckets.get(key);
+  if (!bucket || now >= bucket.resetAt) {
+    rateLimitBuckets.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (bucket.count >= MAX_ATTEMPTS_PER_WINDOW) {
+    return false;
+  }
+  bucket.count += 1;
+  return true;
+}
+
+function logFailure(reason: string, code: string, ip: string) {
+  console.warn(JSON.stringify({ event: "activation_exchange_failed", reason, codePrefix: code.slice(0, 4), ip }));
+}
 
 async function mintSessionForUser(
   admin: ReturnType<typeof createClient>,
@@ -52,6 +79,13 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Invalid activation code format." }, 400);
     }
 
+    const ip = clientIp(req);
+    const rateKey = `${ip}:${normalizedCode}`;
+    if (!checkRateLimit(rateKey)) {
+      logFailure("rate_limited", normalizedCode, ip);
+      return jsonResponse({ error: "Too many attempts. Wait a minute and try again." }, 429);
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -72,10 +106,12 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (sessionError) {
+      logFailure("session_lookup_error", normalizedCode, ip);
       return jsonResponse({ error: sessionError.message }, 400);
     }
 
     if (!session?.user_id) {
+      logFailure("not_approved", normalizedCode, ip);
       return jsonResponse(
         { error: "Activation session not approved yet. Approve the code on your phone first." },
         400,
@@ -84,6 +120,7 @@ Deno.serve(async (req) => {
 
     const { data: userData, error: userError } = await admin.auth.admin.getUserById(session.user_id);
     if (userError || !userData.user) {
+      logFailure("user_not_found", normalizedCode, ip);
       return jsonResponse({ error: "Approved user not found" }, 400);
     }
 

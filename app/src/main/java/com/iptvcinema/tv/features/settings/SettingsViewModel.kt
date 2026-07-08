@@ -16,6 +16,7 @@ import com.iptvcinema.tv.core.datastore.AppSessionRepository
 import com.iptvcinema.tv.core.datastore.AppSessionState
 import com.iptvcinema.tv.core.model.AccountSummary
 import com.iptvcinema.tv.core.model.UserSettings
+import com.iptvcinema.tv.core.player.StreamingQualityOption
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,25 +60,28 @@ class SettingsViewModel @Inject constructor(
     val parentalGateInstance: ParentalGate get() = parentalGate
 
     init {
-        loadAccountAndSettings()
+        viewModelScope.launch {
+            userSettingsRepository.observeSettings().collect { settings ->
+                _userSettings.value = settings
+            }
+        }
+        loadAccountAndParentalControls()
     }
 
-    fun loadAccountAndSettings() {
+    fun loadAccountAndParentalControls() {
         viewModelScope.launch {
-            val email = authRepository.currentUserEmail() ?: "Not signed in"
+            val email = authRepository.currentUserEmail()
+            val displayName = authRepository.currentUserDisplayName()
+                ?: email?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
+                ?: "Guest"
             _accountSummary.value = AccountSummary(
-                name = email.substringBefore("@").replaceFirstChar { it.uppercase() },
-                email = email,
-                plan = "IPTV Cinema",
+                name = displayName,
+                email = email ?: "—",
+                plan = "Lumora Play",
                 renewalDate = "—",
             )
-            if (authRepository.isConfigured()) {
-                runCatching {
-                    _userSettings.value = userSettingsRepository.getSettings()
-                }
-            }
             val profileId = appSessionRepository.sessionState.first().currentProfileId
-            if (profileId != null && authRepository.isConfigured()) {
+            if (profileId != null) {
                 runCatching {
                     _parentalControls.value = parentalControlsRepository.getControls(profileId)
                 }
@@ -104,8 +108,29 @@ class SettingsViewModel @Inject constructor(
         updateSettings { it.copy(continueWatchingEnabled = enabled) }
     }
 
-    fun updateSkipIntro(enabled: Boolean) {
-        updateSettings { it.copy(skipIntroEnabled = enabled) }
+    fun updateDefaultAudioLanguage(language: String) {
+        updateSettings { it.copy(defaultAudioLanguage = language) }
+    }
+
+    fun updateSubtitlesEnabled(enabled: Boolean) {
+        updateSettings { settings ->
+            settings.copy(
+                subtitlesEnabled = enabled,
+                defaultSubtitleLanguage = if (enabled) {
+                    settings.defaultSubtitleLanguage ?: settings.defaultAudioLanguage
+                } else {
+                    settings.defaultSubtitleLanguage
+                },
+            )
+        }
+    }
+
+    fun updateDefaultSubtitleLanguage(language: String) {
+        updateSettings { it.copy(defaultSubtitleLanguage = language) }
+    }
+
+    fun updateStreamingQuality(quality: String) {
+        updateSettings { it.copy(streamingQuality = StreamingQualityOption.normalize(quality)) }
     }
 
     private fun updateSettings(transform: (UserSettings) -> UserSettings) {
@@ -113,12 +138,10 @@ class SettingsViewModel @Inject constructor(
             val current = _userSettings.value ?: return@launch
             val updated = transform(current)
             _userSettings.value = updated
-            if (authRepository.isConfigured()) {
-                runCatching {
-                    userSettingsRepository.updateSettings(updated)
-                }.onFailure {
-                    _userSettings.value = current
-                }
+            runCatching {
+                userSettingsRepository.updateSettings(updated)
+            }.onFailure {
+                _userSettings.value = current
             }
         }
     }

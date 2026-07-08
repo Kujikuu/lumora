@@ -11,12 +11,16 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.iptvcinema.tv.R
@@ -26,6 +30,8 @@ import com.iptvcinema.tv.core.design.components.FilterChipRow
 import com.iptvcinema.tv.core.design.components.FocusAwareContentRail
 import com.iptvcinema.tv.core.design.components.PosterCard
 import com.iptvcinema.tv.core.design.components.PosterCardData
+import com.iptvcinema.tv.core.design.components.catalogContentStart
+import com.iptvcinema.tv.core.design.components.isSectionVisible
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.navigation.ScreenFocusState
@@ -36,6 +42,14 @@ object CatalogBrowseSections {
     const val CONTINUE = "continue"
     const val GRID = "grid"
 }
+
+data class CatalogSectionIndices(
+    val continueWatching: Int,
+    val categories: Int,
+    val sort: Int,
+    val gridStart: Int,
+    val maxIndex: Int,
+)
 
 @Composable
 fun rememberCatalogSortOptions(): List<String> = listOf(
@@ -80,18 +94,43 @@ fun CatalogBrowseContent(
     categoryFocus: FocusRequester,
     gridFocus: FocusRequester,
     featuredContent: @Composable () -> Unit = {},
+    onRestoreScrollReady: (suspend () -> Unit) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val posterRows = remember(posters) { posters.chunked(CATALOG_GRID_COLUMNS) }
-    val gridStartListIndex = (if (hasFeatured) 1 else 0) +
-        (if (continueWatchingItems.isNotEmpty()) 1 else 0) +
-        (if (categories.isNotEmpty()) 1 else 0) +
-        1
-    val maxInitialListIndex = (gridStartListIndex + posterRows.lastIndex).coerceAtLeast(0)
+    val sectionIndices = remember(hasFeatured, continueWatchingItems.isNotEmpty(), categories.isNotEmpty()) {
+        var index = 1 // featured slot always occupies index 0
+        val continueWatching = if (continueWatchingItems.isNotEmpty()) index++ else -1
+        val categoriesIndex = if (categories.isNotEmpty()) index++ else -1
+        val sort = index++
+        val gridStart = index
+        val maxIndex = (gridStart + posterRows.lastIndex).coerceAtLeast(sort)
+        CatalogSectionIndices(
+            continueWatching = continueWatching,
+            categories = categoriesIndex,
+            sort = sort,
+            gridStart = gridStart,
+            maxIndex = maxIndex,
+        )
+    }
     val listState = rememberLazyListState(
-        initialFirstVisibleItemIndex = focusState.scrollOffset.coerceIn(0, maxInitialListIndex),
+        initialFirstVisibleItemIndex = focusState.scrollOffset.coerceIn(0, sectionIndices.maxIndex),
     )
     val scope = rememberCoroutineScope()
+    val contentStart = catalogContentStart()
+    var lastFocusedGridRow by remember { mutableIntStateOf(-1) }
+
+    val scrollToSection: suspend (Int) -> Unit = { sectionIndex ->
+        if (sectionIndex >= 0 && !listState.isSectionVisible(sectionIndex)) {
+            listState.animateScrollToItem(sectionIndex)
+        }
+    }
+
+    LaunchedEffect(listState, sectionIndices.maxIndex, focusState.scrollOffset) {
+        onRestoreScrollReady {
+            listState.scrollToItem(focusState.scrollOffset.coerceIn(0, sectionIndices.maxIndex))
+        }
+    }
 
     LaunchedEffect(listState.firstVisibleItemIndex) {
         focusState.saveBrowseFocus(
@@ -136,6 +175,9 @@ fun CatalogBrowseContent(
                         )
                     },
                     firstItemFocusRequester = if (!hasFeatured) continueWatchingFocus else null,
+                    onEnteringRail = { scrollToSection(sectionIndices.continueWatching) },
+                    parentHandlesVerticalScroll = sectionIndices.continueWatching >= 0,
+                    stableContentStart = true,
                     onWatchNow = onContinueWatchNow,
                     onAddToList = onContinueAddToList,
                     onFavorite = onContinueFavorite,
@@ -157,7 +199,9 @@ fun CatalogBrowseContent(
                         null
                     },
                     focusedChipIndex = selectedFilter,
-                    modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
+                    modifier = Modifier.padding(start = contentStart),
+                    onEnteringRow = { scrollToSection(sectionIndices.categories) },
+                    parentHandlesVerticalScroll = sectionIndices.categories >= 0,
                 )
             }
         }
@@ -168,7 +212,9 @@ fun CatalogBrowseContent(
                 selectedIndex = selectedSortIndex,
                 onSelected = onSortSelected,
                 focusedChipIndex = selectedSortIndex,
-                modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
+                modifier = Modifier.padding(start = contentStart),
+                onEnteringRow = { scrollToSection(sectionIndices.sort) },
+                parentHandlesVerticalScroll = true,
             )
         }
 
@@ -176,12 +222,16 @@ fun CatalogBrowseContent(
             posterRows,
             key = { rowIndex, row -> "poster-row-${row.firstOrNull()?.contentId ?: rowIndex}" },
         ) { rowIndex, rowItems ->
+            val gridListIndex = sectionIndices.gridStart + rowIndex
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .graphicsLayer { clip = true }
                     .padding(
-                        start = CinemaSpacing.NavRailWidth + 16.dp,
+                        start = contentStart,
                         end = 24.dp,
+                        top = CinemaSpacing.FocusScaleOverflow / 2,
+                        bottom = CinemaSpacing.FocusScaleOverflow / 2,
                     ),
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
             ) {
@@ -198,6 +248,8 @@ fun CatalogBrowseContent(
                         onClick = { onPosterClick(poster) },
                         onLongClick = onPosterLongClick?.let { callback -> { callback(poster) } },
                         fixedWidth = null,
+                        focusScale = 1f,
+                        focusedBorderWidth = 0.dp,
                         modifier = Modifier
                             .weight(1f)
                             .onFocusChanged { focus ->
@@ -212,7 +264,12 @@ fun CatalogBrowseContent(
                                         )
                                     }
                                     scope.launch {
-                                        listState.scrollToItem(gridStartListIndex + rowIndex)
+                                        if (rowIndex != lastFocusedGridRow) {
+                                            lastFocusedGridRow = rowIndex
+                                            if (!listState.isSectionVisible(gridListIndex)) {
+                                                listState.animateScrollToItem(gridListIndex)
+                                            }
+                                        }
                                     }
                                 }
                             }

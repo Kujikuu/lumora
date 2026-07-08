@@ -5,7 +5,7 @@ import com.iptvcinema.tv.core.datastore.SessionRequirement
 import com.iptvcinema.tv.core.player.WatchedSeriesEpisodePrefetcher
 import com.iptvcinema.tv.core.data.local.LocalCredentialsStore
 import com.iptvcinema.tv.core.data.repository.AuthRepository
-import com.iptvcinema.tv.core.data.repository.PlaylistSourcesRepository
+import com.iptvcinema.tv.core.data.repository.supabase.SupabasePlaylistSourcesRepository
 import com.iptvcinema.tv.core.model.PlaylistSourceRecord
 import com.iptvcinema.tv.core.model.SourceType
 import javax.inject.Inject
@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.first
 class StartupSessionBootstrap @Inject constructor(
     private val appSessionRepository: AppSessionRepository,
     private val authRepository: AuthRepository,
-    private val playlistSourcesRepository: PlaylistSourcesRepository,
+    private val playlistSourcesRepository: SupabasePlaylistSourcesRepository,
     private val localCredentialsStore: LocalCredentialsStore,
     private val watchedSeriesEpisodePrefetcher: WatchedSeriesEpisodePrefetcher,
 ) {
@@ -49,8 +49,9 @@ class StartupSessionBootstrap @Inject constructor(
         if (!authRepository.isConfigured()) return
 
         runCatching {
-            val sources = playlistSourcesRepository.getSources()
-            val activeSource = sources.firstOrNull { it.isActive } ?: sources.firstOrNull() ?: return
+            val userId = state.userId ?: return@runCatching
+            val sources = playlistSourcesRepository.getSourcesCached(userId)
+            val activeSource = sources.firstOrNull { it.isActive } ?: sources.firstOrNull() ?: return@runCatching
             playlistSourcesRepository.ensureLocalCredentials(activeSource)
             if (canRestoreSource(activeSource)) {
                 appSessionRepository.setSource(
@@ -66,7 +67,8 @@ class StartupSessionBootstrap @Inject constructor(
         if (!authRepository.isConfigured()) return
 
         runCatching {
-            val sources = playlistSourcesRepository.getSources()
+            val userId = appSessionRepository.sessionState.first().userId ?: return@runCatching
+            val sources = playlistSourcesRepository.getSourcesCached(userId)
             val source = sources.firstOrNull { it.id == sourceId }
             if (source == null) {
                 appSessionRepository.clearSource()

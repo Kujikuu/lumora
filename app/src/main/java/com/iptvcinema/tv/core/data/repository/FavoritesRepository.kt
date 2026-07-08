@@ -14,6 +14,7 @@ interface FavoritesRepository {
         title: String,
         posterUrl: String?,
         sourceId: String? = null,
+        currentlyFavorite: Boolean? = null,
     ): Boolean
 
     suspend fun removeFavorite(profileId: String, favorite: FavoriteItem)

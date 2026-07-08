@@ -154,6 +154,7 @@ fun CatalogRefreshBanner(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun AccountDegradedBanner(
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -172,7 +173,13 @@ fun AccountDegradedBanner(
         )
         Text(
             text = stringResource(R.string.account_degraded_message),
+            modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
+        )
+        CinemaButton(
+            text = stringResource(R.string.account_degraded_retry),
+            variant = CinemaButtonVariant.SecondaryDark,
+            onClick = onRetry,
         )
     }
 }

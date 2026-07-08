@@ -1,7 +1,6 @@
 package com.iptvcinema.tv.core.design.components
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -69,7 +68,7 @@ fun FocusableCinemaCard(
     }
     val scale by animateFloatAsState(
         targetValue = targetScale,
-        animationSpec = tween(durationMillis = 120),
+        animationSpec = TvScrollMotion.focusScaleTween,
         label = "focusScale",
     )
 

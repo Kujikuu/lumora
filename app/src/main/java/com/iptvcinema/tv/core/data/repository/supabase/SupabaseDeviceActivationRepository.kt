@@ -13,6 +13,7 @@ import com.iptvcinema.tv.core.supabase.dto.SessionExchangeResponse
 import com.iptvcinema.tv.core.supabase.mapper.toDomain
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -26,9 +27,10 @@ import io.ktor.http.isSuccess
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.random.Random
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 @Singleton
 class SupabaseDeviceActivationRepository @Inject constructor(
@@ -58,12 +60,10 @@ class SupabaseDeviceActivationRepository @Inject constructor(
     }
 
     override suspend fun getSession(sessionId: String): DeviceActivationSession? = runCatching {
-        supabaseClient.from(TABLE)
-            .select(Columns.ALL) {
-                filter {
-                    eq(COLUMN_ID, sessionId)
-                }
-            }
+        supabaseClient.postgrest.rpc(
+            function = "get_device_activation_session",
+            parameters = buildJsonObject { put("session_id", sessionId) },
+        )
             .decodeSingleOrNull<DeviceActivationSessionDto>()
             ?.toDomain()
     }.getOrNull()
@@ -114,7 +114,6 @@ class SupabaseDeviceActivationRepository @Inject constructor(
 
     companion object {
         private const val TABLE = "device_activation_sessions"
-        private const val COLUMN_ID = "id"
         private const val TOKEN_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789"
     }
 }

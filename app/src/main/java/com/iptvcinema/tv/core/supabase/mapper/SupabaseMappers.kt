@@ -13,6 +13,7 @@ import com.iptvcinema.tv.core.model.UserProfile
 import com.iptvcinema.tv.core.model.UserSettings
 import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.model.WatchHistoryItem
+import com.iptvcinema.tv.core.player.StreamingQualityOption
 import com.iptvcinema.tv.core.supabase.dto.DeviceActivationSessionDto
 import com.iptvcinema.tv.core.supabase.dto.FavoriteDto
 import com.iptvcinema.tv.core.supabase.dto.ParentalControlsDto
@@ -84,7 +85,7 @@ fun UserSettingsDto.toDomain(): UserSettings = UserSettings(
     autoplayNextEpisode = autoplayNextEpisode,
     continueWatchingEnabled = continueWatchingEnabled,
     skipIntroEnabled = skipIntroEnabled,
-    streamingQuality = streamingQuality,
+    streamingQuality = StreamingQualityOption.normalize(streamingQuality),
     theme = theme,
 )
 
@@ -109,7 +110,7 @@ fun UserSettings.toDto(userId: String): UserSettingsDto = UserSettingsDto(
     autoplayNextEpisode = autoplayNextEpisode,
     continueWatchingEnabled = continueWatchingEnabled,
     skipIntroEnabled = skipIntroEnabled,
-    streamingQuality = streamingQuality,
+    streamingQuality = StreamingQualityOption.normalize(streamingQuality),
     theme = theme,
 )
 

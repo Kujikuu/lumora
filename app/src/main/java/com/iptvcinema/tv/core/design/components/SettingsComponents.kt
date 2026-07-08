@@ -33,10 +33,55 @@ import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.AccountSummary
 
+data class SettingsMenuItem(
+    val label: String,
+    val summary: String? = null,
+)
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun SettingsPanelHeader(
+    title: String,
+    subtitle: String? = null,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.displaySmall.copy(
+                color = CinemaColors.White,
+                fontWeight = FontWeight.Black,
+            ),
+        )
+        if (!subtitle.isNullOrBlank()) {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun SettingsHintText(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = text,
+        modifier = modifier.padding(start = 4.dp, bottom = 4.dp),
+        style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextMuted),
+    )
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun SettingsMenu(
-    items: List<String>,
+    items: List<SettingsMenuItem>,
     selectedIndex: Int,
     onSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -49,9 +94,10 @@ fun SettingsMenu(
     ) {
         items.forEachIndexed { index, item ->
             SettingsRow(
-                label = item,
+                label = item.label,
                 isSelected = index == selectedIndex,
                 onClick = { onSelected(index) },
+                trailing = item.summary,
                 modifier = if (index == focusedItemIndex && firstItemFocusRequester != null) {
                     Modifier.focusRequester(firstItemFocusRequester)
                 } else {

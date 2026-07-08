@@ -30,6 +30,8 @@ const translations = {
     footer: "iptv.afifistudio.com · Device activation",
     err_missing_config: "Missing config.js — set SUPABASE_URL and SUPABASE_ANON_KEY.",
     err_invalid_code: "That TV code is invalid or expired. Get a fresh code from your TV.",
+    err_code_already_used: "This TV code was already used. Get a fresh code from your TV.",
+    err_rate_limited: "Too many attempts. Wait a minute and try again.",
     err_email_confirm: "Confirm your email first, then return here.",
     err_invalid_credentials: "Invalid email or password.",
     err_enter_code: "Enter the activation code from your TV.",
@@ -72,6 +74,8 @@ const translations = {
     footer: "iptv.afifistudio.com · تفعيل الجهاز",
     err_missing_config: "config.js مفقود — عيّن SUPABASE_URL و SUPABASE_ANON_KEY.",
     err_invalid_code: "رمز التلفاز غير صالح أو منتهٍ. احصل على رمز جديد من التلفاز.",
+    err_code_already_used: "تم استخدام رمز التلفاز بالفعل. احصل على رمز جديد من التلفاز.",
+    err_rate_limited: "محاولات كثيرة. انتظر دقيقة ثم حاول مرة أخرى.",
     err_email_confirm: "أكّد بريدك أولًا ثم عد إلى هنا.",
     err_invalid_credentials: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
     err_enter_code: "أدخل رمز التفعيل من التلفاز.",
@@ -128,6 +132,8 @@ export function t(key) {
 export function mapErr(e) {
   const text = e?.message ?? String(e);
   if (/invalid or expired activation/i.test(text)) return t("err_invalid_code");
+  if (/already used|already linked|status = 'EXPIRED'/i.test(text)) return t("err_code_already_used");
+  if (/too many attempts|rate limit/i.test(text)) return t("err_rate_limited");
   if (/email not confirmed/i.test(text)) return t("err_email_confirm");
   if (/invalid login credentials/i.test(text)) return t("err_invalid_credentials");
   return text;
