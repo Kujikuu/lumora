@@ -643,11 +643,17 @@ private fun LiveCategoryRow(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var hadFocusInRow by remember(items) { mutableStateOf(false) }
+    var focusedIndex by remember(items) { mutableIntStateOf(-1) }
 
     LazyRow(
         state = listState,
         modifier = modifier
-            .onFocusChanged { if (!it.hasFocus) hadFocusInRow = false }
+            .onFocusChanged { focusState ->
+                if (!focusState.hasFocus) {
+                    hadFocusInRow = false
+                    focusedIndex = -1
+                }
+            }
             .clip(CinemaShapes.XLarge)
             .background(CinemaColors.SurfaceSoft.copy(alpha = 0.86f))
             .padding(horizontal = 17.dp, vertical = 12.dp),
@@ -656,6 +662,7 @@ private fun LiveCategoryRow(
     ) {
         itemsIndexed(items) { index, label ->
             val selected = index == selectedIndex
+            val focused = index == focusedIndex
             val colors = LiveCategoryColors[index % LiveCategoryColors.size]
             Column(
                 modifier = Modifier.width(100.dp),
@@ -665,8 +672,12 @@ private fun LiveCategoryRow(
                 Text(
                     text = label,
                     style = MaterialTheme.typography.titleSmall.copy(
-                        color = CinemaColors.White,
-                        fontWeight = FontWeight.Medium,
+                        color = when {
+                            focused -> CinemaColors.Accent
+                            selected -> CinemaColors.White
+                            else -> CinemaColors.TextSecondary
+                        },
+                        fontWeight = if (focused || selected) FontWeight.Bold else FontWeight.Medium,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -676,6 +687,7 @@ private fun LiveCategoryRow(
                         .size(63.dp)
                         .onFocusChanged { focusState ->
                             if (focusState.isFocused) {
+                                focusedIndex = index
                                 scope.launch {
                                     hadFocusInRow = true
                                     listState.animateToFocusedItem(index)
@@ -684,8 +696,10 @@ private fun LiveCategoryRow(
                         },
                     onClick = { onSelected(index) },
                     shape = CircleShape,
-                    focusedBorderWidth = 0.dp,
-                ) { _ ->
+                    focusedBorderWidth = 3.dp,
+                    focusScale = 1.08f,
+                    contentDescription = label,
+                ) { chipFocused ->
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -710,6 +724,16 @@ private fun LiveCategoryRow(
                                     .height(4.dp)
                                     .clip(CinemaShapes.XLarge)
                                     .background(CinemaColors.White),
+                            )
+                        }
+                        if (chipFocused && !selected) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        CinemaColors.Background.copy(alpha = 0.18f),
+                                        CircleShape,
+                                    ),
                             )
                         }
                     }
