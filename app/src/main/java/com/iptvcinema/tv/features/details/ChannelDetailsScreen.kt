@@ -109,6 +109,7 @@ fun ChannelDetailsScreen(
                         synopsis = uiState.currentProgram?.description?.takeIf { it.isNotBlank() }
                             ?: uiState.currentProgram?.title.orEmpty(),
                         primaryActionLabel = watchLiveLabel,
+                        watchLaterLabel = stringResource(R.string.btn_add_to_favorites),
                         onWatchNow = {
                             navController.navigate(AppRoute.player(uiState.channelId, "live"))
                         },

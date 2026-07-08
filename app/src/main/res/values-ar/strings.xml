@@ -278,7 +278,8 @@
     <string name="mylist_subtitle">كل أفلامك ومسلسلاتك وقنواتك المحفوظة في مكان واحد.</string>
     <string name="mylist_all_added">All added</string>
     <string name="mylist_nothing_saved">لا يوجد شيء محفوظ بعد</string>
-    <string name="mylist_nothing_saved_desc">تصفح الأفلام والمسلسلات لإضافتها إلى قائمتك.</string>
+    <string name="mylist_nothing_saved_desc">تصفح الأفلام والمسلسلات والقنوات المباشرة لحفظها في مجموعتك.</string>
+    <string name="mylist_favorite_channels">القنوات المفضلة</string>
     <string name="mylist_remove_tip">نصيحة: اضغط مطولًا على عنصر لإزالته من قائمتك.</string>
     <string name="mylist_filter_all">الكل</string>
     <string name="mylist_filter_movies">الأفلام</string>

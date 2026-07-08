@@ -291,7 +291,8 @@
     <string name="mylist_subtitle">All your saved movies, series, and channels in one place.</string>
     <string name="mylist_all_added">All added</string>
     <string name="mylist_nothing_saved">Nothing saved yet</string>
-    <string name="mylist_nothing_saved_desc">Browse movies and series to add them to your list.</string>
+    <string name="mylist_nothing_saved_desc">Browse movies, series, and live channels to save them to your collection.</string>
+    <string name="mylist_favorite_channels">Favorite channels</string>
     <string name="mylist_remove_tip">Tip: Long press an item to remove it from your list.</string>
     <string name="mylist_filter_all">All</string>
     <string name="mylist_filter_movies">Movies</string>

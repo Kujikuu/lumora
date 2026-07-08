@@ -3,6 +3,7 @@ package com.iptvcinema.tv.features.mylist
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.data.fake.FakeDataProvider
 import com.iptvcinema.tv.core.data.repository.CatalogRepository
 import com.iptvcinema.tv.core.data.repository.FavoritesRepository
 import com.iptvcinema.tv.core.data.repository.WatchHistoryRepository
@@ -22,10 +23,14 @@ import kotlinx.coroutines.launch
 sealed interface MyListUiState {
     data object Loading : MyListUiState
     data class Ready(
-        val favorites: List<FavoriteItem>,
+        val watchLater: List<FavoriteItem>,
+        val favoriteChannels: List<FavoriteChannelCard>,
         val recentlyWatched: List<WatchHistoryItem>,
         val recentlyWatchedPosters: List<PosterCardData> = emptyList(),
-    ) : MyListUiState
+    ) : MyListUiState {
+        val hasContent: Boolean
+            get() = watchLater.isNotEmpty() || favoriteChannels.isNotEmpty()
+    }
     data class Error(val message: String) : MyListUiState
 }
 
@@ -50,11 +55,22 @@ class MyListViewModel @Inject constructor(
             val session = appSessionRepository.sessionState.first()
             val profileId = session.currentProfileId
             if (profileId == null) {
-                _uiState.value = MyListUiState.Ready(emptyList(), emptyList(), emptyList())
+                _uiState.value = MyListUiState.Ready(
+                    watchLater = emptyList(),
+                    favoriteChannels = emptyList(),
+                    recentlyWatched = emptyList(),
+                    recentlyWatchedPosters = emptyList(),
+                )
                 return@launch
             }
             runCatching {
                 val favorites = favoritesRepository.observeFavorites(profileId).first()
+                val partitioned = partitionFavorites(favorites)
+                val favoriteChannels = buildFavoriteChannelCards(
+                    channelFavorites = partitioned.channelFavorites,
+                    sourceId = session.currentSourceId,
+                    isDemoMode = session.isDemoMode,
+                )
                 val history = watchHistoryRepository.observeHistory(profileId, limit = 4).first()
                 val recentlyWatchedPosters = history.map { item ->
                     val display = catalogRepository.resolveWatchHistoryCardDisplay(
@@ -73,7 +89,12 @@ class MyListViewModel @Inject constructor(
                         contentId = item.contentId,
                     )
                 }
-                _uiState.value = MyListUiState.Ready(favorites, history, recentlyWatchedPosters)
+                _uiState.value = MyListUiState.Ready(
+                    watchLater = partitioned.watchLater,
+                    favoriteChannels = favoriteChannels,
+                    recentlyWatched = history,
+                    recentlyWatchedPosters = recentlyWatchedPosters,
+                )
             }.onFailure { error ->
                 _uiState.value = MyListUiState.Error(error.message ?: appStrings.get(R.string.error_load_list))
             }
@@ -88,13 +109,69 @@ class MyListViewModel @Inject constructor(
                 val current = _uiState.value
                 if (current is MyListUiState.Ready) {
                     _uiState.value = current.copy(
-                        favorites = current.favorites.filterNot {
+                        watchLater = current.watchLater.filterNot {
                             it.contentId == favorite.contentId && it.contentType == favorite.contentType
+                        },
+                        favoriteChannels = current.favoriteChannels.filterNot {
+                            it.favorite.contentId == favorite.contentId &&
+                                it.favorite.contentType == favorite.contentType
                         },
                     )
                 }
             }.onFailure { error ->
                 _uiState.value = MyListUiState.Error(error.message ?: appStrings.get(R.string.error_load_list))
+            }
+        }
+    }
+
+    private suspend fun buildFavoriteChannelCards(
+        channelFavorites: List<FavoriteItem>,
+        sourceId: String?,
+        isDemoMode: Boolean,
+    ): List<FavoriteChannelCard> {
+        if (channelFavorites.isEmpty()) return emptyList()
+        val nowMs = System.currentTimeMillis()
+        val channelIds = channelFavorites.map { it.contentId }
+
+        return if (isDemoMode) {
+            channelFavorites.map { favorite ->
+                val demoChannel = FakeDataProvider.channels.find { it.id == favorite.contentId }
+                FavoriteChannelCard(
+                    id = favorite.id,
+                    contentId = favorite.contentId,
+                    name = demoChannel?.name ?: favorite.title,
+                    logoUrl = demoChannel?.logoUrl ?: favorite.posterUrl,
+                    currentProgram = demoChannel?.currentProgram,
+                    favorite = favorite,
+                )
+            }
+        } else if (sourceId != null) {
+            val currentPrograms = catalogRepository.getCurrentProgramsForChannels(
+                sourceId = sourceId,
+                channelIds = channelIds,
+                nowMs = nowMs,
+            )
+            channelFavorites.map { favorite ->
+                val catalogChannel = catalogRepository.getChannel(sourceId, favorite.contentId)
+                FavoriteChannelCard(
+                    id = favorite.id,
+                    contentId = favorite.contentId,
+                    name = catalogChannel?.name ?: favorite.title,
+                    logoUrl = catalogChannel?.logoUrl ?: favorite.posterUrl,
+                    currentProgram = currentPrograms[favorite.contentId]?.title,
+                    favorite = favorite,
+                )
+            }
+        } else {
+            channelFavorites.map { favorite ->
+                FavoriteChannelCard(
+                    id = favorite.id,
+                    contentId = favorite.contentId,
+                    name = favorite.title,
+                    logoUrl = favorite.posterUrl,
+                    currentProgram = null,
+                    favorite = favorite,
+                )
             }
         }
     }

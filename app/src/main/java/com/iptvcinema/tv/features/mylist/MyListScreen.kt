@@ -43,6 +43,8 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.design.components.ChannelTile
+import com.iptvcinema.tv.core.design.components.ChannelTileData
 import com.iptvcinema.tv.core.design.components.CinemaAsyncImage
 import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
 import com.iptvcinema.tv.core.design.components.EmptyState
@@ -72,14 +74,21 @@ fun MyListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
-    val contentFocus = remember { FocusRequester() }
+    val watchLaterFocus = remember { FocusRequester() }
+    val channelsFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("my_list")
     val scope = rememberCoroutineScope()
     val contentStart = shellContentStart()
 
     val exitRailToContent: () -> Unit = {
         scope.launch {
-            runCatching { contentFocus.requestFocus() }
+            val state = uiState
+            val requester = if (state is MyListUiState.Ready && state.watchLater.isNotEmpty()) {
+                watchLaterFocus
+            } else {
+                channelsFocus
+            }
+            runCatching { requester.requestFocus() }
         }
     }
 
@@ -123,9 +132,10 @@ fun MyListScreen(
                 )
             }
             is MyListUiState.Ready -> {
-                LaunchedEffect(state.favorites.isNotEmpty(), focusState.initialFocusHandled) {
-                    if (state.favorites.isNotEmpty() && !focusState.initialFocusHandled) {
-                        focusState.requestInitialFocus(contentFocus)
+                LaunchedEffect(state.hasContent, focusState.initialFocusHandled) {
+                    if (state.hasContent && !focusState.initialFocusHandled) {
+                        val requester = if (state.watchLater.isNotEmpty()) watchLaterFocus else channelsFocus
+                        focusState.requestInitialFocus(requester)
                     }
                 }
                 Column(
@@ -135,63 +145,155 @@ fun MyListScreen(
                     verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
                 ) {
                     CinemaSerifTitle(text = stringResource(R.string.mylist_title))
-                    if (state.favorites.isEmpty()) {
+                    if (!state.hasContent) {
                         EmptyState(
                             title = stringResource(R.string.mylist_nothing_saved),
                             description = stringResource(R.string.mylist_nothing_saved_desc),
                             primaryAction = stringResource(R.string.nav_movies),
-                            secondaryAction = null,
+                            secondaryAction = stringResource(R.string.nav_live_tv),
                             onPrimary = { navController.navigate(AppRoute.MOVIES) },
-                            onSecondary = null,
+                            onSecondary = { navController.navigate(AppRoute.LIVE_TV) },
                         )
                     } else {
-                        Text(
-                            text = stringResource(R.string.btn_watch_later),
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                color = CinemaColors.White,
-                                fontWeight = FontWeight.Medium,
-                            ),
-                            modifier = Modifier.padding(start = contentStart),
-                        )
-                        val listState = rememberLazyListState()
-                        LazyRow(
-                            state = listState,
-                            contentPadding = PaddingValues(
-                                start = contentStart,
-                                end = CinemaSpacing.ScreenPadding,
-                            ),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            item {
-                                AllAddedCard(
-                                    modifier = Modifier
-                                        .focusRequester(contentFocus)
-                                        .onFocusChanged { focusState ->
-                                            if (focusState.isFocused) {
-                                                scope.launch {
-                                                    listState.animateToFocusedItem(0)
-                                                }
-                                            }
-                                        },
-                                )
-                            }
-                            itemsIndexed(state.favorites, key = { _, favorite -> favorite.id }) { index, favorite ->
-                                MyCollectionTile(
-                                    data = favorite.toPosterCardData(),
-                                    onClick = { openFavorite(navController, favorite) },
-                                    onLongClick = { viewModel.removeFavorite(favorite) },
-                                    modifier = Modifier.onFocusChanged { focusState ->
-                                        if (focusState.isFocused) {
-                                            scope.launch {
-                                                listState.animateToFocusedItem(index + 1)
-                                            }
-                                        }
-                                    },
-                                )
-                            }
+                        if (state.watchLater.isNotEmpty()) {
+                            WatchLaterRail(
+                                favorites = state.watchLater,
+                                contentStart = contentStart,
+                                firstItemFocusRequester = watchLaterFocus,
+                                onOpenFavorite = { openFavorite(navController, it) },
+                                onRemoveFavorite = viewModel::removeFavorite,
+                            )
+                        }
+                        if (state.favoriteChannels.isNotEmpty()) {
+                            FavoriteChannelsRail(
+                                channels = state.favoriteChannels,
+                                contentStart = contentStart,
+                                firstItemFocusRequester = if (state.watchLater.isEmpty()) channelsFocus else null,
+                                onChannelClick = { channel ->
+                                    navController.navigate(AppRoute.liveTv(channel.contentId))
+                                },
+                                onRemoveChannel = { channel ->
+                                    viewModel.removeFavorite(channel.favorite)
+                                },
+                            )
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun WatchLaterRail(
+    favorites: List<FavoriteItem>,
+    contentStart: androidx.compose.ui.unit.Dp,
+    firstItemFocusRequester: FocusRequester,
+    onOpenFavorite: (FavoriteItem) -> Unit,
+    onRemoveFavorite: (FavoriteItem) -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
+
+    Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.CardGap)) {
+        Text(
+            text = stringResource(R.string.btn_watch_later),
+            style = MaterialTheme.typography.labelLarge.copy(
+                color = CinemaColors.White,
+                fontWeight = FontWeight.Medium,
+            ),
+            modifier = Modifier.padding(start = contentStart),
+        )
+        LazyRow(
+            state = listState,
+            contentPadding = PaddingValues(
+                start = contentStart,
+                end = CinemaSpacing.ScreenPadding,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            item {
+                AllAddedCard(
+                    modifier = Modifier
+                        .focusRequester(firstItemFocusRequester)
+                        .onFocusChanged { focusState ->
+                            if (focusState.isFocused) {
+                                scope.launch {
+                                    listState.animateToFocusedItem(0)
+                                }
+                            }
+                        },
+                )
+            }
+            itemsIndexed(favorites, key = { _, favorite -> favorite.id }) { index, favorite ->
+                MyCollectionTile(
+                    data = favorite.toPosterCardData(),
+                    onClick = { onOpenFavorite(favorite) },
+                    onLongClick = { onRemoveFavorite(favorite) },
+                    modifier = Modifier.onFocusChanged { focusState ->
+                        if (focusState.isFocused) {
+                            scope.launch {
+                                listState.animateToFocusedItem(index + 1)
+                            }
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun FavoriteChannelsRail(
+    channels: List<FavoriteChannelCard>,
+    contentStart: androidx.compose.ui.unit.Dp,
+    firstItemFocusRequester: FocusRequester?,
+    onChannelClick: (FavoriteChannelCard) -> Unit,
+    onRemoveChannel: (FavoriteChannelCard) -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
+
+    Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.CardGap)) {
+        Text(
+            text = stringResource(R.string.mylist_favorite_channels),
+            style = MaterialTheme.typography.labelLarge.copy(
+                color = CinemaColors.White,
+                fontWeight = FontWeight.Medium,
+            ),
+            modifier = Modifier.padding(start = contentStart),
+        )
+        LazyRow(
+            state = listState,
+            contentPadding = PaddingValues(
+                start = contentStart,
+                end = CinemaSpacing.ScreenPadding,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
+        ) {
+            itemsIndexed(channels, key = { _, channel -> channel.id }) { index, channel ->
+                ChannelTile(
+                    data = channel.toChannelTileData(),
+                    onClick = { onChannelClick(channel) },
+                    onLongClick = { onRemoveChannel(channel) },
+                    modifier = Modifier
+                        .then(
+                            if (index == 0 && firstItemFocusRequester != null) {
+                                Modifier.focusRequester(firstItemFocusRequester)
+                            } else {
+                                Modifier
+                            },
+                        )
+                        .onFocusChanged { focusState ->
+                            if (focusState.isFocused) {
+                                scope.launch {
+                                    listState.animateToFocusedItem(index)
+                                }
+                            }
+                        },
+                )
             }
         }
     }
@@ -280,6 +382,14 @@ private fun MyCollectionTile(
         }
     }
 }
+
+private fun FavoriteChannelCard.toChannelTileData(): ChannelTileData = ChannelTileData(
+    id = contentId,
+    channelName = name,
+    logoUrl = logoUrl,
+    currentProgram = currentProgram,
+    isLive = true,
+)
 
 private fun openFavorite(navController: NavController, favorite: FavoriteItem) {
     when (favorite.contentType) {

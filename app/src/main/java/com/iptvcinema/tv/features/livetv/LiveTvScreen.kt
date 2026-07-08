@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
@@ -94,6 +95,7 @@ import com.iptvcinema.tv.core.model.EpgProgram
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
 import com.iptvcinema.tv.core.navigation.rememberCatalogStateCallbacks
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
+import com.iptvcinema.tv.core.util.rememberPrototypeFeedback
 import kotlinx.coroutines.delay
 
 private const val OVERLAY_HIDE_DELAY_MS = 4_000L
@@ -108,6 +110,9 @@ fun LiveTvScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val playerState by viewModel.playerState.collectAsState()
+    val showFeedback = rememberPrototypeFeedback()
+    val feedbackAddedToMyList = stringResource(R.string.feedback_added_to_mylist)
+    val feedbackRemovedFromMyList = stringResource(R.string.feedback_removed_from_mylist)
     val channelStripFocus = remember { FocusRequester() }
     val videoSurfaceFocus = remember { FocusRequester() }
     val channelFocusState = rememberScreenFocusState("live_tv")
@@ -368,6 +373,7 @@ fun LiveTvScreen(
                                 minutesLeft = minutesLeft,
                                 canGoPrevious = focusedChannelIndex > 0,
                                 canGoNext = focusedChannelIndex < uiState.channels.lastIndex,
+                                isFavorite = uiState.isChannelFavorite(previewChannel.id),
                                 onPreviousChannel = {
                                     if (focusedChannelIndex > 0) {
                                         selectChannelAt(focusedChannelIndex - 1)
@@ -377,6 +383,13 @@ fun LiveTvScreen(
                                     if (focusedChannelIndex < uiState.channels.lastIndex) {
                                         selectChannelAt(focusedChannelIndex + 1)
                                     }
+                                },
+                                onToggleFavorite = {
+                                    val wasFavorite = uiState.isChannelFavorite(previewChannel.id)
+                                    viewModel.toggleChannelFavorite(previewChannel)
+                                    showFeedback(
+                                        if (wasFavorite) feedbackRemovedFromMyList else feedbackAddedToMyList,
+                                    )
                                 },
                                 onInteraction = { revealOverlays() },
                                 modifier = Modifier
@@ -442,8 +455,10 @@ private fun LiveChannelStrip(
     minutesLeft: Int?,
     canGoPrevious: Boolean,
     canGoNext: Boolean,
+    isFavorite: Boolean,
     onPreviousChannel: () -> Unit,
     onNextChannel: () -> Unit,
+    onToggleFavorite: () -> Unit,
     onInteraction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -474,20 +489,36 @@ private fun LiveChannelStrip(
                 }
             },
         onClick = onInteraction,
+        onLongClick = onToggleFavorite,
         shape = CinemaShapes.Card,
         focusScale = 1.01f,
         contentDescription = channel.name,
     ) { focused ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     if (focused) CinemaColors.Surface else CinemaColors.SurfaceSoft.copy(alpha = 0.92f),
                     CinemaShapes.Card,
-                )
-                .padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                ),
         ) {
+            if (isFavorite) {
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = stringResource(R.string.content_desc_favorite),
+                    tint = CinemaColors.Accent,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(10.dp)
+                        .size(18.dp),
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -571,6 +602,7 @@ private fun LiveChannelStrip(
                         style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextSecondary),
                     )
                 }
+            }
             }
         }
     }

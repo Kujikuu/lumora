@@ -46,10 +46,12 @@ fun ChannelTile(
     data: ChannelTileData,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
 ) {
     FocusableCinemaCard(
         modifier = modifier.width(172.dp),
         onClick = onClick,
+        onLongClick = onLongClick,
         shape = CinemaShapes.Card,
         contentDescription = data.channelName,
         defaultBorderWidth = 0.dp,

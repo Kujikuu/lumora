@@ -249,7 +249,6 @@ fun CatalogBrowseContent(
                         onLongClick = onPosterLongClick?.let { callback -> { callback(poster) } },
                         fixedWidth = null,
                         focusScale = 1f,
-                        focusedBorderWidth = 0.dp,
                         modifier = Modifier
                             .weight(1f)
                             .onFocusChanged { focus ->
