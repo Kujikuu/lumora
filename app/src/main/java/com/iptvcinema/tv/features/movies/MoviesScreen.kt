@@ -27,9 +27,7 @@ import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
-import com.iptvcinema.tv.core.design.components.HeroBanner
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
-import com.iptvcinema.tv.core.model.MovieItem
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
@@ -51,13 +49,12 @@ fun MoviesScreen(
     viewModel: MoviesViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val watchNowFocus = remember { FocusRequester() }
     val continueWatchingFocus = remember { FocusRequester() }
     val categoryFocus = remember { FocusRequester() }
     val gridFocus = remember { FocusRequester() }
+    val watchNowFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("movies")
     val categories = uiState.categories
-    val hasFeatured = uiState.featured != null
     val sortOptions = rememberCatalogSortOptions()
     val selectedSortIndex = catalogSortIndex(uiState.sortOption)
 
@@ -86,7 +83,6 @@ fun MoviesScreen(
         val target = when {
             focusState.sectionId == CatalogBrowseSections.GRID && focusState.focusedContentId.isNotBlank() -> gridFocus
             focusState.sectionId == CatalogBrowseSections.CONTINUE -> continueWatchingFocus
-            hasFeatured -> watchNowFocus
             uiState.continueWatchingMovies.isNotEmpty() -> continueWatchingFocus
             categories.isNotEmpty() -> categoryFocus
             else -> gridFocus
@@ -95,7 +91,7 @@ fun MoviesScreen(
             focusState.restoreFocus(target)
         } else {
             focusState.requestInitialFocus(target)
-            if (!hasFeatured && uiState.continueWatchingMovies.isEmpty()) {
+            if (uiState.continueWatchingMovies.isEmpty()) {
                 focusState.saveFocusIndex(selectedFilter)
             }
         }
@@ -145,7 +141,7 @@ fun MoviesScreen(
             ) {
                 CatalogBrowseContent(
                     focusState = focusState,
-                    hasFeatured = hasFeatured,
+                    hasFeatured = false,
                     continueWatchingItems = uiState.continueWatchingMovies,
                     categories = categories,
                     selectedFilter = selectedFilter,
@@ -177,52 +173,10 @@ fun MoviesScreen(
                     continueWatchingFocus = continueWatchingFocus,
                     categoryFocus = categoryFocus,
                     gridFocus = gridFocus,
-                    featuredContent = {
-                        uiState.featured?.let { movie ->
-                            MoviesFeaturedHero(
-                                movie = movie,
-                                watchNowFocusRequester = watchNowFocus,
-                                onWatchNow = {
-                                    navController.navigate(AppRoute.player(movie.id, "movie"))
-                                },
-                                onDetails = {
-                                    navController.navigate(AppRoute.movieDetails(movie.id))
-                                },
-                            )
-                        }
-                    },
                 )
             }
         }
     }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun MoviesFeaturedHero(
-    movie: MovieItem,
-    onWatchNow: () -> Unit,
-    onDetails: () -> Unit,
-    watchNowFocusRequester: FocusRequester,
-) {
-    HeroBanner(
-        title = movie.title,
-        metadata = listOfNotNull(
-            movie.year.takeIf { it > 0 }?.toString(),
-            movie.genres.joinToString(" ").takeIf { it.isNotBlank() },
-            movie.runtimeMinutes.takeIf { it > 0 }?.let { "${it}m" },
-        ),
-        qualityBadges = buildList {
-            if (movie.is4K) add("4K")
-            movie.rating.takeIf { it.isNotBlank() }?.let { add("★ $it") }
-        },
-        description = movie.plot,
-        onWatchNow = onWatchNow,
-        onDetails = onDetails,
-        height = CinemaSpacing.HeroFeaturedMinHeight,
-        watchNowFocusRequester = watchNowFocusRequester,
-        backdropUrl = movie.backdropUrl ?: movie.imageUrl,
-    )
 }
 
 private fun navigateMoviesCardToPlayer(navController: NavController, card: HomeContentCard) {

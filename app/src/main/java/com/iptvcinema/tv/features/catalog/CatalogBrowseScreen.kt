@@ -78,11 +78,11 @@ fun CatalogBrowseContent(
     continueWatchingFocus: FocusRequester,
     categoryFocus: FocusRequester,
     gridFocus: FocusRequester,
-    featuredContent: @Composable () -> Unit,
+    featuredContent: @Composable () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val posterRows = remember(posters) { posters.chunked(CATALOG_GRID_COLUMNS) }
-    val gridStartListIndex = 1 +
+    val gridStartListIndex = (if (hasFeatured) 1 else 0) +
         (if (continueWatchingItems.isNotEmpty()) 1 else 0) +
         (if (categories.isNotEmpty()) 1 else 0) +
         1
@@ -108,7 +108,9 @@ fun CatalogBrowseContent(
         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
     ) {
         item(key = CatalogBrowseSections.FEATURED) {
-            featuredContent()
+            if (hasFeatured) {
+                featuredContent()
+            }
         }
 
         if (continueWatchingItems.isNotEmpty()) {

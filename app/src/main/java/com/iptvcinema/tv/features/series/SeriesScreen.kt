@@ -16,7 +16,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -28,9 +27,7 @@ import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
-import com.iptvcinema.tv.core.design.components.HeroBanner
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
-import com.iptvcinema.tv.core.model.SeriesItem
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
@@ -52,13 +49,12 @@ fun SeriesScreen(
     viewModel: SeriesViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val watchNowFocus = remember { FocusRequester() }
     val continueWatchingFocus = remember { FocusRequester() }
     val categoryFocus = remember { FocusRequester() }
     val gridFocus = remember { FocusRequester() }
+    val watchNowFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("series")
     val categories = uiState.categories
-    val hasFeatured = uiState.featured != null
     val sortOptions = rememberCatalogSortOptions()
     val selectedSortIndex = catalogSortIndex(uiState.sortOption)
 
@@ -87,7 +83,6 @@ fun SeriesScreen(
         val target = when {
             focusState.sectionId == CatalogBrowseSections.GRID && focusState.focusedContentId.isNotBlank() -> gridFocus
             focusState.sectionId == CatalogBrowseSections.CONTINUE -> continueWatchingFocus
-            hasFeatured -> watchNowFocus
             uiState.continueSeries.isNotEmpty() -> continueWatchingFocus
             categories.isNotEmpty() -> categoryFocus
             else -> gridFocus
@@ -96,7 +91,7 @@ fun SeriesScreen(
             focusState.restoreFocus(target)
         } else {
             focusState.requestInitialFocus(target)
-            if (!hasFeatured && uiState.continueSeries.isEmpty()) {
+            if (uiState.continueSeries.isEmpty()) {
                 focusState.saveFocusIndex(selectedFilter)
             }
         }
@@ -146,7 +141,7 @@ fun SeriesScreen(
             ) {
                 CatalogBrowseContent(
                     focusState = focusState,
-                    hasFeatured = hasFeatured,
+                    hasFeatured = false,
                     continueWatchingItems = uiState.continueSeries,
                     categories = categories,
                     selectedFilter = selectedFilter,
@@ -178,62 +173,10 @@ fun SeriesScreen(
                     continueWatchingFocus = continueWatchingFocus,
                     categoryFocus = categoryFocus,
                     gridFocus = gridFocus,
-                    featuredContent = {
-                        uiState.featured?.let { series ->
-                            SeriesFeaturedHero(
-                                series = series,
-                                watchNowFocusRequester = watchNowFocus,
-                                onWatchNow = {
-                                    val resume = uiState.featuredResumeEpisode
-                                    if (resume != null) {
-                                        navController.navigate(
-                                            AppRoute.player(resume.episodeId, "episode", resume.seriesId),
-                                        )
-                                    } else {
-                                        navController.navigate(AppRoute.seriesDetails(series.id))
-                                    }
-                                },
-                                onDetails = {
-                                    navController.navigate(AppRoute.seriesDetails(series.id))
-                                },
-                            )
-                        }
-                    },
                 )
             }
         }
     }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun SeriesFeaturedHero(
-    series: SeriesItem,
-    onWatchNow: () -> Unit,
-    onDetails: () -> Unit,
-    watchNowFocusRequester: FocusRequester,
-) {
-    HeroBanner(
-        title = series.title,
-        metadata = listOfNotNull(
-            series.year.takeIf { it > 0 }?.toString(),
-            series.genres.joinToString(" ").takeIf { it.isNotBlank() },
-            series.seasonCount.takeIf { it > 0 }?.let { count ->
-                pluralStringResource(R.plurals.details_season_count, count, count)
-            },
-        ),
-        qualityBadges = buildList {
-            if (series.is4K) add("4K")
-            series.rating.takeIf { it.isNotBlank() }?.let { add("★ $it") }
-            if (series.hasNewEpisode) add(stringResource(R.string.badge_new_episode))
-        },
-        description = series.plot,
-        onWatchNow = onWatchNow,
-        onDetails = onDetails,
-        height = CinemaSpacing.HeroFeaturedMinHeight,
-        watchNowFocusRequester = watchNowFocusRequester,
-        backdropUrl = series.backdropUrl ?: series.imageUrl,
-    )
 }
 
 private fun navigateSeriesCardToPlayer(navController: NavController, card: HomeContentCard) {
