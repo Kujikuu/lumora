@@ -470,11 +470,16 @@ class PlayerViewModel @Inject constructor(
                 )
                 ?: return
             currentEpisode = episode
+            val series = catalogRepository.getSeries(sourceId, seriesId)
+            val seriesImageUrl = series?.posterUrl?.takeIf { it.isNotBlank() }
+                ?: series?.backdropUrl?.takeIf { it.isNotBlank() }
             val next = nextEpisodeResolver.nextEpisode(sourceId, episode)
             val upNext = nextEpisodeResolver.upNextEpisodes(sourceId, episode, limit = 3)
             _screenState.value = _screenState.value.copy(
                 nextEpisodeTitle = next?.title,
-                upNextItems = upNext.map { it.toPosterCardData() },
+                upNextItems = upNext.map { it.toPosterCardData(seriesImageUrl) },
+                seriesTitle = series?.title ?: _screenState.value.seriesTitle,
+                seriesPosterUrl = seriesImageUrl ?: _screenState.value.seriesPosterUrl,
             )
         }
     }
@@ -1053,9 +1058,9 @@ private enum class AutoplayState {
     TRANSITIONING,
 }
 
-private fun CatalogEpisode.toPosterCardData(): PosterCardData = PosterCardData(
+private fun CatalogEpisode.toPosterCardData(seriesImageUrl: String? = null): PosterCardData = PosterCardData(
     title = title,
     runtime = "S${seasonNumber}E$episodeNumber",
-    imageUrl = thumbnailUrl,
+    imageUrl = thumbnailUrl?.takeIf { it.isNotBlank() } ?: seriesImageUrl,
     contentId = id,
 )
