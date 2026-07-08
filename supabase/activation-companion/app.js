@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { applyLocale, mapErr, t } from "./i18n.js";
 
-const APP_VERSION = "3.2.0";
+const APP_VERSION = "3.3.0";
 const CODE_KEY = "iptv_cinema_activation_code";
 const ACTIVATION_PARAM = "activation";
 const CODE_RE = /^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{2}$/;

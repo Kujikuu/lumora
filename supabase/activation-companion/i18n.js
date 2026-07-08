@@ -1,8 +1,7 @@
 const translations = {
   en: {
-    page_title: "IPTV Cinema — Activate TV",
-    page_description: "Sign in to link your IPTV Cinema account to your Android TV.",
-    brand_kicker: "IPTV Cinema",
+    page_title: "Lumora Play — Activate TV",
+    page_description: "Sign in to link your Lumora Play account to your Android TV.",
     heading_activate: "Activate Your TV",
     step_code: "Enter code",
     step_signin: "Sign in",
@@ -43,9 +42,8 @@ const translations = {
     account_fallback: "your account",
   },
   ar: {
-    page_title: "IPTV Cinema — تفعيل التلفاز",
-    page_description: "سجّل الدخول لربط حساب IPTV Cinema بتلفاز Android.",
-    brand_kicker: "IPTV Cinema",
+    page_title: "Lumora Play — تفعيل التلفاز",
+    page_description: "سجّل الدخول لربط حساب Lumora Play بتلفاز Android.",
     heading_activate: "فعّل تلفازك",
     step_code: "أدخل الرمز",
     step_signin: "تسجيل الدخول",
@@ -102,6 +100,12 @@ export function applyLocale() {
 
   const description = document.querySelector('meta[name="description"]');
   if (description) description.content = t("page_description");
+
+  const ogTitle = document.querySelector('meta[property="og:title"]');
+  if (ogTitle) ogTitle.content = t("page_title");
+
+  const ogDescription = document.querySelector('meta[property="og:description"]');
+  if (ogDescription) ogDescription.content = t("page_description");
 
   document.querySelectorAll("[data-i18n]").forEach((node) => {
     const key = node.getAttribute("data-i18n");
