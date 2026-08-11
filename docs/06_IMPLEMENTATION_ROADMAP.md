@@ -456,7 +456,6 @@ App feels production-ready.
 **Deferred to post-MVP / release prep:**
 
 ```text
-WorkManager periodic catalog refresh
 Full Xtream integration test suite
 Launcher assets and Play Store release pipeline
 ```

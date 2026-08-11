@@ -27,6 +27,7 @@ android {
         applicationId = "com.iptvcinema.tv"
         minSdk = 26
         targetSdk = 35
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = 1
         versionName = "1.0.0"
         buildConfigField("String", "SUPABASE_URL", "\"${localProperty("SUPABASE_URL")}\"")
@@ -127,4 +128,6 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.test.core.ktx)
+    androidTestImplementation(libs.room.testing)
 }

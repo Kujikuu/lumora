@@ -16,7 +16,7 @@
 | Images | Coil |
 | Networking | Retrofit + OkHttp |
 | Serialization | KotlinX Serialization |
-| Catalog Sync | Foreground coroutine sync on connect/re-sync (WorkManager planned for periodic refresh) |
+| Catalog Sync | Cached-first incremental reconciliation; foreground manual sync + WorkManager background checks |
 | Dependency Injection | Hilt |
 
 ## Architecture Pattern
@@ -248,12 +248,14 @@ Actual implementation (Phase 6 complete):
 
 ```text
 XtreamApi.kt          — Retrofit interface; includes get_series_info (not shown in conceptual interface above)
-XtreamSyncRepository  — syncSource() orchestrates 9 steps with progress reporting
-XmltvParser           — minimal EPG parse during sync; failures are non-fatal
+CatalogSyncCoordinator — single-flight freshness policy for initial, startup, periodic, and manual triggers
+XtreamSyncRepository  — conditional HTTP fetch + fingerprinted incremental reconciliation with progress reporting
+XmltvParser           — minimal EPG parse during sync; failures are non-fatal, automatic workers await completion
 Episodes              — lazy-loaded on demand via get_series_info, not bulk-synced
 Browse screens        — Home, Live TV, Movies, Series, Search read from CatalogRepository → Room
 Details / Player      — Room catalog path; demo mode falls back to FakeDataProvider for cast/rails
 Phase 10 additions    — CatalogDaoFacade.purgeSource, RatingPolicy (max_rating), PlaybackSessionTracker, SyncStatusBanner
+Current sync          — cached-first startup, 3-hour freshness, 12-hour WorkManager check, Room v8 validators/fingerprints
 ```
 
 Package paths:
@@ -314,6 +316,8 @@ EPG sync should:
 4. Match programs by `tvg-id`, `channel id`, or normalized name.
 5. Store in Room.
 6. Trim old EPG data.
+
+Manual and initial EPG refreshes run asynchronously. Startup and periodic WorkManager runs await the same per-source serialized EPG job, so catalog success remains non-fatal while the OS retains the worker until EPG completes. EPG availability is updated with a column-only Room query so it cannot overwrite newer catalog totals or freshness.
 
 EPG performance warning:
 

@@ -6,6 +6,7 @@ import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toEpgPrograms
 import com.iptvcinema.tv.core.datastore.AppSessionRepository
 import com.iptvcinema.tv.core.database.CatalogDaoFacade
+import com.iptvcinema.tv.core.epg.EpgSyncRepository
 import com.iptvcinema.tv.core.model.ChannelItem
 import com.iptvcinema.tv.core.model.EpgProgram
 import com.iptvcinema.tv.core.model.MovieItem
@@ -15,6 +16,7 @@ import com.iptvcinema.tv.core.model.SourceType
 import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.catalog.resolveEpisodeContinueWatchingBackdropUrl
 import com.iptvcinema.tv.core.catalog.resolveEpisodeContinueWatchingPosterUrl
+import com.iptvcinema.tv.core.catalog.CatalogSyncCoordinator
 import com.iptvcinema.tv.core.model.WatchHistoryItem
 import com.iptvcinema.tv.core.model.catalog.CatalogChannel
 import com.iptvcinema.tv.core.model.catalog.CatalogContentType
@@ -27,6 +29,7 @@ import com.iptvcinema.tv.core.player.ChannelDirection
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.util.AppStrings
 import javax.inject.Inject
+import javax.inject.Provider
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -79,6 +82,8 @@ class CatalogRepository @Inject constructor(
     private val catalogDaoFacade: CatalogDaoFacade,
     private val playlistSourcesRepository: PlaylistSourcesRepository,
     private val appStrings: AppStrings,
+    private val epgSyncRepository: EpgSyncRepository,
+    private val catalogSyncCoordinator: Provider<CatalogSyncCoordinator>,
 ) {
     fun observeSyncState(): Flow<CatalogSyncState?> =
         appSessionRepository.sessionState.flatMapLatest { session ->
@@ -91,6 +96,8 @@ class CatalogRepository @Inject constructor(
         }
 
     suspend fun purgeSource(sourceId: String) {
+        catalogSyncCoordinator.get().cancel(sourceId)
+        epgSyncRepository.cancelSync(sourceId)
         catalogDaoFacade.purgeSource(sourceId)
     }
 

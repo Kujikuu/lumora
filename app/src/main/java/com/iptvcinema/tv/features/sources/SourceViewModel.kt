@@ -2,6 +2,7 @@ package com.iptvcinema.tv.features.sources
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.data.local.LocalCredentialsStore
 import com.iptvcinema.tv.core.data.repository.AuthRepository
 import com.iptvcinema.tv.core.data.repository.CatalogRepository
@@ -14,14 +15,15 @@ import com.iptvcinema.tv.core.model.SourceType
 import com.iptvcinema.tv.core.model.XtreamCredentials
 import com.iptvcinema.tv.core.xtream.XtreamAuthResult
 import com.iptvcinema.tv.core.xtream.XtreamRepository
-import com.iptvcinema.tv.core.xtream.XtreamSyncProgress
 import com.iptvcinema.tv.core.xtream.XtreamSyncRepository
-import com.iptvcinema.tv.core.xtream.XtreamSyncResult
-import com.iptvcinema.tv.core.xtream.XtreamSyncStep
 import com.iptvcinema.tv.core.catalog.CatalogSyncProgressMapper
+import com.iptvcinema.tv.core.catalog.CatalogSyncCoordinator
+import com.iptvcinema.tv.core.catalog.CatalogSyncCoordinatorResult
+import com.iptvcinema.tv.core.catalog.CatalogSyncMessageFormatter
+import com.iptvcinema.tv.core.catalog.CatalogSyncTrigger
+import com.iptvcinema.tv.core.sync.CatalogSyncScheduler
+import com.iptvcinema.tv.core.util.AppStrings
 import com.iptvcinema.tv.core.m3u.M3uSyncRepository
-import com.iptvcinema.tv.core.m3u.M3uSyncResult
-import com.iptvcinema.tv.core.m3u.M3uSyncStep
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
 import java.time.ZoneId
@@ -62,6 +64,10 @@ class SourceViewModel @Inject constructor(
     private val xtreamSyncRepository: XtreamSyncRepository,
     private val m3uSyncRepository: M3uSyncRepository,
     private val localCredentialsStore: LocalCredentialsStore,
+    private val catalogSyncCoordinator: CatalogSyncCoordinator,
+    private val catalogSyncScheduler: CatalogSyncScheduler,
+    private val appStrings: AppStrings,
+    private val syncMessageFormatter: CatalogSyncMessageFormatter,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<SourcesUiState>(SourcesUiState.Loading)
     val uiState: StateFlow<SourcesUiState> = _uiState.asStateFlow()
@@ -178,10 +184,14 @@ class SourceViewModel @Inject constructor(
             }
 
             persistSource(source, isDemoMode = false) {}
-            val syncResult = xtreamSyncRepository.syncSourceIfNeeded(source.id, credentials)
-            updateChecklistFromSync(syncResult)
+            val syncResult = catalogSyncCoordinator.sync(
+                source.id,
+                SourceType.XTREAM_CODES,
+                CatalogSyncTrigger.INITIAL_CONNECTION,
+            )
+            updateChecklistFromSync()
             when (syncResult) {
-                is XtreamSyncResult.Success -> {
+                is CatalogSyncCoordinatorResult.Success -> {
                     _xtreamConnectState.value = XtreamConnectUiState(
                         isConnecting = false,
                         checklist = buildFinalChecklist(syncResult),
@@ -189,18 +199,11 @@ class SourceViewModel @Inject constructor(
                     loadSources()
                     onComplete()
                 }
-                is XtreamSyncResult.AuthFailed -> {
+                is CatalogSyncCoordinatorResult.Failed -> {
                     _xtreamConnectState.value = XtreamConnectUiState(
                         isConnecting = false,
                         checklist = _xtreamConnectState.value.checklist,
-                        errorMessage = syncResult.message,
-                    )
-                }
-                is XtreamSyncResult.Failed -> {
-                    _xtreamConnectState.value = XtreamConnectUiState(
-                        isConnecting = false,
-                        checklist = _xtreamConnectState.value.checklist,
-                        errorMessage = syncResult.message,
+                        errorMessage = syncMessageFormatter.failure(syncResult),
                     )
                 }
             }
@@ -228,35 +231,30 @@ class SourceViewModel @Inject constructor(
                 SourceType.M3U -> {
                     val credentials = localCredentialsStore.getM3uCredentials(sourceId)
                         ?: run {
-                            _syncMessage.value = "Credentials not found for this source"
+                            _syncMessage.value = appStrings.get(R.string.refresh_credentials_missing)
                             return@launch
                         }
-                    _syncMessage.value = "Syncing ${credentials.playlistName}…"
-                    val result = m3uSyncRepository.syncSource(sourceId, credentials)
+                    _syncMessage.value = appStrings.get(R.string.refresh_syncing_source, credentials.playlistName)
+                    val result = catalogSyncCoordinator.sync(sourceId, SourceType.M3U, CatalogSyncTrigger.MANUAL)
                     _syncMessage.value = when (result) {
-                        is M3uSyncResult.Success ->
-                            "Synced ${result.liveChannelCount} channels" +
-                                if (result.epgAvailable) " with EPG" else ""
-                        is M3uSyncResult.Unreachable -> result.message
-                        is M3uSyncResult.Failed -> result.message
+                        is CatalogSyncCoordinatorResult.Success -> formatChangeMessage(result)
+                        is CatalogSyncCoordinatorResult.Failed -> syncMessageFormatter.failure(result)
                     }
                 }
                 SourceType.XTREAM_CODES -> {
                     val credentials = localCredentialsStore.getXtreamCredentials(sourceId)
                         ?: run {
-                            _syncMessage.value = "Credentials not found for this source"
+                            _syncMessage.value = appStrings.get(R.string.refresh_credentials_missing)
                             return@launch
                         }
-                    _syncMessage.value = "Syncing ${credentials.accountName}…"
-                    val result = xtreamSyncRepository.syncSource(sourceId, credentials)
+                    _syncMessage.value = appStrings.get(R.string.refresh_syncing_source, credentials.accountName)
+                    val result = catalogSyncCoordinator.sync(sourceId, SourceType.XTREAM_CODES, CatalogSyncTrigger.MANUAL)
                     _syncMessage.value = when (result) {
-                        is XtreamSyncResult.Success ->
-                            "Synced ${result.liveChannelCount} channels, ${result.movieCount} movies, ${result.seriesCount} series"
-                        is XtreamSyncResult.AuthFailed -> result.message
-                        is XtreamSyncResult.Failed -> result.message
+                        is CatalogSyncCoordinatorResult.Success -> formatChangeMessage(result)
+                        is CatalogSyncCoordinatorResult.Failed -> syncMessageFormatter.failure(result)
                     }
                 }
-                else -> _syncMessage.value = "Credentials not found for this source"
+                else -> _syncMessage.value = appStrings.get(R.string.refresh_credentials_missing)
             }
             loadSources()
         }
@@ -300,11 +298,15 @@ class SourceViewModel @Inject constructor(
             }
 
             persistSource(source, isDemoMode = false) {}
-            val syncResult = m3uSyncRepository.syncSourceIfNeeded(source.id, credentials)
-            updateChecklistFromM3uSync(syncResult)
+            val syncResult = catalogSyncCoordinator.sync(
+                source.id,
+                SourceType.M3U,
+                CatalogSyncTrigger.INITIAL_CONNECTION,
+            )
+            updateChecklistFromM3uSync()
 
             when (syncResult) {
-                is M3uSyncResult.Success -> {
+                is CatalogSyncCoordinatorResult.Success -> {
                     _m3uConnectState.value = M3uConnectUiState(
                         isConnecting = false,
                         checklist = buildM3uFinalChecklist(syncResult),
@@ -312,14 +314,8 @@ class SourceViewModel @Inject constructor(
                     loadSources()
                     onComplete()
                 }
-                is M3uSyncResult.Unreachable,
-                is M3uSyncResult.Failed,
-                -> {
-                    val message = when (syncResult) {
-                        is M3uSyncResult.Unreachable -> syncResult.message
-                        is M3uSyncResult.Failed -> syncResult.message
-                        else -> "Import failed"
-                    }
+                is CatalogSyncCoordinatorResult.Failed -> {
+                    val message = syncMessageFormatter.failure(syncResult)
                     _m3uConnectState.value = M3uConnectUiState(
                         isConnecting = false,
                         checklist = _m3uConnectState.value.checklist,
@@ -340,6 +336,7 @@ class SourceViewModel @Inject constructor(
                     sourceType = source.type,
                     isDemoMode = source.type == SourceType.DEMO,
                 )
+                if (source.type != SourceType.DEMO) catalogSyncScheduler.enqueueStartupCheck()
                 loadSources()
                 onComplete()
             }.onFailure { error ->
@@ -424,7 +421,7 @@ class SourceViewModel @Inject constructor(
         )
     }
 
-    private fun updateChecklistFromSync(result: XtreamSyncResult) {
+    private fun updateChecklistFromSync() {
         val progress = xtreamSyncRepository.progress.value
         val checklist = progress.map { item ->
             CatalogSyncProgressMapper.xtreamChecklistLabel(item) to item.isSuccess
@@ -432,7 +429,7 @@ class SourceViewModel @Inject constructor(
         _xtreamConnectState.value = _xtreamConnectState.value.copy(checklist = checklist)
     }
 
-    private fun buildFinalChecklist(result: XtreamSyncResult.Success): List<Pair<String, Boolean>> {
+    private fun buildFinalChecklist(result: CatalogSyncCoordinatorResult.Success): List<Pair<String, Boolean>> {
         return listOf(
             "Server reachable" to true,
             "Authentication" to true,
@@ -443,7 +440,7 @@ class SourceViewModel @Inject constructor(
         )
     }
 
-    private fun updateChecklistFromM3uSync(result: M3uSyncResult) {
+    private fun updateChecklistFromM3uSync() {
         val progress = m3uSyncRepository.progress.value
         val checklist = progress.map { item ->
             CatalogSyncProgressMapper.m3uChecklistLabel(item) to item.isSuccess
@@ -451,7 +448,7 @@ class SourceViewModel @Inject constructor(
         _m3uConnectState.value = _m3uConnectState.value.copy(checklist = checklist)
     }
 
-    private fun buildM3uFinalChecklist(result: M3uSyncResult.Success): List<Pair<String, Boolean>> {
+    private fun buildM3uFinalChecklist(result: CatalogSyncCoordinatorResult.Success): List<Pair<String, Boolean>> {
         return listOf(
             "Playlist URL valid" to true,
             "Playlist downloaded" to true,
@@ -460,4 +457,16 @@ class SourceViewModel @Inject constructor(
             "Sync complete" to true,
         )
     }
+
+    private fun formatChangeMessage(result: CatalogSyncCoordinatorResult.Success): String =
+        if (result.changes.hasChanges) {
+            appStrings.get(
+                R.string.refresh_catalog_changes,
+                result.changes.added,
+                result.changes.updated,
+                result.changes.removed,
+            )
+        } else {
+            appStrings.get(R.string.refresh_catalog_up_to_date)
+        }
 }

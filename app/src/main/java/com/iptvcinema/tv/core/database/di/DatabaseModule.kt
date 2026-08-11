@@ -31,6 +31,7 @@ object DatabaseModule {
         MIGRATION_4_5,
         MIGRATION_5_6,
         MIGRATION_6_7,
+        MIGRATION_7_8,
     ).build()
 
     private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -163,6 +164,24 @@ object DatabaseModule {
             db.execSQL(
                 "CREATE INDEX IF NOT EXISTS index_cached_playlist_sources_userId " +
                     "ON cached_playlist_sources(userId)",
+            )
+        }
+    }
+
+    internal val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS catalog_sync_metadata (
+                    sourceId TEXT NOT NULL,
+                    resourceKey TEXT NOT NULL,
+                    etag TEXT,
+                    lastModified TEXT,
+                    contentFingerprint TEXT,
+                    lastCheckedAtEpochMs INTEGER NOT NULL,
+                    PRIMARY KEY(sourceId, resourceKey)
+                )
+                """.trimIndent(),
             )
         }
     }

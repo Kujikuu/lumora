@@ -104,4 +104,19 @@ class AppSessionStateTest {
             AppSessionState(hasSource = true, sourceType = SourceType.M3U).connectedSourceLabel(),
         )
     }
+
+    @Test
+    fun startupCatalogCheck_requiresARealSourceButNotASelectedProfile() {
+        val profilelessSource = AppSessionState(
+            isAuthenticated = true,
+            hasSource = true,
+            currentSourceId = "source-1",
+            sourceType = SourceType.XTREAM_CODES,
+            currentProfileId = null,
+        )
+
+        assertTrue(shouldScheduleStartupCatalogSync(profilelessSource))
+        assertFalse(shouldScheduleStartupCatalogSync(profilelessSource.copy(hasSource = false)))
+        assertFalse(shouldScheduleStartupCatalogSync(profilelessSource.copy(isDemoMode = true)))
+    }
 }

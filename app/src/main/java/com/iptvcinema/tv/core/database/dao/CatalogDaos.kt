@@ -11,6 +11,7 @@ import com.iptvcinema.tv.core.database.entity.LocalMovieEntity
 import com.iptvcinema.tv.core.database.entity.LocalProgramEntity
 import com.iptvcinema.tv.core.database.entity.LocalSeriesEntity
 import com.iptvcinema.tv.core.database.entity.LocalSourceSyncStateEntity
+import com.iptvcinema.tv.core.database.entity.CatalogSyncMetadataEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -26,6 +27,9 @@ interface CategoryDao {
 
     @Query("DELETE FROM categories WHERE sourceId = :sourceId AND contentType = :contentType")
     suspend fun deleteByType(sourceId: String, contentType: String)
+
+    @Query("DELETE FROM categories WHERE sourceId = :sourceId AND contentType = :contentType AND id IN (:ids)")
+    suspend fun deleteByIds(sourceId: String, contentType: String, ids: List<String>)
 
     @Query("DELETE FROM categories WHERE sourceId = :sourceId")
     suspend fun deleteBySource(sourceId: String)
@@ -63,6 +67,12 @@ interface ChannelDao {
     @Query("SELECT * FROM channels WHERE sourceId = :sourceId ORDER BY sortOrder, channelNumber, name")
     suspend fun getAllOrdered(sourceId: String): List<LocalChannelEntity>
 
+    @Query("SELECT id FROM channels WHERE sourceId = :sourceId")
+    suspend fun getIdsBySource(sourceId: String): List<String>
+
+    @Query("SELECT * FROM channels WHERE sourceId = :sourceId AND id IN (:ids)")
+    suspend fun getByIds(sourceId: String, ids: List<String>): List<LocalChannelEntity>
+
     @Query(
         """
         SELECT * FROM channels
@@ -86,6 +96,27 @@ interface ChannelDao {
 
     @Query("DELETE FROM channels WHERE sourceId = :sourceId")
     suspend fun deleteBySource(sourceId: String)
+
+    @Query("DELETE FROM channels WHERE sourceId = :sourceId AND id IN (:ids)")
+    suspend fun deleteByIds(sourceId: String, ids: List<String>)
+
+    @Query(
+        """
+        UPDATE channels
+        SET categoryName = (
+            SELECT categories.name FROM categories
+            WHERE categories.sourceId = channels.sourceId AND categories.id = channels.categoryId
+            LIMIT 1
+        )
+        WHERE sourceId = :sourceId AND categoryId IS NOT NULL
+        AND categoryName IS NOT (
+            SELECT categories.name FROM categories
+            WHERE categories.sourceId = channels.sourceId AND categories.id = channels.categoryId
+            LIMIT 1
+        )
+        """,
+    )
+    suspend fun syncCategoryNames(sourceId: String): Int
 
     @Query("SELECT COUNT(*) FROM channels WHERE sourceId = :sourceId")
     suspend fun countBySource(sourceId: String): Int
@@ -173,11 +204,38 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId ORDER BY sortOrder, title LIMIT :limit")
     suspend fun getFeatured(sourceId: String, limit: Int): List<LocalMovieEntity>
 
+    @Query("SELECT id FROM movies WHERE sourceId = :sourceId")
+    suspend fun getIdsBySource(sourceId: String): List<String>
+
+    @Query("SELECT * FROM movies WHERE sourceId = :sourceId AND id IN (:ids)")
+    suspend fun getByIds(sourceId: String, ids: List<String>): List<LocalMovieEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<LocalMovieEntity>)
 
     @Query("DELETE FROM movies WHERE sourceId = :sourceId")
     suspend fun deleteBySource(sourceId: String)
+
+    @Query("DELETE FROM movies WHERE sourceId = :sourceId AND id IN (:ids)")
+    suspend fun deleteByIds(sourceId: String, ids: List<String>)
+
+    @Query(
+        """
+        UPDATE movies
+        SET categoryName = (
+            SELECT categories.name FROM categories
+            WHERE categories.sourceId = movies.sourceId AND categories.id = movies.categoryId
+            LIMIT 1
+        )
+        WHERE sourceId = :sourceId AND categoryId IS NOT NULL
+        AND categoryName IS NOT (
+            SELECT categories.name FROM categories
+            WHERE categories.sourceId = movies.sourceId AND categories.id = movies.categoryId
+            LIMIT 1
+        )
+        """,
+    )
+    suspend fun syncCategoryNames(sourceId: String): Int
 
     @Query("SELECT COUNT(*) FROM movies WHERE sourceId = :sourceId")
     suspend fun countBySource(sourceId: String): Int
@@ -242,11 +300,38 @@ interface SeriesDao {
     @Query("SELECT id FROM series WHERE sourceId = :sourceId ORDER BY sortOrder, title LIMIT :limit")
     suspend fun getTopIds(sourceId: String, limit: Int): List<String>
 
+    @Query("SELECT id FROM series WHERE sourceId = :sourceId")
+    suspend fun getIdsBySource(sourceId: String): List<String>
+
+    @Query("SELECT * FROM series WHERE sourceId = :sourceId AND id IN (:ids)")
+    suspend fun getByIds(sourceId: String, ids: List<String>): List<LocalSeriesEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<LocalSeriesEntity>)
 
     @Query("DELETE FROM series WHERE sourceId = :sourceId")
     suspend fun deleteBySource(sourceId: String)
+
+    @Query("DELETE FROM series WHERE sourceId = :sourceId AND id IN (:ids)")
+    suspend fun deleteByIds(sourceId: String, ids: List<String>)
+
+    @Query(
+        """
+        UPDATE series
+        SET categoryName = (
+            SELECT categories.name FROM categories
+            WHERE categories.sourceId = series.sourceId AND categories.id = series.categoryId
+            LIMIT 1
+        )
+        WHERE sourceId = :sourceId AND categoryId IS NOT NULL
+        AND categoryName IS NOT (
+            SELECT categories.name FROM categories
+            WHERE categories.sourceId = series.sourceId AND categories.id = series.categoryId
+            LIMIT 1
+        )
+        """,
+    )
+    suspend fun syncCategoryNames(sourceId: String): Int
 
     @Query("SELECT COUNT(*) FROM series WHERE sourceId = :sourceId")
     suspend fun countBySource(sourceId: String): Int
@@ -291,6 +376,9 @@ interface EpisodeDao {
 
     @Query("DELETE FROM episodes WHERE sourceId = :sourceId AND seriesId = :seriesId")
     suspend fun deleteBySeries(sourceId: String, seriesId: String)
+
+    @Query("DELETE FROM episodes WHERE sourceId = :sourceId AND seriesId IN (:seriesIds)")
+    suspend fun deleteBySeriesIds(sourceId: String, seriesIds: List<String>)
 
     @Query("DELETE FROM episodes WHERE sourceId = :sourceId")
     suspend fun deleteBySource(sourceId: String)
@@ -358,6 +446,24 @@ interface SyncStateDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(state: LocalSourceSyncStateEntity)
 
+    @Query("UPDATE source_sync_state SET epgAvailable = :epgAvailable WHERE sourceId = :sourceId")
+    suspend fun updateEpgAvailable(sourceId: String, epgAvailable: Boolean)
+
     @Query("DELETE FROM source_sync_state WHERE sourceId = :sourceId")
     suspend fun delete(sourceId: String)
+}
+
+@Dao
+interface CatalogSyncMetadataDao {
+    @Query("SELECT * FROM catalog_sync_metadata WHERE sourceId = :sourceId AND resourceKey = :resourceKey LIMIT 1")
+    suspend fun get(sourceId: String, resourceKey: String): CatalogSyncMetadataEntity?
+
+    @Query("SELECT * FROM catalog_sync_metadata WHERE sourceId = :sourceId")
+    suspend fun getBySource(sourceId: String): List<CatalogSyncMetadataEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(items: List<CatalogSyncMetadataEntity>)
+
+    @Query("DELETE FROM catalog_sync_metadata WHERE sourceId = :sourceId")
+    suspend fun deleteBySource(sourceId: String)
 }

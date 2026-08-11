@@ -8,9 +8,11 @@ import javax.inject.Singleton
 class CloudSyncInitializer @Inject constructor(
     realtimeCoordinator: SupabaseRealtimeCoordinator,
     cloudDataSyncScheduler: CloudDataSyncScheduler,
+    catalogSyncScheduler: CatalogSyncScheduler,
 ) {
     init {
         realtimeCoordinator.start()
         cloudDataSyncScheduler.schedulePeriodicSync()
+        catalogSyncScheduler.schedulePeriodicSync()
     }
 }

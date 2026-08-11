@@ -6,9 +6,11 @@ import com.iptvcinema.tv.core.di.ApplicationScope
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.withContext
 
 data class EpgSyncOutcome(
@@ -24,12 +26,14 @@ class EpgSyncRepository @Inject constructor(
     private val xmltvParser: XmltvParser,
     @ApplicationScope private val applicationScope: CoroutineScope,
 ) {
+    private val backgroundJobs = LatestPerSourceJobRunner(applicationScope)
+
     suspend fun syncEpg(
         sourceId: String,
         channels: List<LocalChannelEntity>,
         fetchXml: suspend () -> String,
     ): EpgSyncOutcome = withContext(Dispatchers.IO) {
-        runCatching {
+        try {
             val xml = fetchXml()
             val nowMs = System.currentTimeMillis()
             val programs = withContext(Dispatchers.Default) {
@@ -42,7 +46,9 @@ class EpgSyncRepository @Inject constructor(
                 message = if (programs.isEmpty()) "No EPG data" else "${programs.size} programs",
                 isSuccess = true,
             )
-        }.getOrElse { error ->
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
             EpgSyncOutcome(
                 programCount = 0,
                 epgAvailable = false,
@@ -57,17 +63,74 @@ class EpgSyncRepository @Inject constructor(
         channels: List<LocalChannelEntity>,
         fetchXml: suspend () -> String,
         onComplete: suspend (EpgSyncOutcome) -> Unit = {},
-    ): Job = applicationScope.launch(Dispatchers.IO) {
-        val outcome = syncEpg(sourceId, channels, fetchXml)
-        updateEpgAvailable(sourceId, outcome.epgAvailable)
-        onComplete(outcome)
+    ): Job = backgroundJobs.launch(sourceId) {
+        syncEpgAndRecord(sourceId, channels, fetchXml, onComplete)
+    }
+
+    suspend fun syncEpgAndWait(
+        sourceId: String,
+        channels: List<LocalChannelEntity>,
+        fetchXml: suspend () -> String,
+        onComplete: suspend (EpgSyncOutcome) -> Unit = {},
+    ): EpgSyncOutcome {
+        val completion = CompletableDeferred<EpgSyncOutcome>()
+        val job = backgroundJobs.launch(sourceId) {
+            try {
+                completion.complete(syncEpgAndRecord(sourceId, channels, fetchXml, onComplete))
+            } catch (error: CancellationException) {
+                completion.cancel(error)
+                throw error
+            } catch (error: Throwable) {
+                completion.completeExceptionally(error)
+            }
+        }
+        return try {
+            completion.await()
+        } catch (error: CancellationException) {
+            job.cancelAndJoin()
+            throw error
+        }
+    }
+
+    suspend fun cancelSync(sourceId: String) {
+        backgroundJobs.cancelAndJoin(sourceId)
+    }
+
+    suspend fun awaitPendingSync(sourceId: String) {
+        backgroundJobs.awaitIdle(sourceId)
     }
 
     private suspend fun updateEpgAvailable(sourceId: String, epgAvailable: Boolean) {
-        val existing = catalogDaoFacade.syncState.get(sourceId) ?: return
-        if (existing.epgAvailable != epgAvailable) {
-            catalogDaoFacade.syncState.upsert(existing.copy(epgAvailable = epgAvailable))
+        catalogDaoFacade.syncState.updateEpgAvailable(sourceId, epgAvailable)
+    }
+
+    private suspend fun syncEpgAndRecord(
+        sourceId: String,
+        channels: List<LocalChannelEntity>,
+        fetchXml: suspend () -> String,
+        onComplete: suspend (EpgSyncOutcome) -> Unit,
+    ): EpgSyncOutcome {
+        var outcome = syncEpg(sourceId, channels, fetchXml)
+        try {
+            updateEpgAvailable(sourceId, outcome.epgAvailable)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            outcome = EpgSyncOutcome(
+                programCount = outcome.programCount,
+                epgAvailable = outcome.epgAvailable,
+                message = error.message ?: "Unable to save EPG status",
+                isSuccess = false,
+            )
         }
+        try {
+            onComplete(outcome)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Throwable) {
+            // Progress reporting must never fail an otherwise successful catalog sync.
+        }
+        return outcome
     }
 
     companion object {

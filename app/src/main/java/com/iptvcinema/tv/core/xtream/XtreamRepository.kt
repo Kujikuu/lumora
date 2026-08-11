@@ -4,16 +4,20 @@ import com.iptvcinema.tv.core.data.local.LocalCredentialsStore
 import com.iptvcinema.tv.core.model.SourceStatus
 import com.iptvcinema.tv.core.model.XtreamCredentials
 import com.iptvcinema.tv.core.network.XtreamRetrofitFactory
+import com.iptvcinema.tv.core.network.ConditionalFetchResult
+import com.iptvcinema.tv.core.network.HttpValidators
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
+import retrofit2.Response
 
 sealed class XtreamAuthResult {
     data class Success(val response: XtreamAuthResponse) : XtreamAuthResult()
     data class InvalidCredentials(val message: String) : XtreamAuthResult()
     data class Expired(val message: String) : XtreamAuthResult()
-    data class Unreachable(val message: String) : XtreamAuthResult()
+    data class Unreachable(val message: String, val retryable: Boolean = true) : XtreamAuthResult()
     data class Error(val message: String) : XtreamAuthResult()
 }
 
@@ -45,27 +49,82 @@ class XtreamRepository @Inject constructor(
                 else -> XtreamAuthResult.Success(response)
             }
         }.getOrElse { error ->
+            if (error is CancellationException) throw error
             mapThrowable(error)
         }
     }
 
-    suspend fun fetchLiveCategories(credentials: XtreamCredentials): List<XtreamCategoryDto> =
-        withApi(credentials) { it.getLiveCategories(credentials.username, credentials.password) }
+    suspend fun fetchLiveCategories(
+        credentials: XtreamCredentials,
+        validators: HttpValidators = HttpValidators(),
+    ): ConditionalFetchResult<List<XtreamCategoryDto>> = withApi(credentials) {
+        it.getLiveCategories(
+            credentials.username,
+            credentials.password,
+            ifNoneMatch = validators.etag,
+            ifModifiedSince = validators.lastModified,
+        ).toConditionalResult(validators)
+    }
 
-    suspend fun fetchLiveStreams(credentials: XtreamCredentials): List<XtreamLiveStreamDto> =
-        withApi(credentials) { it.getLiveStreams(credentials.username, credentials.password) }
+    suspend fun fetchLiveStreams(
+        credentials: XtreamCredentials,
+        validators: HttpValidators = HttpValidators(),
+    ): ConditionalFetchResult<List<XtreamLiveStreamDto>> = withApi(credentials) {
+        it.getLiveStreams(
+            credentials.username,
+            credentials.password,
+            ifNoneMatch = validators.etag,
+            ifModifiedSince = validators.lastModified,
+        ).toConditionalResult(validators)
+    }
 
-    suspend fun fetchVodCategories(credentials: XtreamCredentials): List<XtreamCategoryDto> =
-        withApi(credentials) { it.getVodCategories(credentials.username, credentials.password) }
+    suspend fun fetchVodCategories(
+        credentials: XtreamCredentials,
+        validators: HttpValidators = HttpValidators(),
+    ): ConditionalFetchResult<List<XtreamCategoryDto>> = withApi(credentials) {
+        it.getVodCategories(
+            credentials.username,
+            credentials.password,
+            ifNoneMatch = validators.etag,
+            ifModifiedSince = validators.lastModified,
+        ).toConditionalResult(validators)
+    }
 
-    suspend fun fetchVodStreams(credentials: XtreamCredentials): List<XtreamVodStreamDto> =
-        withApi(credentials) { it.getVodStreams(credentials.username, credentials.password) }
+    suspend fun fetchVodStreams(
+        credentials: XtreamCredentials,
+        validators: HttpValidators = HttpValidators(),
+    ): ConditionalFetchResult<List<XtreamVodStreamDto>> = withApi(credentials) {
+        it.getVodStreams(
+            credentials.username,
+            credentials.password,
+            ifNoneMatch = validators.etag,
+            ifModifiedSince = validators.lastModified,
+        ).toConditionalResult(validators)
+    }
 
-    suspend fun fetchSeriesCategories(credentials: XtreamCredentials): List<XtreamCategoryDto> =
-        withApi(credentials) { it.getSeriesCategories(credentials.username, credentials.password) }
+    suspend fun fetchSeriesCategories(
+        credentials: XtreamCredentials,
+        validators: HttpValidators = HttpValidators(),
+    ): ConditionalFetchResult<List<XtreamCategoryDto>> = withApi(credentials) {
+        it.getSeriesCategories(
+            credentials.username,
+            credentials.password,
+            ifNoneMatch = validators.etag,
+            ifModifiedSince = validators.lastModified,
+        ).toConditionalResult(validators)
+    }
 
-    suspend fun fetchSeries(credentials: XtreamCredentials): List<XtreamSeriesDto> =
-        withApi(credentials) { it.getSeries(credentials.username, credentials.password) }
+    suspend fun fetchSeries(
+        credentials: XtreamCredentials,
+        validators: HttpValidators = HttpValidators(),
+    ): ConditionalFetchResult<List<XtreamSeriesDto>> = withApi(credentials) {
+        it.getSeries(
+            credentials.username,
+            credentials.password,
+            ifNoneMatch = validators.etag,
+            ifModifiedSince = validators.lastModified,
+        ).toConditionalResult(validators)
+    }
 
     suspend fun fetchSeriesInfo(credentials: XtreamCredentials, seriesId: String): XtreamSeriesInfoResponse =
         withApi(credentials) {
@@ -97,13 +156,37 @@ class XtreamRepository @Inject constructor(
     private fun mapThrowable(error: Throwable): XtreamAuthResult = when (error) {
         is HttpException -> when (error.code()) {
             401, 403 -> XtreamAuthResult.InvalidCredentials("Invalid username or password")
-            else -> XtreamAuthResult.Unreachable("Server returned HTTP ${error.code()}")
+            else -> XtreamAuthResult.Unreachable(
+                message = "Server returned HTTP ${error.code()}",
+                retryable = error.code() == 408 || error.code() == 429 || error.code() >= 500,
+            )
         }
         is IOException -> XtreamAuthResult.Unreachable(
             "Unable to reach server. Check the URL, network connection, and that the provider is online.",
         )
         is IllegalArgumentException -> XtreamAuthResult.Error(error.message ?: "Invalid request")
         else -> XtreamAuthResult.Error(error.message ?: "Connection failed")
+    }
+
+    fun isRetryable(error: Throwable): Boolean = when (error) {
+        is IOException -> true
+        is HttpException -> error.code() == 408 || error.code() == 429 || error.code() >= 500
+        else -> false
+    }
+
+    private fun <T> Response<T>.toConditionalResult(
+        previous: HttpValidators,
+    ): ConditionalFetchResult<T> {
+        val current = HttpValidators(
+            etag = headers()["ETag"],
+            lastModified = headers()["Last-Modified"],
+        )
+        if (code() == 304) {
+            return ConditionalFetchResult.NotModified(current.mergedWith(previous))
+        }
+        if (!isSuccessful) throw HttpException(this)
+        val responseBody = body() ?: throw IOException("Provider returned an empty catalog response")
+        return ConditionalFetchResult.Modified(responseBody, current)
     }
 
     fun authResultToStatus(result: XtreamAuthResult): SourceStatus = when (result) {

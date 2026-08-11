@@ -2,8 +2,10 @@ package com.iptvcinema.tv.core.xtream
 
 import okhttp3.ResponseBody
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.Query
 import retrofit2.http.Streaming
+import retrofit2.Response
 
 interface XtreamApi {
     @GET("player_api.php")
@@ -17,7 +19,9 @@ interface XtreamApi {
         @Query("username") username: String,
         @Query("password") password: String,
         @Query("action") action: String = "get_live_categories",
-    ): List<XtreamCategoryDto>
+        @Header("If-None-Match") ifNoneMatch: String? = null,
+        @Header("If-Modified-Since") ifModifiedSince: String? = null,
+    ): Response<List<XtreamCategoryDto>>
 
     @GET("player_api.php")
     suspend fun getLiveStreams(
@@ -25,14 +29,18 @@ interface XtreamApi {
         @Query("password") password: String,
         @Query("action") action: String = "get_live_streams",
         @Query("category_id") categoryId: String? = null,
-    ): List<XtreamLiveStreamDto>
+        @Header("If-None-Match") ifNoneMatch: String? = null,
+        @Header("If-Modified-Since") ifModifiedSince: String? = null,
+    ): Response<List<XtreamLiveStreamDto>>
 
     @GET("player_api.php")
     suspend fun getVodCategories(
         @Query("username") username: String,
         @Query("password") password: String,
         @Query("action") action: String = "get_vod_categories",
-    ): List<XtreamCategoryDto>
+        @Header("If-None-Match") ifNoneMatch: String? = null,
+        @Header("If-Modified-Since") ifModifiedSince: String? = null,
+    ): Response<List<XtreamCategoryDto>>
 
     @GET("player_api.php")
     suspend fun getVodStreams(
@@ -40,14 +48,18 @@ interface XtreamApi {
         @Query("password") password: String,
         @Query("action") action: String = "get_vod_streams",
         @Query("category_id") categoryId: String? = null,
-    ): List<XtreamVodStreamDto>
+        @Header("If-None-Match") ifNoneMatch: String? = null,
+        @Header("If-Modified-Since") ifModifiedSince: String? = null,
+    ): Response<List<XtreamVodStreamDto>>
 
     @GET("player_api.php")
     suspend fun getSeriesCategories(
         @Query("username") username: String,
         @Query("password") password: String,
         @Query("action") action: String = "get_series_categories",
-    ): List<XtreamCategoryDto>
+        @Header("If-None-Match") ifNoneMatch: String? = null,
+        @Header("If-Modified-Since") ifModifiedSince: String? = null,
+    ): Response<List<XtreamCategoryDto>>
 
     @GET("player_api.php")
     suspend fun getSeries(
@@ -55,7 +67,9 @@ interface XtreamApi {
         @Query("password") password: String,
         @Query("action") action: String = "get_series",
         @Query("category_id") categoryId: String? = null,
-    ): List<XtreamSeriesDto>
+        @Header("If-None-Match") ifNoneMatch: String? = null,
+        @Header("If-Modified-Since") ifModifiedSince: String? = null,
+    ): Response<List<XtreamSeriesDto>>
 
     @GET("player_api.php")
     suspend fun getSeriesInfo(

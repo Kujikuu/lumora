@@ -6,11 +6,22 @@ import com.iptvcinema.tv.core.player.WatchedSeriesEpisodePrefetcher
 import com.iptvcinema.tv.core.data.local.LocalCredentialsStore
 import com.iptvcinema.tv.core.data.repository.AuthRepository
 import com.iptvcinema.tv.core.data.repository.supabase.SupabasePlaylistSourcesRepository
+import com.iptvcinema.tv.core.di.ApplicationScope
 import com.iptvcinema.tv.core.model.PlaylistSourceRecord
 import com.iptvcinema.tv.core.model.SourceType
+import com.iptvcinema.tv.core.sync.CatalogSyncScheduler
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+
+internal fun shouldScheduleStartupCatalogSync(state: AppSessionState): Boolean =
+    state.meetsRequirement(SessionRequirement.HasSource) &&
+        state.currentSourceId != null &&
+        state.sourceType != null &&
+        state.sourceType != SourceType.DEMO &&
+        !state.isDemoMode
 
 @Singleton
 class StartupSessionBootstrap @Inject constructor(
@@ -19,6 +30,8 @@ class StartupSessionBootstrap @Inject constructor(
     private val playlistSourcesRepository: SupabasePlaylistSourcesRepository,
     private val localCredentialsStore: LocalCredentialsStore,
     private val watchedSeriesEpisodePrefetcher: WatchedSeriesEpisodePrefetcher,
+    private val catalogSyncScheduler: CatalogSyncScheduler,
+    @ApplicationScope private val applicationScope: CoroutineScope,
 ) {
     suspend fun prepareSessionState(): AppSessionState {
         if (authRepository.isConfigured()) {
@@ -28,6 +41,9 @@ class StartupSessionBootstrap @Inject constructor(
         restoreActiveSourceIfNeeded()
         val state = appSessionRepository.sessionState.first()
         prefetchWatchedSeriesEpisodesIfReady(state)
+        if (shouldScheduleStartupCatalogSync(state)) {
+            catalogSyncScheduler.enqueueStartupCheck()
+        }
         return state
     }
 
@@ -95,11 +111,13 @@ class StartupSessionBootstrap @Inject constructor(
         SourceType.DEMO -> true
     }
 
-    private suspend fun prefetchWatchedSeriesEpisodesIfReady(state: AppSessionState) {
+    private fun prefetchWatchedSeriesEpisodesIfReady(state: AppSessionState) {
         if (!state.meetsRequirement(SessionRequirement.Ready)) return
         if (state.isDemoMode) return
-        runCatching {
-            watchedSeriesEpisodePrefetcher.prefetchForCurrentSession()
+        applicationScope.launch {
+            runCatching {
+                watchedSeriesEpisodePrefetcher.prefetchForCurrentSession()
+            }
         }
     }
 }

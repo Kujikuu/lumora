@@ -147,10 +147,17 @@
     <string name="sync_step_m3u_downloading">جارٍ تنزيل قائمة التشغيل…</string>
     <string name="sync_step_m3u_parsing">جارٍ تحليل القنوات…</string>
     <string name="refresh_failed">فشل التحديث</string>
+    <string name="refresh_source_missing">لم يتم العثور على مصدر فهرس نشط</string>
     <string name="refresh_demo_unavailable">الوضع التجريبي — التحديث غير متاح</string>
     <string name="refresh_credentials_missing">لم يتم العثور على بيانات هذا المصدر</string>
+    <string name="refresh_authentication_failed">فشلت مصادقة المزوّد. تحقق من حالة الحساب وبيانات الدخول.</string>
+    <string name="refresh_network_failed">تعذر الاتصال بالمزوّد. تحقق من اتصال الشبكة ثم حاول مرة أخرى.</string>
+    <string name="refresh_provider_failed">أرسل المزوّد بيانات فهرس غير صالحة. تم الاحتفاظ بالفهرس المحفوظ.</string>
     <string name="refresh_success_xtream">تمت مزامنة %1$d قناة و%2$d فيلم و%3$d مسلسل</string>
     <string name="refresh_success_m3u">تمت مزامنة %1$d قناة</string>
+    <string name="refresh_catalog_up_to_date">الفهرس محدّث بالفعل</string>
+    <string name="refresh_catalog_changes">تمت إضافة %1$d · تحديث %2$d · إزالة %3$d</string>
+    <string name="refresh_syncing_source">جارٍ مزامنة %1$s…</string>
 
     <string name="profile_title">اختر حسابًا</string>
     <string name="profile_subtitle">من يشاهد؟</string>

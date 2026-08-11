@@ -104,3 +104,13 @@ data class LocalSourceSyncStateEntity(
     val epgAvailable: Boolean = false,
     val lastError: String? = null,
 )
+
+@Entity(tableName = "catalog_sync_metadata", primaryKeys = ["sourceId", "resourceKey"])
+data class CatalogSyncMetadataEntity(
+    val sourceId: String,
+    val resourceKey: String,
+    val etag: String? = null,
+    val lastModified: String? = null,
+    val contentFingerprint: String? = null,
+    val lastCheckedAtEpochMs: Long,
+)

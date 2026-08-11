@@ -47,9 +47,9 @@ There are no instrumented/E2E tests. `androidTest` deps are wired but unused. Ko
 
 ```
 Xtream / M3U / Demo source
-   → XtreamSyncRepository / M3uSyncRepository / FakeDataProvider
+   → CatalogSyncCoordinator → XtreamSyncRepository / M3uSyncRepository / FakeDataProvider
    → normalizers (core/xtream, core/m3u, core/epg)
-   → CatalogDaoFacade.replace{Live,Vod,Series,Programs}(...)  [Room, version 5]
+   → CatalogDaoFacade incremental reconciliation  [Room, version 8]
    → CatalogRepository  (domain queries, Flow-based)
    → Feature ViewModel (StateFlow)
    → Compose for TV UI
@@ -68,7 +68,7 @@ Hilt modules live under `core/*/di/`. Repositories are bound to interfaces in `c
 
 ### Catalog sync (`core/xtream/XtreamSyncRepository.kt`)
 
-9-step pipeline (`XtreamSyncStep`) reported via `StateFlow`: validate URL → authenticate → live categories → live streams → VOD categories → VOD streams → series categories → series → watched-series episodes → EPG. `XmltvParser` failures are non-fatal. Episodes are **lazy** — fetched on demand via `get_series_info`, never bulk-synced. `CatalogDaoFacade.purgeSource()` wipes all rows for a source on delete.
+`CatalogSyncCoordinator` is the single entry point for initial, startup, periodic, and manual syncs. Cached content renders immediately; startup checks use a 3-hour freshness window and WorkManager checks the active source every 12 hours. Xtream/M3U requests use HTTP validators when supported, then fingerprints and 500-row Room diff batches to insert new, update changed, and remove missing items without replacing unchanged rows. The `XtreamSyncStep` pipeline still reports progress via `StateFlow`; EPG failures remain non-fatal, automatic workers await EPG so Android cannot abandon it after catalog success, and manual/initial EPG remains asynchronous. Episodes stay lazy via `get_series_info`, including non-blocking watched-series prefetch after startup. `CatalogDaoFacade.purgeSource()` cancels active catalog/EPG work and removes sync metadata.
 
 ### Playback (`core/player/`)
 
@@ -102,7 +102,7 @@ Hilt modules live under `core/*/di/`. Repositories are bound to interfaces in `c
 
 ## Testing notes
 
-19 unit-test files live under `app/src/test/java/com/iptvcinema/tv/...` mirroring `core/` and `features/`. They cover the pure logic paths: normalizers (Xtream/M3U/XMLTV), parental gate + rating policy, episode sequence + watch-history resume, EPG window math, guide layout, player key handler, session state, Supabase mappers, sync-status formatter, PIN hasher, cloud-credentials cipher. **No ViewModel/Composable/UI tests exist yet** — when adding one, follow the existing `*Test.kt` naming and prefer hand-written fakes over mocking frameworks.
+JVM tests live under `app/src/test/java/com/iptvcinema/tv/...` and instrumentation tests under `app/src/androidTest/`. They cover pure logic paths plus Room reconciliation and the v7→v8 metadata migration. **No ViewModel/Composable/UI tests exist yet** — when adding one, follow the existing `*Test.kt` naming and prefer hand-written fakes over mocking frameworks.
 
 ## Docs pack (`docs/`)
 

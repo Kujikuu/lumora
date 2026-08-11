@@ -19,7 +19,9 @@ object XtreamNormalizer {
         dtos: List<XtreamCategoryDto>,
     ): Pair<List<LocalCategoryEntity>, List<CatalogCategory>> {
         val entities = dtos.mapIndexedNotNull { index, dto ->
-            val id = dto.categoryId.asIdString() ?: return@mapIndexedNotNull null
+            val id = dto.categoryId.asIdString()
+                ?.let { namespacedCategoryId(CatalogContentType.LIVE, it) }
+                ?: return@mapIndexedNotNull null
             val name = dto.categoryName?.trim().orEmpty().ifBlank { "Uncategorized" }
             LocalCategoryEntity(
                 id = id,
@@ -47,6 +49,7 @@ object XtreamNormalizer {
     ): List<LocalChannelEntity> = dtos.mapIndexedNotNull { index, dto ->
         val streamId = dto.streamId.asIdString() ?: return@mapIndexedNotNull null
         val categoryId = dto.categoryId.asIdString()
+            ?.let { namespacedCategoryId(CatalogContentType.LIVE, it) }
         val name = dto.name?.trim().orEmpty().ifBlank { "Channel $streamId" }
         val directSource = dto.directSource?.trim().orEmpty()
         val streamUrl = directSource.ifBlank {
@@ -76,7 +79,9 @@ object XtreamNormalizer {
         sourceId: String,
         dtos: List<XtreamCategoryDto>,
     ): List<LocalCategoryEntity> = dtos.mapIndexedNotNull { index, dto ->
-        val id = dto.categoryId.asIdString() ?: return@mapIndexedNotNull null
+        val id = dto.categoryId.asIdString()
+            ?.let { namespacedCategoryId(CatalogContentType.VOD, it) }
+            ?: return@mapIndexedNotNull null
         LocalCategoryEntity(
             id = id,
             sourceId = sourceId,
@@ -95,6 +100,7 @@ object XtreamNormalizer {
     ): List<LocalMovieEntity> = dtos.mapIndexedNotNull { index, dto ->
         val streamId = dto.streamId.asIdString() ?: return@mapIndexedNotNull null
         val categoryId = dto.categoryId.asIdString()
+            ?.let { namespacedCategoryId(CatalogContentType.VOD, it) }
         val extension = dto.containerExtension?.trim().orEmpty().ifBlank { "mp4" }
         val directSource = dto.directSource?.trim().orEmpty()
         val streamUrl = directSource.ifBlank {
@@ -131,7 +137,9 @@ object XtreamNormalizer {
         sourceId: String,
         dtos: List<XtreamCategoryDto>,
     ): List<LocalCategoryEntity> = dtos.mapIndexedNotNull { index, dto ->
-        val id = dto.categoryId.asIdString() ?: return@mapIndexedNotNull null
+        val id = dto.categoryId.asIdString()
+            ?.let { namespacedCategoryId(CatalogContentType.SERIES, it) }
+            ?: return@mapIndexedNotNull null
         LocalCategoryEntity(
             id = id,
             sourceId = sourceId,
@@ -148,6 +156,7 @@ object XtreamNormalizer {
     ): List<LocalSeriesEntity> = dtos.mapIndexedNotNull { index, dto ->
         val seriesId = dto.seriesId.asIdString() ?: return@mapIndexedNotNull null
         val categoryId = dto.categoryId.asIdString()
+            ?.let { namespacedCategoryId(CatalogContentType.SERIES, it) }
         LocalSeriesEntity(
             id = seriesId,
             sourceId = sourceId,
@@ -245,4 +254,7 @@ object XtreamNormalizer {
             ?: return runCatching { java.time.Instant.parse(trimmed).toEpochMilli() }.getOrNull()
         return if (numeric > 1_000_000_000_000L) numeric else numeric * 1000L
     }
+
+    private fun namespacedCategoryId(contentType: CatalogContentType, providerId: String): String =
+        "xtream:${contentType.name.lowercase()}:$providerId"
 }
