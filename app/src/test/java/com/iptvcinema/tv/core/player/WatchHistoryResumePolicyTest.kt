@@ -68,6 +68,30 @@ class WatchHistoryResumePolicyTest {
     }
 
     @Test
+    fun selectContinueWatching_doesNotReviveOlderEpisode_whenLatestEpisodeIsNotResumable() {
+        val items = listOf(
+            episodeHistory(
+                id = "latest",
+                seriesId = "series-a",
+                episodeId = "s2e19",
+                lastWatchedEpochSecond = 200,
+                positionMs = 1_918L,
+            ),
+            episodeHistory(
+                id = "older",
+                seriesId = "series-a",
+                episodeId = "s1e21",
+                lastWatchedEpochSecond = 100,
+                positionMs = 30_000L,
+            ),
+        )
+
+        val result = WatchHistoryResumePolicy.selectContinueWatching(items, limit = 10)
+
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
     fun selectContinueWatching_includesMoviesAndRespectsLimit() {
         val items = listOf(
             movieHistory(id = "m1", lastWatchedEpochSecond = 200),
@@ -83,6 +107,7 @@ class WatchHistoryResumePolicyTest {
         seriesId: String,
         episodeId: String,
         lastWatchedEpochSecond: Long,
+        positionMs: Long = 30_000L,
     ) = com.iptvcinema.tv.core.model.WatchHistoryItem(
         id = id,
         profileId = "profile-1",
@@ -92,7 +117,7 @@ class WatchHistoryResumePolicyTest {
         seriesId = seriesId,
         title = "Episode",
         posterUrl = null,
-        positionMs = 30_000L,
+        positionMs = positionMs,
         durationMs = 100_000L,
         lastWatchedAt = java.time.Instant.ofEpochSecond(lastWatchedEpochSecond),
     )

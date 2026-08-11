@@ -63,10 +63,21 @@ object WatchHistoryResumePolicy {
      */
     fun selectContinueWatching(items: List<WatchHistoryItem>, limit: Int): List<WatchHistoryItem> {
         if (limit <= 0) return emptyList()
-        val inProgress = items.filter { item ->
-            item.contentType in CONTINUE_WATCHING_TYPES &&
-                isContinueWatching(item.positionMs, item.durationMs)
-        }
+        val latestEpisodeIdsBySeries = items
+            .filter { item -> item.contentType == WatchHistoryContentType.EPISODE }
+            .groupBy(::episodeSeriesKey)
+            .mapValues { (_, episodes) -> episodes.maxBy { it.lastWatchedAt }.id }
+        val inProgress = items
+            .asSequence()
+            .filter { item ->
+                item.contentType != WatchHistoryContentType.EPISODE ||
+                    latestEpisodeIdsBySeries[episodeSeriesKey(item)] == item.id
+            }
+            .filter { item ->
+                item.contentType in CONTINUE_WATCHING_TYPES &&
+                    isContinueWatching(item.positionMs, item.durationMs)
+            }
+            .sortedByDescending { it.lastWatchedAt }
         val result = mutableListOf<WatchHistoryItem>()
         val seenSeriesIds = mutableSetOf<String>()
         for (item in inProgress) {
@@ -80,6 +91,9 @@ object WatchHistoryResumePolicy {
         }
         return result
     }
+
+    private fun episodeSeriesKey(item: WatchHistoryItem): String =
+        item.seriesId?.takeIf { it.isNotBlank() } ?: "episode:${item.contentId}"
 
     private val CONTINUE_WATCHING_TYPES = setOf(
         WatchHistoryContentType.MOVIE,

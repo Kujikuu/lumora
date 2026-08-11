@@ -60,6 +60,56 @@ class ContinueWatchingResolverTest {
     }
 
     @Test
+    fun resolve_restartsLatestEpisode_whenOlderEpisodeIsStillInProgress() = runBlocking {
+        val resolver = ContinueWatchingResolver(FakeContinueWatchingCatalog(episodes))
+        val history = listOf(
+            episodeHistory(
+                seriesId = "series-a",
+                episodeId = "e3",
+                lastWatchedEpochSecond = 200,
+                positionMs = 1_918L,
+            ),
+            episodeHistory(
+                seriesId = "series-a",
+                episodeId = "e2",
+                lastWatchedEpochSecond = 100,
+                positionMs = 30_000L,
+            ),
+        )
+
+        val result = resolver.resolve(history, sourceId = "source-1", limit = 10)
+
+        assertEquals(1, result.size)
+        assertEquals("e3", result.first().contentId)
+        assertEquals(0L, result.first().positionMs)
+    }
+
+    @Test
+    fun resolve_doesNotRegressAfterStaleEarlierSeasonEpisodeGetsNewerTimestamp() = runBlocking {
+        val resolver = ContinueWatchingResolver(FakeContinueWatchingCatalog(episodes))
+        val history = listOf(
+            episodeHistory(
+                seriesId = "series-a",
+                episodeId = "e2",
+                lastWatchedEpochSecond = 300,
+                positionMs = 30_000L,
+            ),
+            episodeHistory(
+                seriesId = "series-a",
+                episodeId = "e3",
+                lastWatchedEpochSecond = 200,
+                positionMs = 1_918L,
+            ),
+        )
+
+        val result = resolver.resolve(history, sourceId = "source-1", limit = 10)
+
+        assertEquals(1, result.size)
+        assertEquals("e3", result.first().contentId)
+        assertEquals(0L, result.first().positionMs)
+    }
+
+    @Test
     fun resolve_respectsLimit() = runBlocking {
         val seriesBEpisodes = episodes.map { it.copy(id = "b-${it.id}", seriesId = "series-b") }
         val resolver = ContinueWatchingResolver(
@@ -93,6 +143,7 @@ class ContinueWatchingResolverTest {
         seriesId: String,
         episodeId: String,
         lastWatchedEpochSecond: Long,
+        positionMs: Long = 30_000L,
     ) = WatchHistoryItem(
         id = "$seriesId-$episodeId-progress",
         profileId = "profile-1",
@@ -102,7 +153,7 @@ class ContinueWatchingResolverTest {
         seriesId = seriesId,
         title = "Episode",
         posterUrl = null,
-        positionMs = 30_000L,
+        positionMs = positionMs,
         durationMs = 100_000L,
         lastWatchedAt = Instant.ofEpochSecond(lastWatchedEpochSecond),
     )
@@ -165,6 +216,9 @@ class ContinueWatchingResolverTest {
                 cast = null,
                 sortOrder = 0,
             )
+
+        override suspend fun getEpisodesForSeries(sourceId: String, seriesId: String): List<CatalogEpisode> =
+            episodes.filter { it.seriesId == seriesId }
 
         override suspend fun nextEpisode(sourceId: String, current: CatalogEpisode): CatalogEpisode? =
             EpisodeSequenceHelper.nextEpisode(
