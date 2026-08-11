@@ -174,6 +174,19 @@ class RoutingWatchHistoryRepository @Inject constructor(
             .getOrDefault(emptyList())
     }
 
+    override suspend fun getEpisodeHistoryForSeries(
+        profileId: String,
+        sourceId: String,
+        seriesId: String,
+    ): List<WatchHistoryItem> {
+        val backend = resolveBackend()
+        return runCatching {
+            backend.getEpisodeHistoryForSeries(profileId, sourceId, seriesId)
+        }.onFailure { cloudAccountStatus.reportCloudReadFailure() }
+            .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
+            .getOrDefault(emptyList())
+    }
+
     override suspend fun remove(
         profileId: String,
         contentId: String,

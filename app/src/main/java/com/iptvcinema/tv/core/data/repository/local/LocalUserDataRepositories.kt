@@ -5,6 +5,7 @@ import com.iptvcinema.tv.core.data.repository.ParentalControlsRepository
 import com.iptvcinema.tv.core.data.repository.ProfilesRepository
 import com.iptvcinema.tv.core.data.repository.UserSettingsRepository
 import com.iptvcinema.tv.core.data.repository.WatchHistoryRepository
+import com.iptvcinema.tv.core.data.repository.filterEpisodeHistoryForSeries
 import com.iptvcinema.tv.core.model.FavoriteContentType
 import com.iptvcinema.tv.core.model.FavoriteItem
 import com.iptvcinema.tv.core.model.ParentalControls
@@ -222,6 +223,14 @@ class LocalWatchHistoryRepository @Inject constructor(
         historyByProfile[profileId].orEmpty()
             .mapNotNull { it.seriesId }
             .distinct()
+    }
+
+    override suspend fun getEpisodeHistoryForSeries(
+        profileId: String,
+        sourceId: String,
+        seriesId: String,
+    ): List<WatchHistoryItem> = mutex.withLock {
+        filterEpisodeHistoryForSeries(historyByProfile[profileId].orEmpty(), sourceId, seriesId)
     }
 
     override suspend fun remove(

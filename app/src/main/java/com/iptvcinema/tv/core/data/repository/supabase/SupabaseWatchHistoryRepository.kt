@@ -172,6 +172,23 @@ class SupabaseWatchHistoryRepository @Inject constructor(
             .mapNotNull { it.seriesId?.takeIf { id -> id.isNotBlank() } }
             .distinct()
 
+    override suspend fun getEpisodeHistoryForSeries(
+        profileId: String,
+        sourceId: String,
+        seriesId: String,
+    ): List<WatchHistoryItem> = supabaseClient.from(TABLE)
+        .select(Columns.ALL) {
+            filter {
+                eq(COLUMN_PROFILE_ID, profileId)
+                eq(COLUMN_SOURCE_ID, sourceId)
+                eq(COLUMN_SERIES_ID, seriesId)
+                eq(COLUMN_CONTENT_TYPE, WatchHistoryContentType.EPISODE.name)
+            }
+            order(COLUMN_LAST_WATCHED_AT, Order.DESCENDING)
+        }
+        .decodeList<WatchHistoryDto>()
+        .map { it.toDomain() }
+
     override suspend fun remove(
         profileId: String,
         contentId: String,
@@ -259,6 +276,7 @@ class SupabaseWatchHistoryRepository @Inject constructor(
     companion object {
         private const val TABLE = "watch_history"
         private const val COLUMN_PROFILE_ID = "profile_id"
+        private const val COLUMN_SOURCE_ID = "source_id"
         private const val COLUMN_CONTENT_ID = "content_id"
         private const val COLUMN_CONTENT_TYPE = "content_type"
         private const val COLUMN_SERIES_ID = "series_id"

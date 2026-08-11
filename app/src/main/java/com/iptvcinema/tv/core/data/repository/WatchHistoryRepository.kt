@@ -24,6 +24,22 @@ interface WatchHistoryRepository {
         seriesId: String? = null,
     )
     suspend fun getDistinctSeriesIds(profileId: String): List<String>
+    suspend fun getEpisodeHistoryForSeries(
+        profileId: String,
+        sourceId: String,
+        seriesId: String,
+    ): List<WatchHistoryItem>
     suspend fun remove(profileId: String, contentId: String, contentType: WatchHistoryContentType)
     fun invalidate()
 }
+
+internal fun filterEpisodeHistoryForSeries(
+    items: List<WatchHistoryItem>,
+    sourceId: String,
+    seriesId: String,
+): List<WatchHistoryItem> = items
+    .asSequence()
+    .filter { it.contentType == WatchHistoryContentType.EPISODE }
+    .filter { it.sourceId == sourceId && it.seriesId == seriesId }
+    .sortedByDescending { it.lastWatchedAt }
+    .toList()
