@@ -6,7 +6,8 @@ object EpisodeWatchProgress {
     const val WATCHED_THRESHOLD = 0.95f
 
     fun visualState(progress: Float?): EpisodeWatchVisualState = when {
-        progress == null || !progress.isFinite() || progress <= 0f -> EpisodeWatchVisualState.UNWATCHED
+        progress == null || !progress.isFinite() || progress <= 0f || progress > 1f ->
+            EpisodeWatchVisualState.UNWATCHED
         progress >= WATCHED_THRESHOLD -> EpisodeWatchVisualState.WATCHED
         else -> EpisodeWatchVisualState.PARTIAL
     }

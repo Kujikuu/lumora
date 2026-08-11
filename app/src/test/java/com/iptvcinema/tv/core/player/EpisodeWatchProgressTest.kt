@@ -28,4 +28,9 @@ class EpisodeWatchProgressTest {
             EpisodeWatchProgress.visualState(Float.POSITIVE_INFINITY),
         )
     }
+
+    @Test
+    fun progressAboveOne_isUnwatched() {
+        assertEquals(EpisodeWatchVisualState.UNWATCHED, EpisodeWatchProgress.visualState(1.1f))
+    }
 }
