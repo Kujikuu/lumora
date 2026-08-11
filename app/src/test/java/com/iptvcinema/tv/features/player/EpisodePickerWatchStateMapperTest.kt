@@ -47,6 +47,51 @@ class EpisodePickerWatchStateMapperTest {
         assertNull(episode.progress)
     }
 
+    @Test
+    fun apply_prefersNewerDuplicateHistoryRow() {
+        val episode = EpisodePickerWatchStateMapper.apply(
+            seasons = seasons("target"),
+            history = listOf(
+                history(
+                    contentId = "target",
+                    sourceId = "source-a",
+                    seriesId = "series-a",
+                    positionMs = 25_000L,
+                    durationMs = 100_000L,
+                    lastWatchedAt = Instant.parse("2026-08-11T09:00:00Z"),
+                ),
+                history(
+                    contentId = "target",
+                    sourceId = "source-a",
+                    seriesId = "series-a",
+                    positionMs = 75_000L,
+                    durationMs = 100_000L,
+                    lastWatchedAt = Instant.parse("2026-08-11T10:00:00Z"),
+                ),
+            ),
+            sourceId = "source-a",
+            seriesId = "series-a",
+        ).single().episodes.single()
+
+        assertEquals(0.75f, episode.progress!!, 0.001f)
+    }
+
+    @Test
+    fun apply_usesFirstDuplicateWhenTimestampsAreEqual() {
+        val timestamp = Instant.parse("2026-08-11T10:00:00Z")
+        val episode = EpisodePickerWatchStateMapper.apply(
+            seasons = seasons("target"),
+            history = listOf(
+                history("target", "source-a", "series-a", 20_000L, 100_000L, timestamp),
+                history("target", "source-a", "series-a", 80_000L, 100_000L, timestamp),
+            ),
+            sourceId = "source-a",
+            seriesId = "series-a",
+        ).single().episodes.single()
+
+        assertEquals(0.2f, episode.progress!!, 0.001f)
+    }
+
     private fun seasons(vararg episodeIds: String) = listOf(
         SeasonItem(
             id = "series-a-s1",
@@ -63,6 +108,7 @@ class EpisodePickerWatchStateMapperTest {
         seriesId: String,
         positionMs: Long,
         durationMs: Long?,
+        lastWatchedAt: Instant = Instant.parse("2026-08-11T10:00:00Z"),
     ) = WatchHistoryItem(
         id = contentId,
         profileId = "profile-a",
@@ -74,6 +120,6 @@ class EpisodePickerWatchStateMapperTest {
         posterUrl = null,
         positionMs = positionMs,
         durationMs = durationMs,
-        lastWatchedAt = Instant.parse("2026-08-11T10:00:00Z"),
+        lastWatchedAt = lastWatchedAt,
     )
 }

@@ -4,10 +4,13 @@ import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.model.WatchHistoryItem
 import com.iptvcinema.tv.core.model.catalog.CatalogEpisode
 import java.time.Instant
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 class EpisodePickerLoaderTest {
@@ -49,6 +52,42 @@ class EpisodePickerLoaderTest {
         )
 
         assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun loadEpisodePickerSeasons_propagatesCatalogCancellation() = runBlocking {
+        val cancellation = CancellationException("catalog cancelled")
+
+        try {
+            loadEpisodePickerSeasons(
+                profileId = "profile-a",
+                sourceId = "source-a",
+                seriesId = "series-a",
+                loadEpisodes = { _, _ -> throw cancellation },
+                loadHistory = { _, _, _ -> emptyList() },
+            )
+            fail("Expected catalog cancellation to propagate")
+        } catch (actual: CancellationException) {
+            assertSame(cancellation, actual)
+        }
+    }
+
+    @Test
+    fun loadEpisodePickerSeasons_propagatesHistoryCancellation() = runBlocking {
+        val cancellation = CancellationException("history cancelled")
+
+        try {
+            loadEpisodePickerSeasons(
+                profileId = "profile-a",
+                sourceId = "source-a",
+                seriesId = "series-a",
+                loadEpisodes = { _, _ -> listOf(episode("e1")) },
+                loadHistory = { _, _, _ -> throw cancellation },
+            )
+            fail("Expected history cancellation to propagate")
+        } catch (actual: CancellationException) {
+            assertSame(cancellation, actual)
+        }
     }
 
     private fun episode(id: String) = CatalogEpisode(

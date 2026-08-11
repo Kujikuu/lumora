@@ -120,6 +120,7 @@ class PlayerViewModel @Inject constructor(
     private var pendingPreviousRequest: PlaybackRequest? = null
     private var pendingTransitionSourceId: String? = null
     private var channelPickerJob: Job? = null
+    private val episodePickerLoadCoordinator = EpisodePickerLoadCoordinator(viewModelScope)
 
     init {
         startPositionTicker()
@@ -233,38 +234,45 @@ class PlayerViewModel @Inject constructor(
 
     fun openEpisodePicker() {
         if (!_screenState.value.isEpisode) return
-        viewModelScope.launch {
-            val request = _screenState.value.playbackRequest ?: return@launch
-            val sourceId = request.sourceId ?: return@launch
-            val seriesId = request.seriesId ?: _screenState.value.seriesId ?: seriesIdArg ?: return@launch
-            _screenState.value = _screenState.value.copy(
-                episodePickerOpen = true,
-                episodePickerLoading = true,
-            )
-            val profileId = appSessionRepository.sessionState.first().currentProfileId
-            val seasons = loadEpisodePickerSeasons(
-                profileId = profileId,
-                sourceId = sourceId,
-                seriesId = seriesId,
-                loadEpisodes = { resolvedSourceId, resolvedSeriesId ->
-                    episodeCatalogRepository.getEpisodesForSeries(resolvedSourceId, resolvedSeriesId)
-                },
-                loadHistory = { resolvedProfileId, resolvedSourceId, resolvedSeriesId ->
-                    watchHistoryRepository.getEpisodeHistoryForSeries(
-                        resolvedProfileId,
-                        resolvedSourceId,
-                        resolvedSeriesId,
-                    )
-                },
-            )
-            _screenState.value = _screenState.value.copy(
-                episodePickerSeasons = seasons,
-                episodePickerLoading = false,
-            )
-        }
+        val request = _screenState.value.playbackRequest ?: return
+        val sourceId = request.sourceId ?: return
+        val seriesId = request.seriesId ?: _screenState.value.seriesId ?: seriesIdArg ?: return
+        episodePickerLoadCoordinator.launch(
+            onStart = {
+                _screenState.value = _screenState.value.copy(
+                    episodePickerOpen = true,
+                    episodePickerLoading = true,
+                )
+            },
+            load = {
+                val profileId = appSessionRepository.sessionState.first().currentProfileId
+                loadEpisodePickerSeasons(
+                    profileId = profileId,
+                    sourceId = sourceId,
+                    seriesId = seriesId,
+                    loadEpisodes = { resolvedSourceId, resolvedSeriesId ->
+                        episodeCatalogRepository.getEpisodesForSeries(resolvedSourceId, resolvedSeriesId)
+                    },
+                    loadHistory = { resolvedProfileId, resolvedSourceId, resolvedSeriesId ->
+                        watchHistoryRepository.getEpisodeHistoryForSeries(
+                            resolvedProfileId,
+                            resolvedSourceId,
+                            resolvedSeriesId,
+                        )
+                    },
+                )
+            },
+            publish = { seasons ->
+                _screenState.value = _screenState.value.copy(
+                    episodePickerSeasons = seasons,
+                    episodePickerLoading = false,
+                )
+            },
+        )
     }
 
     fun dismissEpisodePicker() {
+        episodePickerLoadCoordinator.cancel()
         _screenState.value = _screenState.value.copy(
             episodePickerOpen = false,
             episodePickerSeasons = emptyList(),
