@@ -7,7 +7,6 @@ import com.iptvcinema.tv.core.data.repository.CatalogRepository
 import com.iptvcinema.tv.core.data.repository.UserSettingsRepository
 import com.iptvcinema.tv.core.data.repository.WatchHistoryRepository
 import com.iptvcinema.tv.core.datastore.AppSessionRepository
-import com.iptvcinema.tv.core.catalog.SeasonGrouping
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toChannelItem
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toChannelTileData
 import com.iptvcinema.tv.core.design.components.ChannelTileData
@@ -242,8 +241,22 @@ class PlayerViewModel @Inject constructor(
                 episodePickerOpen = true,
                 episodePickerLoading = true,
             )
-            val episodes = episodeCatalogRepository.getEpisodesForSeries(sourceId, seriesId)
-            val seasons = SeasonGrouping.toSeasonItems(episodes, seriesId)
+            val profileId = appSessionRepository.sessionState.first().currentProfileId
+            val seasons = loadEpisodePickerSeasons(
+                profileId = profileId,
+                sourceId = sourceId,
+                seriesId = seriesId,
+                loadEpisodes = { resolvedSourceId, resolvedSeriesId ->
+                    episodeCatalogRepository.getEpisodesForSeries(resolvedSourceId, resolvedSeriesId)
+                },
+                loadHistory = { resolvedProfileId, resolvedSourceId, resolvedSeriesId ->
+                    watchHistoryRepository.getEpisodeHistoryForSeries(
+                        resolvedProfileId,
+                        resolvedSourceId,
+                        resolvedSeriesId,
+                    )
+                },
+            )
             _screenState.value = _screenState.value.copy(
                 episodePickerSeasons = seasons,
                 episodePickerLoading = false,
