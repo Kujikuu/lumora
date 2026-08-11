@@ -332,6 +332,7 @@
     <string name="player_loading_channels">جارٍ تحميل القنوات…</string>
     <string name="player_no_episodes">لا تتوفر حلقات</string>
     <string name="player_no_channels">لا تتوفر قنوات</string>
+    <string name="player_episode_watched">تمت المشاهدة</string>
     <string name="player_up_next_in">التالي خلال %1$d ث</string>
     <string name="player_seek_hint">استخدم ◀ ▶ للتقديم</string>
     <string name="player_btn_rewind">رجوع</string>

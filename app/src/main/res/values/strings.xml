@@ -348,6 +348,7 @@
     <string name="player_loading_channels">Loading channels…</string>
     <string name="player_no_episodes">No episodes available</string>
     <string name="player_no_channels">No channels available</string>
+    <string name="player_episode_watched">Watched</string>
     <string name="player_up_next_in">Up Next in %1$d s</string>
     <string name="player_seek_hint">Use ◀ ▶ to seek</string>
     <string name="player_btn_rewind">Rewind</string>

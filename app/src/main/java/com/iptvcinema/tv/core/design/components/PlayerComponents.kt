@@ -1344,6 +1344,7 @@ fun PlayerEpisodeSidebar(
                         durationMinutes = episode.durationMinutes,
                         thumbnailUrl = episode.thumbnailUrl,
                         fallbackImageUrl = seriesPosterUrl,
+                        progress = episode.progress,
                         isPlaying = isPlaying,
                         onClick = { onEpisodeClick(episode.id) },
                         modifier = if (isPlaying) {

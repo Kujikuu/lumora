@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Videocam
@@ -29,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -41,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
@@ -50,6 +53,8 @@ import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.epg.GuideLayoutHelper
 import com.iptvcinema.tv.core.model.CastMember
 import com.iptvcinema.tv.core.model.EpgProgram
+import com.iptvcinema.tv.core.player.EpisodeWatchProgress
+import com.iptvcinema.tv.core.player.EpisodeWatchVisualState
 
 private val DetailPosterInsetWidth = 120.dp
 private val EpisodeLandscapeCardWidth = 220.dp
@@ -691,10 +696,14 @@ fun PlayerEpisodeSidebarRow(
     durationMinutes: Int,
     thumbnailUrl: String?,
     fallbackImageUrl: String?,
+    progress: Float?,
     isPlaying: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val watchState = EpisodeWatchProgress.visualState(progress)
+    val watchedDescription = stringResource(R.string.player_episode_watched)
+
     FocusableCinemaCard(
         modifier = modifier
             .fillMaxWidth()
@@ -741,13 +750,44 @@ fun PlayerEpisodeSidebarRow(
                 CinemaAsyncImage(
                     imageUrl = thumbnailUrl ?: fallbackImageUrl,
                     contentDescription = title,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            alpha = if (watchState == EpisodeWatchVisualState.WATCHED) 0.62f else 1f
+                        },
                     contentScale = ContentScale.Crop,
                     fallbackLabel = episodeNumber.toString(),
                 )
+                if (watchState == EpisodeWatchVisualState.PARTIAL) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .fillMaxWidth(progress?.coerceIn(0f, 1f) ?: 0f)
+                            .height(4.dp)
+                            .background(CinemaColors.Accent),
+                    )
+                }
+                if (watchState == EpisodeWatchVisualState.WATCHED) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(6.dp)
+                            .size(26.dp)
+                            .background(CinemaColors.Success, CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = watchedDescription,
+                            tint = CinemaColors.White,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
+                        .padding(bottom = if (watchState == EpisodeWatchVisualState.PARTIAL) 4.dp else 0.dp)
                         .background(CinemaColors.Background.copy(alpha = 0.75f), CinemaShapes.Card)
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 ) {
