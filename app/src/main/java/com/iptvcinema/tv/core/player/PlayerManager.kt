@@ -247,7 +247,9 @@ class PlayerManager @Inject constructor(
                 PlaybackTuning.BUFFER_FOR_PLAYBACK_MS,
                 PlaybackTuning.BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS,
             )
-            .setPrioritizeTimeOverSizeThresholds(true)
+            // Size wins over time, so a high-bitrate stream stops buffering at the byte cap.
+            .setTargetBufferBytes(PlaybackTuning.targetBufferBytes(Runtime.getRuntime().maxMemory()))
+            .setPrioritizeTimeOverSizeThresholds(false)
             .build()
         val renderersFactory = DefaultRenderersFactory(context)
             .setEnableDecoderFallback(true)

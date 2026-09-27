@@ -36,6 +36,9 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material.icons.filled.Sports
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -84,6 +87,7 @@ import com.iptvcinema.tv.core.design.components.CinemaAsyncImage
 import com.iptvcinema.tv.core.design.components.animateToFocusedItem
 import com.iptvcinema.tv.core.design.components.CinemaScreen
 import com.iptvcinema.tv.core.design.components.FocusableCinemaCard
+import com.iptvcinema.tv.core.design.components.KeepScreenOn
 import com.iptvcinema.tv.core.design.components.PlayerBufferingOverlay
 import com.iptvcinema.tv.core.design.components.PlayerRebufferOverlay
 import com.iptvcinema.tv.core.design.theme.CinemaColors
@@ -110,6 +114,7 @@ fun LiveTvScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val playerState by viewModel.playerState.collectAsState()
+    KeepScreenOn(enabled = playerState.isPlaying || playerState.isBuffering)
     val activeCategoryName by viewModel.activeCategoryName.collectAsState()
     val isResolvingChannelSelection by viewModel.isResolvingChannelSelection.collectAsState()
     val showFeedback = rememberPrototypeFeedback()
@@ -642,7 +647,7 @@ private fun liveCategoryIcon(label: String, index: Int): ImageVector = when {
     else -> Icons.Default.LiveTv
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 private fun LiveCategoryRow(
     items: List<String>,
@@ -650,14 +655,30 @@ private fun LiveCategoryRow(
     onSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val listState = rememberLazyListState()
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = selectedIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0)),
+    )
     val scope = rememberCoroutineScope()
     var hadFocusInRow by remember(items) { mutableStateOf(false) }
     var focusedIndex by remember(items) { mutableIntStateOf(-1) }
+    val selectedRequester = remember { FocusRequester() }
+    var selectedChipComposed by remember { mutableStateOf(false) }
+
+    // Keep the current category on screen, without re-scrolling when it is already visible.
+    LaunchedEffect(selectedIndex, items.size) {
+        if (selectedIndex !in items.indices) return@LaunchedEffect
+        val visible = listState.layoutInfo.visibleItemsInfo.any { it.index == selectedIndex }
+        if (!visible) listState.scrollToItem(selectedIndex)
+    }
 
     LazyRow(
         state = listState,
         modifier = modifier
+            // Entering the row lands on the current category, not the nearest or first chip.
+            .focusProperties {
+                enter = { if (selectedChipComposed) selectedRequester else FocusRequester.Default }
+            }
+            .focusGroup()
             .onFocusChanged { focusState ->
                 if (!focusState.hasFocus) {
                     hadFocusInRow = false
@@ -674,6 +695,12 @@ private fun LiveCategoryRow(
             val selected = index == selectedIndex
             val focused = index == focusedIndex
             val colors = LiveCategoryColors[index % LiveCategoryColors.size]
+            if (selected) {
+                DisposableEffect(Unit) {
+                    selectedChipComposed = true
+                    onDispose { selectedChipComposed = false }
+                }
+            }
             Column(
                 modifier = Modifier.width(100.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -695,6 +722,7 @@ private fun LiveCategoryRow(
                 FocusableCinemaCard(
                     modifier = Modifier
                         .size(63.dp)
+                        .then(if (selected) Modifier.focusRequester(selectedRequester) else Modifier)
                         .onFocusChanged { focusState ->
                             if (focusState.isFocused) {
                                 focusedIndex = index

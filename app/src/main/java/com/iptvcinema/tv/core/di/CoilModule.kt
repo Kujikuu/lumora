@@ -52,6 +52,7 @@ object CoilModule {
     // Posters for a full IPTV catalog add up fast; a bigger disk cache means fewer
     // pop-ins when scrolling back through rails already seen.
     private const val DISK_CACHE_BYTES = 250L * 1024L * 1024L
-    private const val MEMORY_CACHE_FRACTION = 0.25
+    // Shares the heap with the video buffer; kept modest for 128 MB TVs.
+    private const val MEMORY_CACHE_FRACTION = 0.18
     private const val CROSSFADE_MS = 180
 }

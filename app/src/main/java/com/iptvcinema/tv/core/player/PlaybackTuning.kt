@@ -10,6 +10,18 @@ object PlaybackTuning {
     const val BUFFER_FOR_PLAYBACK_MS = 1_000
     const val BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 2_500
 
+    // ExoPlayer keeps buffered media on the Java heap. Low-end TVs cap the heap at 128 MB,
+    // and buffering a high-bitrate live channel by time alone ran it out of memory within
+    // minutes. The buffer is capped in bytes relative to the heap instead.
+    const val MIN_TARGET_BUFFER_BYTES = 16 * 1024 * 1024
+    const val MAX_TARGET_BUFFER_BYTES = 64 * 1024 * 1024
+    private const val HEAP_FRACTION_FOR_BUFFER = 5
+
+    fun targetBufferBytes(maxHeapBytes: Long): Int =
+        (maxHeapBytes / HEAP_FRACTION_FOR_BUFFER)
+            .coerceIn(MIN_TARGET_BUFFER_BYTES.toLong(), MAX_TARGET_BUFFER_BYTES.toLong())
+            .toInt()
+
     const val CONNECT_TIMEOUT_MS = 8_000L
     const val READ_TIMEOUT_MS = 20_000L
 

@@ -75,6 +75,36 @@ class PlayerKeyHandlerTest {
     }
 
     @Test
+    fun resolve_dpadUpDown_zapsChannels_forLiveWhenOverlayHidden() {
+        assertEquals(
+            PlayerKeyAction.ChannelPrevious,
+            PlayerKeyHandler.resolve(Key.DirectionUp, isLive = true, isEpisode = false, controlsVisible = false, pickerOpen = false),
+        )
+        assertEquals(
+            PlayerKeyAction.ChannelNext,
+            PlayerKeyHandler.resolve(Key.DirectionDown, isLive = true, isEpisode = false, controlsVisible = false, pickerOpen = false),
+        )
+    }
+
+    @Test
+    fun resolve_dpadUpDown_leavesFocusAlone_whenOverlayVisible() {
+        assertNull(
+            PlayerKeyHandler.resolve(Key.DirectionUp, isLive = true, isEpisode = false, controlsVisible = true, pickerOpen = false),
+        )
+        assertNull(
+            PlayerKeyHandler.resolve(Key.DirectionDown, isLive = true, isEpisode = false, controlsVisible = true, pickerOpen = false),
+        )
+    }
+
+    @Test
+    fun resolve_dpadDown_revealsOverlay_forVodWhenHidden() {
+        assertEquals(
+            PlayerKeyAction.RevealOverlay,
+            PlayerKeyHandler.resolve(Key.DirectionDown, isLive = false, isEpisode = false, controlsVisible = false, pickerOpen = false),
+        )
+    }
+
+    @Test
     fun resolve_returnsNull_whenPickerOpen() {
         assertNull(
             PlayerKeyHandler.resolve(

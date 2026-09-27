@@ -61,6 +61,13 @@ object PlayerKeyHandler {
                     else -> null
                 }
             }
+            // With the overlay hidden on live, Up/Down zap channels like a TV remote.
+            Key.DirectionUp -> {
+                if (isLive && !controlsVisible) return PlayerKeyAction.ChannelPrevious
+            }
+            Key.DirectionDown -> {
+                if (isLive && !controlsVisible) return PlayerKeyAction.ChannelNext
+            }
             Key.ChannelUp, Key.PageUp -> {
                 if (isLive) return PlayerKeyAction.ChannelPrevious
                 return null

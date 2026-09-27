@@ -56,6 +56,8 @@ import com.iptvcinema.tv.core.design.components.PlayerOverlay
 import com.iptvcinema.tv.core.design.components.PlayerRebufferOverlay
 import com.iptvcinema.tv.core.design.components.PlayerTrackSidebar
 import com.iptvcinema.tv.core.design.components.PlayerTrackTab
+import com.iptvcinema.tv.core.design.components.KeepScreenOn
+import com.iptvcinema.tv.core.design.components.PlayerScrubLogic
 import com.iptvcinema.tv.core.design.components.rememberDelayedVisibility
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.navigation.AppRoute
@@ -111,12 +113,15 @@ fun PlayerScreen(
 
     fun handlePlayerKeyAction(action: PlayerKeyAction) {
         when (action) {
+            // Zapping shows the compact channel banner; opening the full overlay on every
+            // channel press would cover the picture and cost frames on slow TVs.
+            PlayerKeyAction.ChannelPrevious,
+            PlayerKeyAction.ChannelNext,
+            -> PlayerKeyHandler.toCommand(action)?.let { viewModel.onCommand(it) }
             PlayerKeyAction.PlayPause,
             PlayerKeyAction.Play,
             PlayerKeyAction.Pause,
             is PlayerKeyAction.SeekRelative,
-            PlayerKeyAction.ChannelPrevious,
-            PlayerKeyAction.ChannelNext,
             PlayerKeyAction.EpisodePrevious,
             PlayerKeyAction.EpisodeNext,
             -> {
@@ -176,6 +181,8 @@ fun PlayerScreen(
         revealOverlay()
     }
 
+    KeepScreenOn(enabled = playerState.isPlaying || playerState.isBuffering)
+
     val loadError = screenState.loadError ?: playerState.errorMessage
     val loadErrorCode = screenState.loadErrorCode ?: playerState.errorCode
 
@@ -227,18 +234,13 @@ fun PlayerScreen(
     }
 
     val durationMs = playerState.durationMs
-    val progress = if (playerState.isLive || durationMs == null || durationMs <= 0L) {
-        0f
-    } else {
-        (playerState.positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
-    }
 
     val controlsVisible = isOverlayVisible &&
         !trackPickerOpen &&
         !pickerOpen &&
         !screenState.showAutoplayCountdown
     val resumeHint = screenState.resumeFromMs.takeIf { it > 0L }?.let {
-        stringResource(R.string.player_resume_from, formatTimeMs(it))
+        stringResource(R.string.player_resume_from, PlayerScrubLogic.format(it))
     }
     val nextEpisodeTitle = screenState.nextEpisodeTitle
         ?: screenState.upNextItems.firstOrNull()?.title
@@ -258,18 +260,11 @@ fun PlayerScreen(
                 playbackRequest.episodeNumber,
             )
         }
-        playerState.metadata.isNotEmpty() -> playerState.metadata.joinToString(" · ")
+        // The LIVE badge already says it; drop the duplicate word from the subtitle.
+        playerState.metadata.isNotEmpty() -> playerState.metadata
+            .filterNot { playerState.isLive && it.equals("LIVE", ignoreCase = true) }
+            .joinToString(" · ")
         else -> ""
-    }
-    val totalTime = if (playerState.isLive || durationMs == null || durationMs <= 0L) {
-        ""
-    } else {
-        formatTimeMs(durationMs)
-    }
-    val remainingTime = if (playerState.isLive || durationMs == null || durationMs <= 0L) {
-        ""
-    } else {
-        "-${formatTimeMs((durationMs - playerState.positionMs).coerceAtLeast(0L))}"
     }
     val channelLogoUrl = if (playerState.isLive) playbackRequest?.posterUrl else null
     val layoutDirection = LocalLayoutDirection.current
@@ -384,22 +379,13 @@ fun PlayerScreen(
                 PlayerOverlay(
                     title = overlayTitle,
                     subtitle = overlaySubtitle,
-                    progress = progress,
-                    elapsed = formatTimeMs(playerState.positionMs),
-                    total = totalTime,
-                    remaining = remainingTime,
-                    isPlaying = playerState.isPlaying,
                     isLive = playerState.isLive,
+                    isPlaying = playerState.isPlaying,
+                    positionMs = playerState.positionMs,
                     durationMs = durationMs ?: 0L,
                     qualityLabel = playerState.qualityLabel,
                     resumeHint = resumeHint,
                     channelLogoUrl = channelLogoUrl,
-                    showEpisodesAction = screenState.isEpisode,
-                    showChannelsAction = playerState.isLive,
-                    showNextAction = screenState.isEpisode || playerState.isLive,
-                    nextActionAccent = screenState.isEpisode,
-                    upNextItems = if (screenState.isEpisode) screenState.upNextItems else emptyList(),
-                    onUpNextClick = { episodeId -> viewModel.playUpNextEpisode(episodeId) },
                     currentLiveProgram = screenState.currentLiveProgram?.let { program ->
                         PlayerLiveProgramDisplay(
                             title = program.title,
@@ -414,38 +400,31 @@ fun PlayerScreen(
                             progress = program.progress,
                         )
                     },
-                    onSeekTo = { positionMs ->
-                        revealOverlay()
-                        registerOverlayActivity()
-                        viewModel.onCommand(PlayerCommand.SeekTo(positionMs))
-                    },
-                    onSeekInteraction = {
-                        revealOverlay()
-                        registerOverlayActivity()
-                    },
+                    upNextItems = if (screenState.isEpisode) screenState.upNextItems else emptyList(),
+                    onUpNextClick = { episodeId -> viewModel.playUpNextEpisode(episodeId) },
+                    // Live channel changes live on channel up/down and the Channels list, so
+                    // there is no separate "next channel" button duplicating them.
+                    showNextEpisode = screenState.isEpisode,
+                    showEpisodes = screenState.isEpisode,
+                    showChannels = playerState.isLive,
                     onPlayPause = {
                         revealOverlay()
                         viewModel.onCommand(PlayerCommand.PlayPause)
                     },
-                    onRewind10 = {
+                    onSeekRelative = { deltaMs ->
                         revealOverlay()
                         if (!playerState.isLive) {
-                            viewModel.onCommand(PlayerCommand.SeekRelative(-10_000L))
+                            viewModel.onCommand(PlayerCommand.SeekRelative(deltaMs))
                         }
                     },
-                    onForward10 = {
-                        revealOverlay()
-                        if (!playerState.isLive) {
-                            viewModel.onCommand(PlayerCommand.SeekRelative(10_000L))
-                        }
+                    onSeekTo = { positionMs ->
+                        registerOverlayActivity()
+                        viewModel.onCommand(PlayerCommand.SeekTo(positionMs))
                     },
-                    onNext = {
+                    onInteraction = { registerOverlayActivity() },
+                    onNextEpisode = {
                         revealOverlay()
-                        if (playerState.isLive) {
-                            viewModel.onCommand(PlayerCommand.ChannelNext)
-                        } else {
-                            viewModel.skipToNextEpisode()
-                        }
+                        viewModel.skipToNextEpisode()
                     },
                     onEpisodes = {
                         revealOverlay()
@@ -455,17 +434,11 @@ fun PlayerScreen(
                         revealOverlay()
                         viewModel.openChannelPicker()
                     },
-                    onSubtitles = {
+                    onTracks = {
                         revealOverlay()
                         trackPickerTab = PlayerTrackTab.Subtitles
                         trackPickerOpen = true
                     },
-                    onSettings = {
-                        revealOverlay()
-                        trackPickerTab = PlayerTrackTab.Audio
-                        trackPickerOpen = true
-                    },
-                    onBack = { navController.popBackStack() },
                     playPauseFocusRequester = playPauseFocus,
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -554,9 +527,3 @@ fun PlayerScreen(
     }
 }
 
-private fun formatTimeMs(ms: Long): String {
-    val totalSeconds = (ms / 1000).coerceAtLeast(0)
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "$minutes:${seconds.toString().padStart(2, '0')}"
-}
