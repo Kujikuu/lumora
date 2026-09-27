@@ -86,19 +86,21 @@ import com.iptvcinema.tv.R
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun PlayerBufferingOverlay(modifier: Modifier = Modifier) {
+    // Light scrim so the previous channel's last frame stays visible while the next loads.
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(CinemaColors.Background.copy(alpha = 0.6f)),
+            .background(CinemaColors.Background.copy(alpha = 0.35f)),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = stringResource(R.string.player_buffering),
-            style = MaterialTheme.typography.titleLarge.copy(
-                color = CinemaColors.White,
-                fontWeight = FontWeight.SemiBold,
-            ),
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CinemaSpinner()
+            Text(
+                text = stringResource(R.string.player_buffering),
+                modifier = Modifier.padding(top = 16.dp),
+                style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextSecondary),
+            )
+        }
     }
 }
 
@@ -1226,18 +1228,10 @@ fun ChannelChangeBanner(
 @Composable
 fun PlayerRebufferOverlay(modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(CinemaSpacing.ScreenPadding),
-        contentAlignment = Alignment.TopCenter,
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = stringResource(R.string.player_buffering),
-            modifier = Modifier
-                .background(CinemaColors.Background.copy(alpha = 0.75f), CinemaShapes.Small)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextSecondary),
-        )
+        CinemaSpinner()
     }
 }
 

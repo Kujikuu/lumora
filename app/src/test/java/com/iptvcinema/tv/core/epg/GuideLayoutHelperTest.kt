@@ -112,9 +112,28 @@ class GuideLayoutHelperTest {
         assertEquals(listOf("real"), programs.map { it.id })
     }
 
-    private fun program(id: String, start: Long, end: Long): EpgProgram = EpgProgram(
+    @Test
+    fun programsByChannel_groupsSortsAndDropsOutOfWindow() {
+        val programs = listOf(
+            program("b", start = 2_000, end = 3_000, channelId = "ch1"),
+            program("a", start = 1_000, end = 2_000, channelId = "ch1"),
+            program("c", start = 1_500, end = 2_500, channelId = "ch2"),
+            program("old", start = 0, end = 500, channelId = "ch2"),
+        )
+
+        val grouped = GuideLayoutHelper.programsByChannel(programs, windowStartMs = 900, windowEndMs = 5_000)
+
+        assertEquals(listOf("a", "b"), grouped["ch1"]?.map { it.id })
+        assertEquals(listOf("c"), grouped["ch2"]?.map { it.id })
+        assertEquals(
+            GuideLayoutHelper.programsForChannel(programs, "ch1", 900, 5_000),
+            grouped["ch1"],
+        )
+    }
+
+    private fun program(id: String, start: Long, end: Long, channelId: String = "ch1"): EpgProgram = EpgProgram(
         id = id,
-        channelId = "ch1",
+        channelId = channelId,
         title = id,
         startHour = 0,
         startMinute = 0,

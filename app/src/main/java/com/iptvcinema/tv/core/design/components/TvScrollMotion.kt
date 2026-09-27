@@ -3,8 +3,8 @@ package com.iptvcinema.tv.core.design.components
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.lazy.LazyListState
-import kotlinx.coroutines.delay
 
 /** Shared TV scroll/focus animation timings — keep in sync with nav-rail transitions. */
 object TvScrollMotion {
@@ -18,9 +18,20 @@ object TvScrollMotion {
     )
 }
 
-/** Smooth horizontal rail scroll when D-pad focus moves between cards. */
+/**
+ * Glides a rail so the focused card sits at the start. Uses a fixed-length tween on the
+ * pixel distance, so each D-pad step takes the same time as the focus-scale animation
+ * and the rail moves in step with the card instead of lurching.
+ */
 suspend fun LazyListState.animateToFocusedItem(index: Int) {
-    animateScrollToItem(index)
+    val itemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+    if (itemInfo == null) {
+        animateScrollToItem(index)
+        return
+    }
+    val delta = (itemInfo.offset - layoutInfo.beforeContentPadding).toFloat()
+    if (delta == 0f) return
+    animateScrollBy(delta, railGlideTween)
 }
 
 /** Smooth horizontal scroll for non-lazy rows (e.g. mood tiles). */
@@ -28,17 +39,14 @@ suspend fun ScrollState.animateScrollToValue(
     target: Int,
     durationMillis: Int = TvScrollMotion.HORIZONTAL_MS,
 ) {
-    val start = value
-    if (start == target) return
-    val steps = (durationMillis / 16).coerceAtLeast(4)
-    val stepDelay = durationMillis / steps
-    for (step in 1..steps) {
-        val fraction = FastOutSlowInEasing.transform(step.toFloat() / steps)
-        scrollTo((start + (target - start) * fraction).toInt())
-        if (step < steps) delay(stepDelay.toLong())
-    }
-    scrollTo(target)
+    if (value == target) return
+    animateScrollTo(target, tween(durationMillis = durationMillis, easing = FastOutSlowInEasing))
 }
+
+private val railGlideTween = tween<Float>(
+    durationMillis = TvScrollMotion.HORIZONTAL_MS,
+    easing = FastOutSlowInEasing,
+)
 
 /** Skip redundant parent scroll when the section is already the primary visible row. */
 fun LazyListState.isSectionVisible(sectionIndex: Int): Boolean =

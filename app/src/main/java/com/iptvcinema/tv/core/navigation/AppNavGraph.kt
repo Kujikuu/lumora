@@ -1,5 +1,10 @@
 package com.iptvcinema.tv.core.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
@@ -60,9 +65,14 @@ fun AppNavGraph(
     val activity = LocalActivity.current as ComponentActivity
     val sessionViewModel: SessionViewModel = hiltViewModel(activity)
 
+    // The default NavHost crossfade is 700 ms, which feels sluggish on a remote.
     NavHost(
         navController = navController,
         startDestination = AppRoute.SPLASH,
+        enterTransition = { fadeIn(tween(NAV_ENTER_MS)) + scaleIn(tween(NAV_ENTER_MS), initialScale = 0.98f) },
+        exitTransition = { fadeOut(tween(NAV_EXIT_MS)) },
+        popEnterTransition = { fadeIn(tween(NAV_ENTER_MS)) },
+        popExitTransition = { fadeOut(tween(NAV_EXIT_MS)) + scaleOut(tween(NAV_EXIT_MS), targetScale = 0.98f) },
     ) {
         composable(AppRoute.SPLASH) {
             val viewModel: SplashViewModel = hiltViewModel()
@@ -520,3 +530,6 @@ fun AppNavGraph(
         }
     }
 }
+
+private const val NAV_ENTER_MS = 180
+private const val NAV_EXIT_MS = 120

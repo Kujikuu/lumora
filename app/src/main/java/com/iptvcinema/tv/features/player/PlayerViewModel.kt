@@ -25,6 +25,7 @@ import com.iptvcinema.tv.core.player.PlaybackRepository
 import com.iptvcinema.tv.core.player.PlaybackRequest
 import com.iptvcinema.tv.core.player.PlaybackResolveResult
 import com.iptvcinema.tv.core.player.PlaybackSessionTracker
+import com.iptvcinema.tv.core.player.PlaybackTuning
 import com.iptvcinema.tv.core.player.PlaybackPreferences
 import com.iptvcinema.tv.core.player.PlayerCommand
 import com.iptvcinema.tv.core.player.PlayerManager
@@ -44,6 +45,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 data class PlayerScreenState(
     val isLoading: Boolean = true,
@@ -120,6 +123,10 @@ class PlayerViewModel @Inject constructor(
     private var pendingPreviousRequest: PlaybackRequest? = null
     private var pendingTransitionSourceId: String? = null
     private var channelPickerJob: Job? = null
+    private var channelZapJob: Job? = null
+    private val channelZapMutex = Mutex()
+    private var pendingZapChannelId: String? = null
+    private var playbackToken: Int? = null
     private val episodePickerLoadCoordinator = EpisodePickerLoadCoordinator(viewModelScope)
 
     init {
@@ -440,7 +447,7 @@ class PlayerViewModel @Inject constructor(
                     isEpisode = result.request.contentType == WatchHistoryContentType.EPISODE,
                     seriesId = result.request.seriesId ?: seriesIdArg,
                 )
-                playerManager.play(result.request, resumeMs, isXtreamSource())
+                playbackToken = playerManager.play(result.request, resumeMs, isXtreamSource())
                 updateLivePlaybackSession(result.request)
                 scheduleProgressSave()
                 loadLiveProgramInfo(result.request)
@@ -559,7 +566,7 @@ class PlayerViewModel @Inject constructor(
                         episodePickerOpen = false,
                         episodePickerSeasons = emptyList(),
                     )
-                    playerManager.play(result.request, 0L, isXtreamSource())
+                    playbackToken = playerManager.play(result.request, 0L, isXtreamSource())
                     scheduleProgressSave()
                     loadLiveProgramInfo(result.request)
                     stopEpgRefresh()
@@ -631,15 +638,29 @@ class PlayerViewModel @Inject constructor(
         return playbackRepository.resolve(episode.id, "episode", episode.seriesId)
     }
 
+    // Each press moves the banner right away. The stream only switches once presses stop
+    // for CHANNEL_ZAP_DEBOUNCE_MS, so flicking through 5 channels opens 1 stream, not 5.
     private fun changeChannel(direction: ChannelDirection) {
+        val request = _screenState.value.playbackRequest ?: return
+        if (!request.isLive) return
+        val sourceId = request.sourceId ?: return
         viewModelScope.launch {
-            runCatching {
-                val request = _screenState.value.playbackRequest ?: return@runCatching
-                if (!request.isLive) return@runCatching
-                val sourceId = request.sourceId ?: return@runCatching
-                val adjacent = catalogRepository.getAdjacentChannel(sourceId, request.contentId, direction)
-                    ?: return@runCatching
-                switchToResolvedChannel(sourceId, adjacent.id)
+            val target = channelZapMutex.withLock {
+                val fromId = pendingZapChannelId ?: request.contentId
+                val adjacent = runCatching {
+                    catalogRepository.getAdjacentChannel(sourceId, fromId, direction)
+                }.getOrNull() ?: return@withLock null
+                if (adjacent.id == fromId) return@withLock null
+                pendingZapChannelId = adjacent.id
+                adjacent
+            } ?: return@launch
+            _screenState.value = _screenState.value.copy(channelChangeBanner = target.name)
+            showChannelBannerBriefly()
+            channelZapJob?.cancel()
+            channelZapJob = viewModelScope.launch {
+                delay(PlaybackTuning.CHANNEL_ZAP_DEBOUNCE_MS)
+                switchToResolvedChannel(sourceId, target.id)
+                if (pendingZapChannelId == target.id) pendingZapChannelId = null
             }
         }
     }
@@ -656,6 +677,10 @@ class PlayerViewModel @Inject constructor(
         }
         when (result) {
             is PlaybackResolveResult.Success -> {
+                // Start the stream first; channel and programme lookups only feed the banner.
+                val liveRequest = result.request.copy(metadata = listOf("LIVE"))
+                _screenState.value = _screenState.value.copy(playbackRequest = liveRequest)
+                playbackToken = playerManager.play(liveRequest, 0L, isXtreamSource())
                 val channel = runCatching { catalogRepository.getChannel(sourceId, channelId) }.getOrNull()
                 val programTitle = runCatching { catalogRepository.getCurrentProgram(sourceId, channelId)?.title }.getOrNull()
                 val metadata = buildList {
@@ -663,7 +688,8 @@ class PlayerViewModel @Inject constructor(
                     channel?.categoryName?.takeIf { it.isNotBlank() }?.let { add(it) }
                     programTitle?.takeIf { it.isNotBlank() }?.let { add(it) }
                 }
-                val updatedRequest = result.request.copy(metadata = metadata)
+                val updatedRequest = liveRequest.copy(metadata = metadata)
+                playerManager.updateMetadata(metadata)
                 _screenState.value = _screenState.value.copy(
                     playbackRequest = updatedRequest,
                     channelChangeBanner = buildString {
@@ -671,7 +697,6 @@ class PlayerViewModel @Inject constructor(
                         programTitle?.takeIf { it.isNotBlank() }?.let { append(" · $it") }
                     },
                 )
-                playerManager.play(updatedRequest, 0L, isXtreamSource())
                 updateLivePlaybackSession(updatedRequest)
                 saveLiveWatchEntry(updatedRequest)
                 loadLiveProgramInfo(updatedRequest)
@@ -1023,6 +1048,7 @@ class PlayerViewModel @Inject constructor(
         positionTickerJob?.cancel()
         autoplayJob?.cancel()
         channelBannerJob?.cancel()
+        channelZapJob?.cancel()
         stopEpgRefresh()
         playbackSessionTracker.setCurrentLiveChannel(null)
         if (finalRequest != null) {
@@ -1030,7 +1056,7 @@ class PlayerViewModel @Inject constructor(
                 saveProgressSnapshot(finalRequest, finalPlayerState)
             }
         }
-        playerManager.release()
+        playbackToken?.let(playerManager::stop)
         super.onCleared()
     }
 

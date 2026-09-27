@@ -32,4 +32,7 @@ object PlayerErrorMapper {
             else -> "Stream unavailable" to "PLAYBACK_ERROR"
         }
     }
+
+    fun stalledStreamError(): Pair<String, String> =
+        "Stream stopped responding" to "STREAM_STALLED"
 }

@@ -9,12 +9,14 @@ import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.iptvcinema.tv.core.di.ApplicationScope
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -27,6 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 
 @Singleton
 class PlayerManager @Inject constructor(
@@ -44,12 +47,25 @@ class PlayerManager @Inject constructor(
     private var trackedSubtitleGroupIndex: Int = -1
     private var retryAttempt: Int = 0
     private var retryJob: Job? = null
+    private var stallJob: Job? = null
     private var playbackGeneration: Int = 0
+    private var sessionToken: Int = 0
     private var pendingErrorMessage: String? = null
     private var pendingErrorCode: String? = null
     private var playbackPreferences: PlaybackPreferences? = null
     private var userOverrodeAudio = false
     private var userOverrodeSubtitles = false
+
+    // Dedicated client: no API interceptors (they would override provider user agents),
+    // pooled connections so channel zaps reuse sockets to the same provider.
+    private val playbackHttpClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(PlaybackTuning.CONNECT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            .readTimeout(PlaybackTuning.READ_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .build()
+    }
 
     fun getExoPlayer(): ExoPlayer = ensurePlayer()
 
@@ -61,7 +77,12 @@ class PlayerManager @Inject constructor(
         }
     }
 
-    fun play(request: PlaybackRequest, startPositionMs: Long = 0L, isXtreamSource: Boolean = false) {
+    /**
+     * Starts a stream and returns a token identifying this playback session. Pass the token
+     * to [stop] so a screen only stops playback it started, never another screen's stream.
+     */
+    fun play(request: PlaybackRequest, startPositionMs: Long = 0L, isXtreamSource: Boolean = false): Int {
+        sessionToken++
         retryJob?.cancel()
         retryAttempt = 0
         pendingErrorMessage = null
@@ -70,6 +91,7 @@ class PlayerManager @Inject constructor(
         userOverrodeAudio = false
         userOverrodeSubtitles = false
         playInternal(request, startPositionMs, isXtreamSource, playbackGeneration)
+        return sessionToken
     }
 
     @OptIn(UnstableApi::class)
@@ -102,13 +124,15 @@ class PlayerManager @Inject constructor(
                 qualityLabel = null,
             )
         }
-        exoPlayer.stop()
-        exoPlayer.clearMediaItems()
+        stallJob?.cancel()
         val mediaItem = MediaItem.Builder()
             .setUri(request.streamUrl)
             .build()
+        // setMediaSource replaces the old stream in place. Skipping stop() keeps the last
+        // frame on screen until the new one renders, so zaps do not flash black.
         exoPlayer.setMediaSource(
             DefaultMediaSourceFactory(buildDataSourceFactory(request.headers))
+                .setLoadErrorHandlingPolicy(LiveAwareLoadErrorPolicy())
                 .createMediaSource(mediaItem),
         )
         exoPlayer.prepare()
@@ -155,10 +179,30 @@ class PlayerManager @Inject constructor(
         playInternal(request, lastStartPositionMs, isXtreamSource, playbackGeneration)
     }
 
+    /**
+     * Stops the stream started with [token] but keeps the player alive, so the next screen
+     * can reuse it. Does nothing if another screen has started playback since.
+     */
+    fun stop(token: Int) {
+        if (token != sessionToken) return
+        playbackGeneration++
+        retryJob?.cancel()
+        retryJob = null
+        stallJob?.cancel()
+        stallJob = null
+        player?.stop()
+        player?.clearMediaItems()
+        pendingErrorMessage = null
+        pendingErrorCode = null
+        _state.value = PlayerUiState()
+    }
+
     fun release() {
         playbackGeneration++
         retryJob?.cancel()
         retryJob = null
+        stallJob?.cancel()
+        stallJob = null
         player?.removeListener(playerListener)
         player?.release()
         player = null
@@ -169,6 +213,11 @@ class PlayerManager @Inject constructor(
         _state.value = PlayerUiState()
     }
 
+    /** Updates the on-screen metadata of the current stream without restarting it. */
+    fun updateMetadata(metadata: List<String>) {
+        _state.update { it.copy(metadata = metadata) }
+    }
+
     fun clearPlaybackEnded() {
         _state.update { it.copy(playbackEnded = false) }
     }
@@ -177,11 +226,11 @@ class PlayerManager @Inject constructor(
     private fun buildDataSourceFactory(headers: PlaybackHeaders): DefaultDataSource.Factory {
         val requestProperties = headers.customHeaders.toMutableMap()
         headers.referer?.let { requestProperties["Referer"] = it }
-        val httpFactory = DefaultHttpDataSource.Factory()
-            .setConnectTimeoutMs(15_000)
-            .setReadTimeoutMs(60_000)
-            .setAllowCrossProtocolRedirects(true)
-        headers.userAgent?.let { httpFactory.setUserAgent(it) }
+        // Fall back to the platform agent, which is what the previous HttpURLConnection
+        // stack sent. Some providers reject OkHttp's default agent.
+        val userAgent = headers.userAgent ?: System.getProperty("http.agent")
+        val httpFactory = OkHttpDataSource.Factory(playbackHttpClient)
+        userAgent?.let { httpFactory.setUserAgent(it) }
         if (requestProperties.isNotEmpty()) {
             httpFactory.setDefaultRequestProperties(requestProperties)
         }
@@ -193,13 +242,16 @@ class PlayerManager @Inject constructor(
         player?.let { return it }
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                /* minBufferMs = */ 30_000,
-                /* maxBufferMs = */ 90_000,
-                /* bufferForPlaybackMs = */ 1_500,
-                /* bufferForPlaybackAfterRebufferMs = */ 8_000,
+                PlaybackTuning.MIN_BUFFER_MS,
+                PlaybackTuning.MAX_BUFFER_MS,
+                PlaybackTuning.BUFFER_FOR_PLAYBACK_MS,
+                PlaybackTuning.BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS,
             )
+            .setPrioritizeTimeOverSizeThresholds(true)
             .build()
-        return ExoPlayer.Builder(context)
+        val renderersFactory = DefaultRenderersFactory(context)
+            .setEnableDecoderFallback(true)
+        return ExoPlayer.Builder(context, renderersFactory)
             .setLoadControl(loadControl)
             .build()
             .also { exoPlayer ->
@@ -371,6 +423,11 @@ class PlayerManager @Inject constructor(
                     isPlaying = if (playbackState == Player.STATE_ENDED) false else it.isPlaying,
                 )
             }
+            if (playbackState == Player.STATE_BUFFERING) {
+                armStallWatchdog()
+            } else {
+                stallJob?.cancel()
+            }
             if (playbackState == Player.STATE_READY) {
                 retryAttempt = 0
                 player?.let { exoPlayer ->
@@ -391,33 +448,27 @@ class PlayerManager @Inject constructor(
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            stallJob?.cancel()
             val (message, code) = PlayerErrorMapper.mapPlaybackError(error, isXtreamSource)
-            val willRetry = error.isTransientNetworkError() && retryAttempt < MAX_RETRY_ATTEMPTS
-            if (willRetry) {
-                pendingErrorMessage = message
-                pendingErrorCode = code
-                _state.update {
-                    it.copy(
-                        errorMessage = null,
-                        errorCode = null,
-                        isReconnecting = true,
-                        isBuffering = true,
-                        isPlaying = false,
-                    )
+            val action = PlaybackRecoveryPolicy.forError(
+                errorCode = error.errorCode,
+                isLive = lastRequest?.isLive == true,
+                attempt = retryAttempt,
+            )
+            when (action) {
+                PlaybackRecoveryAction.SEEK_TO_LIVE_EDGE -> {
+                    retryAttempt += 1
+                    markReconnecting(message, code)
+                    player?.let { exoPlayer ->
+                        exoPlayer.seekToDefaultPosition()
+                        exoPlayer.prepare()
+                    }
                 }
-                scheduleRetryIfTransient(error)
-            } else {
-                pendingErrorMessage = null
-                pendingErrorCode = null
-                _state.update {
-                    it.copy(
-                        errorMessage = message,
-                        errorCode = code,
-                        isReconnecting = false,
-                        isBuffering = false,
-                        isPlaying = false,
-                    )
+                PlaybackRecoveryAction.RETRY -> {
+                    markReconnecting(message, code)
+                    scheduleRetry()
                 }
+                PlaybackRecoveryAction.FAIL -> showError(message, code)
             }
         }
 
@@ -451,16 +502,75 @@ class PlayerManager @Inject constructor(
         }
     }
 
-    private fun scheduleRetryIfTransient(error: PlaybackException) {
+    private fun markReconnecting(message: String, code: String) {
+        pendingErrorMessage = message
+        pendingErrorCode = code
+        _state.update {
+            it.copy(
+                errorMessage = null,
+                errorCode = null,
+                isReconnecting = true,
+                isBuffering = true,
+                isPlaying = false,
+            )
+        }
+    }
+
+    private fun showError(message: String?, code: String?) {
+        stallJob?.cancel()
+        pendingErrorMessage = null
+        pendingErrorCode = null
+        _state.update {
+            it.copy(
+                errorMessage = message,
+                errorCode = code,
+                isReconnecting = false,
+                isBuffering = false,
+                isPlaying = false,
+            )
+        }
+    }
+
+    // A stream can hang in BUFFERING without ever raising an error (a live playlist that
+    // stops updating, a socket that never times out). Re-open it instead of spinning forever.
+    private fun armStallWatchdog() {
+        stallJob?.cancel()
+        val exoPlayer = player ?: return
+        val generation = playbackGeneration
+        val positionAtStart = exoPlayer.currentPosition
+        stallJob = applicationScope.launch(Dispatchers.Main.immediate) {
+            delay(PlaybackTuning.STALL_TIMEOUT_MS)
+            val current = player ?: return@launch
+            if (generation != playbackGeneration) return@launch
+            val stalled = PlaybackRecoveryPolicy.isStalled(
+                stillBuffering = current.playbackState == Player.STATE_BUFFERING,
+                positionAtStartMs = positionAtStart,
+                currentPositionMs = current.currentPosition,
+            )
+            if (stalled) recoverFromStall()
+        }
+    }
+
+    private fun recoverFromStall() {
+        val (message, code) = PlayerErrorMapper.stalledStreamError()
+        if (retryAttempt >= MAX_RETRY_ATTEMPTS) {
+            player?.stop()
+            showError(message, code)
+            return
+        }
+        markReconnecting(message, code)
+        scheduleRetry(immediate = true)
+    }
+
+    private fun scheduleRetry(immediate: Boolean = false) {
         val request = lastRequest ?: return
-        if (!error.isTransientNetworkError()) return
         if (retryAttempt >= MAX_RETRY_ATTEMPTS) {
             showPendingError()
             return
         }
         retryJob?.cancel()
         retryAttempt += 1
-        val delayMs = RETRY_BASE_DELAY_MS * (1L shl (retryAttempt - 1))
+        val delayMs = if (immediate) 0L else PlaybackRecoveryPolicy.retryDelayMs(retryAttempt)
         val retryStartPositionMs = player?.currentPosition
             ?.takeIf { it > 0L && !request.isLive }
             ?: lastStartPositionMs
@@ -492,14 +602,7 @@ class PlayerManager @Inject constructor(
         pendingErrorCode = null
     }
 
-    private fun PlaybackException.isTransientNetworkError(): Boolean =
-        errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
-            errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
-            errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ||
-            errorCode == PlaybackException.ERROR_CODE_IO_UNSPECIFIED
-
     companion object {
-        private const val MAX_RETRY_ATTEMPTS = 3
-        private const val RETRY_BASE_DELAY_MS = 1_000L
+        private const val MAX_RETRY_ATTEMPTS = PlaybackTuning.MAX_RETRY_ATTEMPTS
     }
 }

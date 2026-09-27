@@ -43,6 +43,18 @@ object GuideLayoutHelper {
         .filter { it.channelId == channelId }
         .sortedBy { it.startEpochMs }
 
+    /**
+     * Groups window programmes by channel in one pass. Guide rows look up their list here
+     * instead of each row re-filtering the full programme list on every recomposition.
+     */
+    fun programsByChannel(
+        programs: List<EpgProgram>,
+        windowStartMs: Long,
+        windowEndMs: Long,
+    ): Map<String, List<EpgProgram>> = programsInWindow(programs, windowStartMs, windowEndMs)
+        .groupBy { it.channelId }
+        .mapValues { (_, channelPrograms) -> channelPrograms.sortedBy { it.startEpochMs } }
+
     fun timelineSlotStarts(windowStartMs: Long, windowEndMs: Long): List<Long> {
         if (windowEndMs <= windowStartMs) return emptyList()
         val alignedStart = (windowStartMs / SLOT_DURATION_MS) * SLOT_DURATION_MS

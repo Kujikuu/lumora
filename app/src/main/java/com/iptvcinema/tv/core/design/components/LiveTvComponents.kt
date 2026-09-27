@@ -630,20 +630,18 @@ fun ProgramGuideGrid(
                         .fillMaxWidth()
                         .height(320.dp),
                 ) {
+                    val programsByChannel = remember(programs, windowStartMs, windowEndMs) {
+                        GuideLayoutHelper.programsByChannel(programs, windowStartMs, windowEndMs)
+                    }
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        items(channels, key = { it.id }) { channel ->
+                        items(channels, key = { it.id }, contentType = { "guideRow" }) { channel ->
                             GuideChannelRow(
                                 channel = channel,
                                 isNowPlaying = channel.id == nowPlayingChannelId,
-                                programs = GuideLayoutHelper.programsForChannel(
-                                    programs = programs,
-                                    channelId = channel.id,
-                                    windowStartMs = windowStartMs,
-                                    windowEndMs = windowEndMs,
-                                ),
+                                programs = programsByChannel[channel.id].orEmpty(),
                                 channelColumnWidth = channelColumnWidth,
                                 rowHeight = rowHeight,
                                 windowStartMs = windowStartMs,

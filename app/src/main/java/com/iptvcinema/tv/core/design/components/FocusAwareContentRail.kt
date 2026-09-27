@@ -1,6 +1,5 @@
 package com.iptvcinema.tv.core.design.components
 
-import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,9 +20,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -36,7 +37,7 @@ import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun FocusAwareContentRail(
     title: String,
@@ -64,7 +65,8 @@ fun FocusAwareContentRail(
     val railHeight = variant.railHeight()
     val focusOverflow = CinemaSpacing.FocusScaleOverflow
     var hadFocusInRail by remember(title) { mutableStateOf(false) }
-    var focusedItemIndex by remember(title) { mutableIntStateOf(0) }
+    // Separate name so the restore index passed in by the caller is not shadowed.
+    var lastFocusedIndex by remember(title) { mutableIntStateOf(focusedItemIndex.coerceAtLeast(0)) }
     val contentStart = if (stableContentStart) CinemaSpacing.ContentStart else shellContentStart()
 
     Column(
@@ -111,7 +113,9 @@ fun FocusAwareContentRail(
                 .height(railHeight + focusOverflow)
                 .graphicsLayer { clip = true }
                 .padding(vertical = focusOverflow / 2)
-                .focusGroup(),
+                // Coming back into the rail from above or below lands on the last focused
+                // card, not whichever card happens to be geometrically closest.
+                .focusRestorer(),
             contentPadding = PaddingValues(
                 start = contentStart,
                 end = CinemaSpacing.ScreenPadding,
@@ -133,7 +137,7 @@ fun FocusAwareContentRail(
                     onCardLongClick = onCardLongClick?.let { callback -> { callback(item) } },
                     onFocusChanged = { focused ->
                         if (focused) {
-                            focusedItemIndex = index
+                            lastFocusedIndex = index
                             onItemFocused(item)
                             onFocusedItemIndexChange(index)
                             scope.launch {

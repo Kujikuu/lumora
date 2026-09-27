@@ -221,6 +221,8 @@ fun CatalogBrowseContent(
         itemsIndexed(
             posterRows,
             key = { rowIndex, row -> "poster-row-${row.firstOrNull()?.contentId ?: rowIndex}" },
+            // Lets rows scrolled off screen be reused for incoming rows instead of rebuilt.
+            contentType = { _, _ -> "posterRow" },
         ) { rowIndex, rowItems ->
             val gridListIndex = sectionIndices.gridStart + rowIndex
             Row(

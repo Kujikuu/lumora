@@ -1,24 +1,34 @@
 package com.iptvcinema.tv.core.design.components
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
+import androidx.compose.animation.core.withInfiniteAnimationFrameMillis
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.iptvcinema.tv.core.design.theme.CinemaColors
@@ -31,24 +41,56 @@ fun SkeletonBox(
     height: Dp = 24.dp,
     width: Dp = Dp.Unspecified,
 ) {
-    val transition = rememberInfiniteTransition(label = "skeleton")
-    val alpha by transition.animateFloat(
-        initialValue = 0.08f,
-        targetValue = 0.18f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "skeletonAlpha",
-    )
     Box(
         modifier = modifier
             .then(if (width != Dp.Unspecified) Modifier.width(width) else Modifier)
-            .height(height)
-            .clip(CinemaShapes.Card)
-            .background(CinemaColors.TextPrimary.copy(alpha = alpha)),
+            .then(if (height != Dp.Unspecified) Modifier.height(height) else Modifier)
+            .shimmer(CinemaShapes.Card),
     )
 }
+
+/**
+ * Draws a skeleton base with a soft highlight sweeping left to right. The sweep is
+ * positioned from the shared frame clock and the element's place on screen, so every
+ * skeleton on a page moves as one band instead of pulsing out of sync. Only the draw
+ * phase reads the animation, so it never triggers recomposition.
+ */
+fun Modifier.shimmer(shape: Shape = CinemaShapes.Card): Modifier = composed {
+    var frameTimeMs by remember { mutableLongStateOf(0L) }
+    var xInWindow by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            withInfiniteAnimationFrameMillis { frameTimeMs = it }
+        }
+    }
+    val density = LocalDensity.current
+    val screenWidthPx = with(density) { LocalConfiguration.current.screenWidthDp.dp.toPx() }
+    val bandPx = with(density) { ShimmerBandWidth.toPx() }
+    this
+        .onGloballyPositioned { xInWindow = it.positionInWindow().x }
+        .clip(shape)
+        .drawBehind {
+            drawRect(ShimmerBase)
+            val progress = (frameTimeMs % ShimmerPeriodMs) / ShimmerPeriodMs.toFloat()
+            val bandCenter = -bandPx + progress * (screenWidthPx + bandPx * 2) - xInWindow
+            drawRect(
+                brush = Brush.linearGradient(
+                    colors = ShimmerHighlightColors,
+                    start = Offset(bandCenter - bandPx, 0f),
+                    end = Offset(bandCenter + bandPx, size.height),
+                ),
+            )
+        }
+}
+
+private const val ShimmerPeriodMs = 1_400L
+private val ShimmerBandWidth = 220.dp
+private val ShimmerBase = CinemaColors.TextPrimary.copy(alpha = 0.07f)
+private val ShimmerHighlightColors = listOf(
+    Color.Transparent,
+    CinemaColors.TextPrimary.copy(alpha = 0.09f),
+    Color.Transparent,
+)
 
 @Composable
 fun SkeletonPosterRail(count: Int = 7, modifier: Modifier = Modifier) {
@@ -63,15 +105,22 @@ fun SkeletonPosterRail(count: Int = 7, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun SkeletonPosterGrid(columns: Int = 6, rows: Int = 2, modifier: Modifier = Modifier) {
+fun SkeletonPosterGrid(columns: Int = 5, rows: Int = 2, modifier: Modifier = Modifier) {
+    // Same column count and poster ratio as the catalog grid, so content lands in place.
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
     ) {
         repeat(rows) {
-            Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
+            ) {
                 repeat(columns) {
-                    SkeletonBox(width = 148.dp, height = 222.dp)
+                    SkeletonBox(
+                        modifier = Modifier.weight(1f).aspectRatio(2f / 3f),
+                        height = Dp.Unspecified,
+                    )
                 }
             }
         }

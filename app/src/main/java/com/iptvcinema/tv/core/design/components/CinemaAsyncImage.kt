@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -31,7 +32,7 @@ fun CinemaAsyncImage(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
     fallbackLabel: String = contentDescription.orEmpty(),
-    showLoadingSkeleton: Boolean = false,
+    showLoadingSkeleton: Boolean = true,
 ) {
     if (imageUrl.isNullOrBlank()) {
         ImageFallback(
@@ -53,7 +54,8 @@ fun CinemaAsyncImage(
         return
     }
 
-    Box(modifier = modifier) {
+    // Shimmer sits behind the image and the image crossfades in over it.
+    Box(modifier = modifier.then(if (isLoading) Modifier.shimmer(RectangleShape) else Modifier)) {
         AsyncImage(
             model = imageUrl,
             contentDescription = contentDescription,
@@ -66,9 +68,6 @@ fun CinemaAsyncImage(
             onSuccess = { isLoading = false },
             onLoading = { isLoading = showLoadingSkeleton },
         )
-        if (isLoading && showLoadingSkeleton) {
-            SkeletonBox(modifier = Modifier.fillMaxSize())
-        }
     }
 }
 

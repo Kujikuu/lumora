@@ -85,7 +85,6 @@ fun HeroBanner(
 ) {
     val sectionBringIntoViewRequester = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
-    val shellImmersion = LocalShellImmersion.current
     val heroContentStart = shellHeroContentStart()
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val sideGradientColors = if (isRtl) {
@@ -225,7 +224,6 @@ fun HeroBanner(
                         .then(watchNowFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
                         .onFocusChanged { focusState ->
                             if (focusState.isFocused) {
-                                shellImmersion?.showNavRail()
                                 scope.launch {
                                     sectionBringIntoViewRequester.bringIntoView()
                                 }

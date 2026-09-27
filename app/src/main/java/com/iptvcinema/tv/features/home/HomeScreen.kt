@@ -39,8 +39,6 @@ import com.iptvcinema.tv.core.design.components.ExpandedPosterCardVariant
 import com.iptvcinema.tv.core.design.components.FocusAwareContentRail
 import com.iptvcinema.tv.core.design.components.HeroCarousel
 import com.iptvcinema.tv.core.design.components.Top10Rail
-import com.iptvcinema.tv.core.design.components.LocalShellImmersion
-import com.iptvcinema.tv.core.design.components.TrackShellVerticalScroll
 import com.iptvcinema.tv.core.design.components.isSectionVisible
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.home.HomeContentCard
@@ -82,7 +80,6 @@ fun HomeScreen(
     val catalogCallbacks = rememberCatalogStateCallbacks(navController)
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
-    val shellImmersion = LocalShellImmersion.current
     var continueMenuCard by remember { mutableStateOf<HomeContentCard?>(null) }
 
     val hasHeroFocusTarget = uiState.heroMovies.isNotEmpty()
@@ -118,7 +115,6 @@ fun HomeScreen(
     val listState = rememberLazyListState(
         initialFirstVisibleItemIndex = focusState.scrollOffset.coerceIn(0, sectionIndices.maxIndex),
     )
-    TrackShellVerticalScroll(listState)
 
     val scrollToSection: suspend (Int) -> Unit = { sectionIndex ->
         if (sectionIndex >= 0 && !listState.isSectionVisible(sectionIndex)) {
@@ -127,7 +123,6 @@ fun HomeScreen(
     }
     val focusHeroOrFirstRail: () -> Unit = {
         scope.launch {
-            shellImmersion?.showNavRail()
             val targetSection = when {
                 sectionIndices.hero >= 0 -> sectionIndices.hero
                 sectionIndices.continueWatching >= 0 -> sectionIndices.continueWatching

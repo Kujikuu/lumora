@@ -26,6 +26,7 @@ import com.iptvcinema.tv.core.player.PlaybackResolveResult
 import com.iptvcinema.tv.core.player.PlayerManager
 import com.iptvcinema.tv.core.player.PlayerUiState
 import com.iptvcinema.tv.core.player.PlaybackSessionTracker
+import com.iptvcinema.tv.core.player.PlaybackTuning
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.util.AppStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -127,6 +128,7 @@ class LiveTvViewModel @Inject constructor(
     private var clockJob: Job? = null
     private var playbackJob: Job? = null
     private var activePlaybackChannelId: String? = null
+    private var playbackToken: Int? = null
 
     init {
         CatalogRefreshSupport.observeSyncBanner(viewModelScope, catalogRepository) { banner ->
@@ -324,7 +326,8 @@ class LiveTvViewModel @Inject constructor(
             refreshEpg()
         }
         if (previousChannelId != channel.id) {
-            startPlayback(channel.id)
+            // Scrolling the strip fires this per step; only open the stream once it settles.
+            startPlayback(channel.id, delayMs = PlaybackTuning.CHANNEL_ZAP_DEBOUNCE_MS)
         }
     }
 
@@ -349,9 +352,10 @@ class LiveTvViewModel @Inject constructor(
 
     fun getExoPlayer() = playerManager.getExoPlayer()
 
-    private fun startPlayback(channelId: String) {
+    private fun startPlayback(channelId: String, delayMs: Long = 0L) {
         playbackJob?.cancel()
         playbackJob = viewModelScope.launch {
+            if (delayMs > 0L) delay(delayMs)
             val result = runCatching {
                 playbackRepository.resolve(channelId, "live")
             }.getOrElse {
@@ -370,7 +374,7 @@ class LiveTvViewModel @Inject constructor(
                         return@launch
                     }
                     activePlaybackChannelId = channelId
-                    playerManager.play(
+                    playbackToken = playerManager.play(
                         request = result.request,
                         startPositionMs = 0L,
                         isXtreamSource = session.sourceType == SourceType.XTREAM_CODES,
@@ -497,7 +501,7 @@ class LiveTvViewModel @Inject constructor(
         clockJob?.cancel()
         playbackJob?.cancel()
         playbackSessionTracker.setCurrentLiveChannel(null)
-        playerManager.release()
+        playbackToken?.let(playerManager::stop)
         activePlaybackChannelId = null
         super.onCleared()
     }

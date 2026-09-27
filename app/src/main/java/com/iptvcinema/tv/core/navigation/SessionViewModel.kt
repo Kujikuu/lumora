@@ -30,6 +30,14 @@ class SessionViewModel @Inject constructor(
     private val _isHydrated = MutableStateFlow(false)
     val isHydrated: StateFlow<Boolean> = _isHydrated.asStateFlow()
 
+    // Declared before sessionState: its eager collector can emit synchronously during
+    // construction and would otherwise write to these before they are initialized.
+    private val _accountDisplayName = MutableStateFlow("")
+    val accountDisplayName: StateFlow<String> = _accountDisplayName.asStateFlow()
+
+    private val _activeProfileName = MutableStateFlow<String?>(null)
+    val activeProfileName: StateFlow<String?> = _activeProfileName.asStateFlow()
+
     val sessionState: StateFlow<AppSessionState> = appSessionRepository.sessionState
         .onEach { session ->
             _isHydrated.value = true
@@ -40,12 +48,6 @@ class SessionViewModel @Inject constructor(
             started = SharingStarted.Eagerly,
             initialValue = AppSessionState(),
         )
-
-    private val _accountDisplayName = MutableStateFlow("")
-    val accountDisplayName: StateFlow<String> = _accountDisplayName.asStateFlow()
-
-    private val _activeProfileName = MutableStateFlow<String?>(null)
-    val activeProfileName: StateFlow<String?> = _activeProfileName.asStateFlow()
 
     init {
         viewModelScope.launch {

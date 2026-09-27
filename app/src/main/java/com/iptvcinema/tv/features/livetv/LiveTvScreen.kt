@@ -440,6 +440,7 @@ private fun LiveTvVideoSurface(
                 )
                 useController = false
                 setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
+                setKeepContentOnPlayerReset(true)
                 resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
             }
         },

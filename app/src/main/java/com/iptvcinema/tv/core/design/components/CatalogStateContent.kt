@@ -1,5 +1,10 @@
 package com.iptvcinema.tv.core.design.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -52,83 +57,108 @@ fun CatalogStateContent(
     val resolvedEmptyTitle = emptyTitle ?: stringResource(R.string.empty_nothing_here)
     val resolvedEmptyDescription = emptyDescription ?: stringResource(R.string.empty_try_another)
 
-    when {
-        sourceStatus == SourceStatus.EXPIRED -> {
-            ExpiredAccountState(
-                onReconnect = onManageSources,
-                onManageSources = onManageSources,
-                modifier = modifier,
-            )
-        }
-        sourceStatus == SourceStatus.FAILED && sourceType == SourceType.M3U -> {
-            InvalidPlaylistState(
-                onEditSource = onEditSource,
-                onManageSources = onManageSources,
-                modifier = modifier,
-            )
-        }
-        loadState == CatalogLoadState.Loading -> {
-            CatalogSkeleton(style = skeletonStyle, modifier = modifier)
-        }
-        loadState == CatalogLoadState.Empty && message?.contains("No source", ignoreCase = true) == true -> {
-            Box(
-                modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                EmptyState(
-                    title = stringResource(R.string.empty_title),
-                    description = stringResource(R.string.empty_description),
-                    primaryAction = stringResource(R.string.btn_add_source),
-                    secondaryAction = null,
-                    onPrimary = onAddSource,
-                    onSecondary = null,
-                    footerNote = stringResource(R.string.source_footer),
-                )
-            }
-        }
-        loadState == CatalogLoadState.Empty -> {
-            Box(
-                modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                EmptyState(
-                    title = resolvedEmptyTitle,
-                    description = message ?: resolvedEmptyDescription,
-                    primaryAction = if (onRefreshCatalog != null) {
-                        stringResource(R.string.btn_refresh_catalog)
-                    } else {
-                        stringResource(R.string.btn_manage_sources)
-                    },
-                    secondaryAction = if (onRefreshCatalog != null) {
-                        stringResource(R.string.btn_manage_sources)
-                    } else {
-                        null
-                    },
-                    onPrimary = onRefreshCatalog ?: onManageSources,
-                    onSecondary = if (onRefreshCatalog != null) onManageSources else null,
-                    footerNote = null,
-                )
-            }
-        }
-        loadState == CatalogLoadState.Error -> {
-            Box(
-                modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                CatalogErrorState(
-                    message = message,
-                    onRetry = onRetry,
+    val displayState = when {
+        sourceStatus == SourceStatus.EXPIRED -> CatalogDisplayState.Expired
+        sourceStatus == SourceStatus.FAILED && sourceType == SourceType.M3U -> CatalogDisplayState.InvalidPlaylist
+        loadState == CatalogLoadState.Loading -> CatalogDisplayState.Loading
+        loadState == CatalogLoadState.Empty && message?.contains("No source", ignoreCase = true) == true ->
+            CatalogDisplayState.NoSource
+        loadState == CatalogLoadState.Empty -> CatalogDisplayState.Empty
+        loadState == CatalogLoadState.Error -> CatalogDisplayState.Error
+        else -> CatalogDisplayState.Ready
+    }
+
+    // Fade between states so the skeleton dissolves into content instead of a hard cut.
+    AnimatedContent(
+        targetState = displayState,
+        transitionSpec = {
+            fadeIn(tween(StateFadeInMs)) togetherWith fadeOut(tween(StateFadeOutMs)) using null
+        },
+        label = "catalogState",
+    ) { state ->
+        when (state) {
+            CatalogDisplayState.Expired -> {
+                ExpiredAccountState(
+                    onReconnect = onManageSources,
                     onManageSources = onManageSources,
+                    modifier = modifier,
                 )
             }
-        }
-        loadState == CatalogLoadState.Ready -> {
-            Box(modifier = modifier.fillMaxSize()) {
-                readyContent()
+            CatalogDisplayState.InvalidPlaylist -> {
+                InvalidPlaylistState(
+                    onEditSource = onEditSource,
+                    onManageSources = onManageSources,
+                    modifier = modifier,
+                )
+            }
+            CatalogDisplayState.Loading -> {
+                CatalogSkeleton(style = skeletonStyle, modifier = modifier)
+            }
+            CatalogDisplayState.NoSource -> {
+                Box(
+                    modifier = modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    EmptyState(
+                        title = stringResource(R.string.empty_title),
+                        description = stringResource(R.string.empty_description),
+                        primaryAction = stringResource(R.string.btn_add_source),
+                        secondaryAction = null,
+                        onPrimary = onAddSource,
+                        onSecondary = null,
+                        footerNote = stringResource(R.string.source_footer),
+                    )
+                }
+            }
+            CatalogDisplayState.Empty -> {
+                Box(
+                    modifier = modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    EmptyState(
+                        title = resolvedEmptyTitle,
+                        description = message ?: resolvedEmptyDescription,
+                        primaryAction = if (onRefreshCatalog != null) {
+                            stringResource(R.string.btn_refresh_catalog)
+                        } else {
+                            stringResource(R.string.btn_manage_sources)
+                        },
+                        secondaryAction = if (onRefreshCatalog != null) {
+                            stringResource(R.string.btn_manage_sources)
+                        } else {
+                            null
+                        },
+                        onPrimary = onRefreshCatalog ?: onManageSources,
+                        onSecondary = if (onRefreshCatalog != null) onManageSources else null,
+                        footerNote = null,
+                    )
+                }
+            }
+            CatalogDisplayState.Error -> {
+                Box(
+                    modifier = modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CatalogErrorState(
+                        message = message,
+                        onRetry = onRetry,
+                        onManageSources = onManageSources,
+                    )
+                }
+            }
+            CatalogDisplayState.Ready -> {
+                Box(modifier = modifier.fillMaxSize()) {
+                    readyContent()
+                }
             }
         }
     }
 }
+
+private enum class CatalogDisplayState { Expired, InvalidPlaylist, Loading, NoSource, Empty, Error, Ready }
+
+private const val StateFadeInMs = 220
+private const val StateFadeOutMs = 160
 
 @Composable
 private fun CatalogSkeleton(

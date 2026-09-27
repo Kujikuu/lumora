@@ -56,10 +56,12 @@ import com.iptvcinema.tv.core.design.components.PlayerOverlay
 import com.iptvcinema.tv.core.design.components.PlayerRebufferOverlay
 import com.iptvcinema.tv.core.design.components.PlayerTrackSidebar
 import com.iptvcinema.tv.core.design.components.PlayerTrackTab
+import com.iptvcinema.tv.core.design.components.rememberDelayedVisibility
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
 import com.iptvcinema.tv.core.player.PlayerCommand
+import com.iptvcinema.tv.core.player.PlaybackTuning
 import kotlinx.coroutines.delay
 
 private const val OVERLAY_HIDE_DELAY_MS = 5_000L
@@ -338,6 +340,7 @@ fun PlayerScreen(
                         )
                         useController = false
                         setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
+                        setKeepContentOnPlayerReset(true)
                         resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     }
                 },
@@ -355,9 +358,17 @@ fun PlayerScreen(
                 )
             }
 
-            if (playerState.isBuffering && !playerState.hasFirstFrame) {
+            val showInitialBuffering = rememberDelayedVisibility(
+                visible = playerState.isBuffering && !playerState.hasFirstFrame,
+                delayMs = PlaybackTuning.BUFFERING_INDICATOR_DELAY_MS,
+            )
+            val showRebuffering = rememberDelayedVisibility(
+                visible = playerState.isBuffering && playerState.hasFirstFrame || playerState.isReconnecting,
+                delayMs = PlaybackTuning.BUFFERING_INDICATOR_DELAY_MS,
+            )
+            if (showInitialBuffering) {
                 PlayerBufferingOverlay()
-            } else if (playerState.isBuffering && playerState.hasFirstFrame || playerState.isReconnecting) {
+            } else if (showRebuffering) {
                 PlayerRebufferOverlay()
             }
 
