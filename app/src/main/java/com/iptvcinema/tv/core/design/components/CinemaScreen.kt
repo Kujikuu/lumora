@@ -463,7 +463,11 @@ fun CinemaScreen(
             .background(CinemaColors.Background),
     ) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                // A new screen may briefly focus the rail before its content is ready. Keep the
+                // rail collapsed until the content has taken focus once, then allow expanding.
+                .onFocusChanged { if (it.hasFocus) suppressRailExpansion = false },
             contentAlignment = Alignment.TopStart,
         ) {
             content()
