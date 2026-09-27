@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
@@ -37,11 +35,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -56,8 +49,6 @@ import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
-import com.iptvcinema.tv.core.util.RatingFormatter
-import com.iptvcinema.tv.core.model.MovieItem
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -262,108 +253,6 @@ fun HeroBanner(
             }
         }
     }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-fun HeroCarousel(
-    movies: List<MovieItem>,
-    onWatchNow: (MovieItem) -> Unit,
-    onDetails: (MovieItem) -> Unit,
-    modifier: Modifier = Modifier,
-    watchNowFocusRequester: FocusRequester? = null,
-    onAddToList: ((MovieItem) -> Unit)? = null,
-    onFavorite: ((MovieItem) -> Unit)? = null,
-) {
-    if (movies.isEmpty()) return
-
-    if (movies.size == 1) {
-        val movie = movies.first()
-        HeroBanner(
-            title = movie.title,
-            metadata = heroMovieMetadata(movie),
-            qualityBadges = heroMovieQualityBadges(movie),
-            description = movie.plot,
-            onWatchNow = { onWatchNow(movie) },
-            onDetails = { onDetails(movie) },
-            modifier = modifier,
-            watchNowFocusRequester = watchNowFocusRequester,
-            backdropUrl = movie.backdropUrl ?: movie.imageUrl,
-            onAddToList = onAddToList?.let { callback -> { callback(movie) } },
-            onFavorite = onFavorite?.let { callback -> { callback(movie) } },
-            isFavorite = movie.isFavorite,
-        )
-        return
-    }
-
-    val pagerState = rememberPagerState(pageCount = { movies.size })
-    val scope = rememberCoroutineScope()
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .onPreviewKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                when (event.key) {
-                    Key.DirectionLeft -> {
-                        if (pagerState.currentPage > 0) {
-                            scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    Key.DirectionRight -> {
-                        if (pagerState.currentPage < movies.lastIndex) {
-                            scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    else -> false
-                }
-            },
-    ) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxWidth(),
-            userScrollEnabled = false,
-        ) { page ->
-            val movie = movies[page]
-            val thumbs = movies.map { (it.backdropUrl ?: it.imageUrl) to it.title }
-            HeroBanner(
-                title = movie.title,
-                metadata = heroMovieMetadata(movie),
-                qualityBadges = heroMovieQualityBadges(movie),
-                description = movie.plot,
-                onWatchNow = { onWatchNow(movie) },
-                onDetails = { onDetails(movie) },
-                modifier = Modifier.fillMaxWidth(),
-                carouselDotCount = movies.size,
-                selectedCarouselDot = pagerState.currentPage,
-                watchNowFocusRequester = if (page == pagerState.currentPage) watchNowFocusRequester else null,
-                backdropUrl = movie.backdropUrl ?: movie.imageUrl,
-                onAddToList = onAddToList?.let { callback -> { callback(movie) } },
-                onFavorite = onFavorite?.let { callback -> { callback(movie) } },
-                isFavorite = movie.isFavorite,
-                carouselThumbs = thumbs,
-                selectedThumbIndex = pagerState.currentPage,
-                onThumbSelect = { index -> scope.launch { pagerState.animateScrollToPage(index) } },
-            )
-        }
-    }
-}
-
-private fun heroMovieMetadata(movie: MovieItem): List<String> = listOfNotNull(
-    movie.year.takeIf { it > 0 }?.toString(),
-    movie.genres.joinToString(" ").takeIf { it.isNotBlank() },
-    movie.runtimeMinutes.takeIf { it > 0 }?.let { "${it}m" },
-)
-
-private fun heroMovieQualityBadges(movie: MovieItem): List<String> = buildList {
-    if (movie.is4K) add("4K")
-    RatingFormatter.formatForDisplay(movie.rating)?.let { add("★ $it") }
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)

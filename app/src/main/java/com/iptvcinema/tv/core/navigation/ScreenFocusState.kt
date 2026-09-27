@@ -6,7 +6,6 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.focus.FocusRequester
-import kotlinx.coroutines.delay
 
 data class ScreenFocusSnapshot(
     val focusIndex: Int = ScreenFocusState.NO_SAVED_FOCUS,
@@ -82,17 +81,20 @@ class ScreenFocusState(
         return result
     }
 
+    // Slow TVs can take many frames to compose and attach the target after data loads.
+    // Trying once per frame for a short window lands focus as soon as it is possible,
+    // instead of two fixed attempts that miss on slow devices and leave focus in the nav rail.
     private suspend fun requestFocusAfterComposition(focusRequester: FocusRequester): Boolean {
-        delay(FOCUS_RESTORE_DELAY_MS)
-        withFrameNanos { }
-        val firstRequest = runCatching { focusRequester.requestFocus() }.getOrDefault(false)
-        withFrameNanos { }
-        return firstRequest || runCatching { focusRequester.requestFocus() }.getOrDefault(false)
+        repeat(FOCUS_MAX_FRAME_ATTEMPTS) {
+            withFrameNanos { }
+            if (runCatching { focusRequester.requestFocus() }.getOrDefault(false)) return true
+        }
+        return false
     }
 
     companion object {
         const val NO_SAVED_FOCUS = -1
-        private const val FOCUS_RESTORE_DELAY_MS = 150L
+        private const val FOCUS_MAX_FRAME_ATTEMPTS = 90
 
         @Suppress("UNCHECKED_CAST")
         val Saver: Saver<ScreenFocusState, Any> = Saver(

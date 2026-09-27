@@ -21,7 +21,7 @@ object CinemaSpacing {
     val HeroMaxHeight = 440.dp
 
     val NavRailWidth = 92.dp
-    val NavRailExpandedWidth = 340.dp
+    val NavRailExpandedWidth = 250.dp
     /** Icon column width inside the rail (rail width minus horizontal padding). */
     val NavRailIconSlotWidth = 80.dp
     /** Nav icons at ~70% of the previous 28dp size; same in collapsed and expanded. */
