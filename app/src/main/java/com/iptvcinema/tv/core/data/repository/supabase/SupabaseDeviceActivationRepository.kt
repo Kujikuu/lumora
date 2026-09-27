@@ -4,19 +4,14 @@ import com.iptvcinema.tv.BuildConfig
 import com.iptvcinema.tv.core.data.repository.AuthRepository
 import com.iptvcinema.tv.core.data.repository.DeviceActivationRepository
 import com.iptvcinema.tv.core.datastore.AppSessionRepository
-import com.iptvcinema.tv.core.model.ActivationSessionStatus
 import com.iptvcinema.tv.core.model.DeviceActivationSession
-import com.iptvcinema.tv.core.supabase.dto.ActivationSessionInsertDto
 import com.iptvcinema.tv.core.supabase.dto.DeviceActivationSessionDto
 import com.iptvcinema.tv.core.supabase.dto.SessionExchangeRequest
 import com.iptvcinema.tv.core.supabase.dto.SessionExchangeResponse
 import com.iptvcinema.tv.core.supabase.mapper.toDomain
 import io.github.jan.supabase.SupabaseClient
-import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.postgrest.query.Columns
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -44,18 +39,16 @@ class SupabaseDeviceActivationRepository @Inject constructor(
         val code = generateActivationCode()
         val qrToken = generateQrToken()
 
-        val dto = ActivationSessionInsertDto(
-            code = code,
-            qrToken = qrToken,
-            status = ActivationSessionStatus.PENDING.name,
-            deviceName = deviceName,
+        // RPC returns a single composite row (JSON object), not a list — use decodeAs, not decodeSingle.
+        return supabaseClient.postgrest.rpc(
+            function = "create_device_activation_session",
+            parameters = buildJsonObject {
+                put("activation_code", code)
+                put("activation_qr_token", qrToken)
+                put("activation_device_name", deviceName)
+            },
         )
-
-        return supabaseClient.from(TABLE)
-            .insert(dto) {
-                select(Columns.ALL)
-            }
-            .decodeSingle<DeviceActivationSessionDto>()
+            .decodeAs<DeviceActivationSessionDto>()
             .toDomain()
     }
 
@@ -64,7 +57,7 @@ class SupabaseDeviceActivationRepository @Inject constructor(
             function = "get_device_activation_session",
             parameters = buildJsonObject { put("session_id", sessionId) },
         )
-            .decodeSingleOrNull<DeviceActivationSessionDto>()
+            .decodeAsOrNull<DeviceActivationSessionDto>()
             ?.toDomain()
     }.getOrNull()
 
@@ -113,7 +106,6 @@ class SupabaseDeviceActivationRepository @Inject constructor(
     )
 
     companion object {
-        private const val TABLE = "device_activation_sessions"
         private const val TOKEN_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789"
     }
 }

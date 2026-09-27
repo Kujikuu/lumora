@@ -104,14 +104,6 @@ data class ParentalControlsDto(
 )
 
 @Serializable
-data class ActivationSessionInsertDto(
-    val code: String,
-    @SerialName("qr_token") val qrToken: String,
-    val status: String,
-    @SerialName("device_name") val deviceName: String? = null,
-)
-
-@Serializable
 data class SessionExchangeRequest(
     val code: String,
 )
