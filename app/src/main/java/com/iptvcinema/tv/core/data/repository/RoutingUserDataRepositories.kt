@@ -198,6 +198,13 @@ class RoutingWatchHistoryRepository @Inject constructor(
             .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
     }
 
+    override suspend fun removeSeries(profileId: String, seriesId: String) {
+        val backend = resolveBackend()
+        runCatching { backend.removeSeries(profileId, seriesId) }
+            .onFailure { cloudAccountStatus.reportCloudWriteFailure(it) }
+            .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
+    }
+
     override fun invalidate() {
         supabase.invalidate()
         local.invalidate()

@@ -27,6 +27,7 @@ import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.model.home.HomeCardAction
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.model.home.toFavoriteContentType
+import com.iptvcinema.tv.core.util.continueWatchingKey
 import com.iptvcinema.tv.core.util.removeContinueWatching
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -259,6 +260,11 @@ class MoviesViewModel @Inject constructor(
     }
 
     fun removeContinueWatching(card: HomeContentCard) {
+        // Hide it now; the server delete and re-fetch take seconds on a slow TV.
+        val key = card.continueWatchingKey()
+        _uiState.value = _uiState.value.copy(
+            continueWatchingMovies = _uiState.value.continueWatchingMovies.filterNot { it.continueWatchingKey() == key },
+        )
         viewModelScope.launch {
             val profileId = appSessionRepository.sessionState.first().currentProfileId ?: return@launch
             runCatching {

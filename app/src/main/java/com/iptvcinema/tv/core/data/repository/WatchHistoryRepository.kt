@@ -30,6 +30,9 @@ interface WatchHistoryRepository {
         seriesId: String,
     ): List<WatchHistoryItem>
     suspend fun remove(profileId: String, contentId: String, contentType: WatchHistoryContentType)
+
+    /** Removes every watched episode of a series, so it leaves Continue Watching entirely. */
+    suspend fun removeSeries(profileId: String, seriesId: String)
     fun invalidate()
 }
 

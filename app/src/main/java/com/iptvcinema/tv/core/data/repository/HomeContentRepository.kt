@@ -1,6 +1,7 @@
 package com.iptvcinema.tv.core.data.repository
 
 import android.util.Log
+import com.iptvcinema.tv.core.util.safeSummary
 import com.iptvcinema.tv.core.data.fake.FakeDataProvider
 import com.iptvcinema.tv.core.data.mapper.CatalogEntityMapper.toDomain
 import com.iptvcinema.tv.core.database.CatalogDaoFacade
@@ -165,7 +166,7 @@ class HomeContentRepository @Inject constructor(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            Log.w(TAG, "Home section '$section' failed to load", error)
+            Log.w(TAG, "Home section '$section' failed to load: ${error.safeSummary()}")
             fallback
         }
 

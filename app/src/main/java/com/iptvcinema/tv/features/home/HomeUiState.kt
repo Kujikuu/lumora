@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.features.home
 
+import com.iptvcinema.tv.core.util.continueWatchingKey
 import androidx.annotation.StringRes
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.catalog.CatalogRefreshState
@@ -122,3 +123,17 @@ data class HomeSpotlight(
     val progress: Float? = null,
     val is4K: Boolean = false,
 )
+
+/** Drops Continue Watching and Next episode cards whose title the user just removed. */
+fun HomeUiState.withoutContinueWatching(hiddenKeys: Set<String>): HomeUiState {
+    if (hiddenKeys.isEmpty()) return this
+    val filtered = sections.mapNotNull { section ->
+        when (section) {
+            is HomeSection.ContinueWatching, is HomeSection.NextEpisode ->
+                section.withItems(section.items.filterNot { it.continueWatchingKey() in hiddenKeys })
+                    .takeIf { it.items.isNotEmpty() }
+            else -> section
+        }
+    }
+    return copy(sections = filtered)
+}

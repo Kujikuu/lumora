@@ -247,6 +247,13 @@ class LocalWatchHistoryRepository @Inject constructor(
         refreshTrigger.value += 1
     }
 
+    override suspend fun removeSeries(profileId: String, seriesId: String) {
+        mutex.withLock {
+            historyByProfile[profileId]?.removeAll { it.seriesId == seriesId }
+        }
+        refreshTrigger.value += 1
+    }
+
     override fun invalidate() {
         refreshTrigger.value += 1
     }

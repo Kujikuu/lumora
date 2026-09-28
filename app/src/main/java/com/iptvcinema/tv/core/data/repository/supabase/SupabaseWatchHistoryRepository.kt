@@ -212,6 +212,17 @@ class SupabaseWatchHistoryRepository @Inject constructor(
         refreshTrigger.emit(Unit)
     }
 
+    override suspend fun removeSeries(profileId: String, seriesId: String) {
+        supabaseClient.from(TABLE)
+            .delete {
+                filter {
+                    eq(COLUMN_PROFILE_ID, profileId)
+                    eq(COLUMN_SERIES_ID, seriesId)
+                }
+            }
+        refreshTrigger.emit(Unit)
+    }
+
     suspend fun refresh(profileId: String) {
         runCatching { getHistory(profileId, CONTINUE_WATCHING_FETCH_LIMIT) }
             .onSuccess { cloudUserDataCache.saveWatchHistory(profileId, it) }

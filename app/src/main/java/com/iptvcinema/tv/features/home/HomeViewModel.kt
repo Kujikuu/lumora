@@ -33,7 +33,9 @@ import com.iptvcinema.tv.core.parental.ParentalGate
 import com.iptvcinema.tv.core.util.AppStrings
 import com.iptvcinema.tv.core.util.RemainingWatchTimeFormatter
 import com.iptvcinema.tv.core.util.SyncStatusFormatter
+import com.iptvcinema.tv.core.util.continueWatchingKey
 import com.iptvcinema.tv.core.util.removeContinueWatching
+import com.iptvcinema.tv.core.util.safeSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -53,6 +55,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.withIndex
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -87,7 +90,8 @@ class HomeViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            observeHome().collect { next ->
+            combine(observeHome(), hiddenContinueKeys) { state, hidden -> state.withoutContinueWatching(hidden) }
+                .collect { next ->
                 val current = _uiState.value
                 _uiState.value = next.copy(
                     syncBannerText = current.syncBannerText,
@@ -225,7 +229,12 @@ class HomeViewModel @Inject constructor(
         watchHistoryRepository.invalidate()
     }
 
+    // Hidden right away; the server delete and re-fetch take seconds on a slow TV.
+    private val hiddenContinueKeys = MutableStateFlow<Set<String>>(emptySet())
+
     fun removeContinueWatching(card: HomeContentCard) {
+        val key = card.continueWatchingKey()
+        hiddenContinueKeys.update { it + key }
         viewModelScope.launch {
             val profileId = appSessionRepository.sessionState.first().currentProfileId ?: return@launch
             runCatchingNonCancellation { watchHistoryRepository.removeContinueWatching(profileId, card) }
@@ -300,7 +309,7 @@ class HomeViewModel @Inject constructor(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            Log.w(TAG, "Home action failed", error)
+            Log.w(TAG, "Home action failed: ${error.safeSummary()}")
         }
     }
 
