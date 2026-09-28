@@ -40,6 +40,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
@@ -53,6 +54,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -343,19 +345,36 @@ private fun PlayerScrubber(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(
+            TimeLabel(
                 text = PlayerScrubLogic.format(shownMs),
-                style = MaterialTheme.typography.labelLarge.copy(
-                    color = if (scrubbing) CinemaColors.AccentSoft else CinemaColors.White,
-                    fontWeight = if (scrubbing) FontWeight.Bold else FontWeight.Medium,
-                ),
+                color = if (scrubbing) CinemaColors.AccentSoft else CinemaColors.White,
+                bold = scrubbing,
             )
-            Text(
+            TimeLabel(
                 text = "-" + PlayerScrubLogic.format((durationMs - shownMs).coerceAtLeast(0L)),
-                style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextSecondary),
+                color = CinemaColors.TextSecondary,
             )
         }
     }
+}
+
+/**
+ * Times always read left to right ("-1:26:43"), even in Arabic. Without an explicit LTR
+ * direction the RTL paragraph moved the minus sign to the end and wrapped the label.
+ */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun TimeLabel(text: String, color: Color, bold: Boolean = false) {
+    Text(
+        text = text,
+        maxLines = 1,
+        softWrap = false,
+        style = MaterialTheme.typography.labelLarge.copy(
+            color = color,
+            fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium,
+            textDirection = TextDirection.Ltr,
+        ),
+    )
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)

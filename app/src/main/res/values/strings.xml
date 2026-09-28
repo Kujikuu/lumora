@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Lumora Play</string>
+    <string name="splash_brand_name" translatable="false">LUMORA</string>
+    <string name="splash_lockup_tagline">IPTV PLAYER AND MORE</string>
     <string name="phase1_subtitle">Phase 1 — Foundation ready</string>
 
     <!-- Navigation -->

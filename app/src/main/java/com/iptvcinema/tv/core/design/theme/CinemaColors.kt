@@ -37,4 +37,10 @@ object CinemaColors {
     val Success = Color(0xFF46D369)
     val Warning = Color(0xFFF5C518)
     val Danger = Color(0xFFE02424)
+
+    // Lumora logo bands, sampled from the launcher mark.
+    val LumoraYellow = Color(0xFFEDD900)
+    val LumoraRed = Color(0xFFE70302)
+    val LumoraBlue = Color(0xFF0200EC)
+    val LumoraCyan = Color(0xFF00EBE8)
 }

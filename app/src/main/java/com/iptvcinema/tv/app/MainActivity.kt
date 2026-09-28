@@ -4,9 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.iptvcinema.tv.core.design.theme.CinemaTheme
@@ -20,16 +17,12 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var playerManager: PlayerManager
 
-    private var isStartupReady by mutableStateOf(false)
-
     override fun onCreate(savedInstanceState: Bundle?) {
-        val splashScreen = installSplashScreen()
-        splashScreen.setKeepOnScreenCondition { !isStartupReady }
+        // Released on the first frame; the animated intro lives in the Compose SplashScreen.
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         setContent {
-            IptvCinemaAppContent(
-                onStartupReady = { isStartupReady = true },
-            )
+            IptvCinemaAppContent()
         }
     }
 
@@ -42,10 +35,8 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun IptvCinemaAppContent(
-    onStartupReady: () -> Unit = {},
-) {
+private fun IptvCinemaAppContent() {
     CinemaTheme {
-        AppNavGraph(onStartupReady = onStartupReady)
+        AppNavGraph()
     }
 }

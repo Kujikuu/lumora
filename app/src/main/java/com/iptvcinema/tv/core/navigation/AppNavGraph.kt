@@ -50,6 +50,7 @@ import com.iptvcinema.tv.features.sources.M3uFormScreen
 import com.iptvcinema.tv.features.sources.PlaylistManagementScreen
 import com.iptvcinema.tv.features.sources.SourceViewModel
 import com.iptvcinema.tv.features.sources.XtreamFormScreen
+import com.iptvcinema.tv.features.splash.SplashScreen
 import com.iptvcinema.tv.features.splash.SplashViewModel
 import com.iptvcinema.tv.features.states.EmptyStateScreen
 import com.iptvcinema.tv.features.states.ErrorStateScreen
@@ -60,7 +61,6 @@ import com.iptvcinema.tv.features.welcome.WelcomeScreen
 @Composable
 fun AppNavGraph(
     navController: NavHostController = rememberNavController(),
-    onStartupReady: () -> Unit = {},
 ) {
     val activity = LocalActivity.current as ComponentActivity
     val sessionViewModel: SessionViewModel = hiltViewModel(activity)
@@ -80,12 +80,14 @@ fun AppNavGraph(
 
             BlockBackHandler()
 
-            LaunchedEffect(destination) {
-                destination?.let { startupDestination ->
-                    navController.navigateOnboardingClearingStack(startupDestination.route())
-                    onStartupReady()
-                }
-            }
+            SplashScreen(
+                isReady = destination != null,
+                onFinished = {
+                    destination?.let { startupDestination ->
+                        navController.navigateOnboardingClearingStack(startupDestination.route())
+                    }
+                },
+            )
         }
 
         composable(AppRoute.WELCOME) {

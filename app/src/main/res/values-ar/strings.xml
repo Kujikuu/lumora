@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Lumora Play</string>
+    <string name="splash_lockup_tagline">مشغل IPTV والمزيد</string>
     <string name="phase1_subtitle">المرحلة 1 — الأساس جاهز</string>
 
     <string name="nav_home">Watch</string>
