@@ -73,6 +73,10 @@ class HomeViewModel @Inject constructor(
     private val appStrings: AppStrings,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
+
+    // Declared before init, which collects it. Hides removed Continue Watching cards right
+    // away; the server delete and re-fetch take seconds on a slow TV.
+    private val hiddenContinueKeys = MutableStateFlow<Set<String>>(emptySet())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
@@ -228,9 +232,6 @@ class HomeViewModel @Inject constructor(
     fun refreshContinueWatching() {
         watchHistoryRepository.invalidate()
     }
-
-    // Hidden right away; the server delete and re-fetch take seconds on a slow TV.
-    private val hiddenContinueKeys = MutableStateFlow<Set<String>>(emptySet())
 
     fun removeContinueWatching(card: HomeContentCard) {
         val key = card.continueWatchingKey()
