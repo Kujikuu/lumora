@@ -61,10 +61,13 @@ class SupabaseWatchHistoryRepository @Inject constructor(
                 realtimeCoordinator.watchHistoryChanges(),
             ).flatMapLatest {
                 flow {
-                    val history = runCatching { getHistory(profileId, limit) }
+                    // Always cache the full fetch: the cache is shared with continue watching,
+                    // and saving a short list would replace (truncate) the longer one.
+                    val fetchLimit = maxOf(limit, CONTINUE_WATCHING_FETCH_LIMIT)
+                    val history = runCatching { getHistory(profileId, fetchLimit) }
                         .onSuccess { cloudUserDataCache.saveWatchHistory(profileId, it) }
-                        .getOrDefault(cloudUserDataCache.getWatchHistory(profileId, limit).orEmpty())
-                    emit(history)
+                        .getOrElse { cloudUserDataCache.getWatchHistory(profileId, fetchLimit).orEmpty() }
+                    emit(history.take(limit))
                 }
             },
         )
@@ -81,7 +84,10 @@ class SupabaseWatchHistoryRepository @Inject constructor(
             ).flatMapLatest {
                 flow {
                     val items = runCatching { loadContinueWatching(profileId, limit) }
-                        .getOrDefault(emptyList())
+                        .getOrElse {
+                            val cached = cloudUserDataCache.getWatchHistory(profileId, CONTINUE_WATCHING_FETCH_LIMIT)
+                            resolveContinueWatching(cached.orEmpty(), limit)
+                        }
                     emit(items)
                 }
             },
@@ -124,15 +130,9 @@ class SupabaseWatchHistoryRepository @Inject constructor(
         val upsertKey = "$profileId:$contentId:${contentType.name}"
         val nowMs = System.currentTimeMillis()
         val shouldSkip = upsertMutex.withLock {
-            val skip = upsertKey == lastUpsertKey &&
+            upsertKey == lastUpsertKey &&
                 kotlin.math.abs(positionMs - lastUpsertPositionMs) < MIN_POSITION_DELTA_MS &&
                 nowMs - lastUpsertAtMs < MIN_UPSERT_INTERVAL_MS
-            if (!skip) {
-                lastUpsertKey = upsertKey
-                lastUpsertPositionMs = positionMs
-                lastUpsertAtMs = nowMs
-            }
-            skip
         }
         if (shouldSkip) return
 
@@ -155,6 +155,12 @@ class SupabaseWatchHistoryRepository @Inject constructor(
         supabaseClient.from(TABLE).upsert(upsert) {
             onConflict = "profile_id,content_id,content_type"
         }
+        // Only a saved position counts for throttling; a failed write must not block the retry.
+        upsertMutex.withLock {
+            lastUpsertKey = upsertKey
+            lastUpsertPositionMs = positionMs
+            lastUpsertAtMs = nowMs
+        }
         refreshTrigger.emit(Unit)
     }
 
@@ -164,7 +170,8 @@ class SupabaseWatchHistoryRepository @Inject constructor(
                 filter {
                     eq(COLUMN_PROFILE_ID, profileId)
                     eq(COLUMN_CONTENT_TYPE, WatchHistoryContentType.EPISODE.name)
-                    filter(COLUMN_SERIES_ID, FilterOperator.IS, "NOT.NULL")
+                    // PostgREST syntax is series_id=not.is.null; "is.NOT.NULL" is rejected.
+                    filterNot(COLUMN_SERIES_ID, FilterOperator.IS, "null")
                 }
                 limit(SERIES_ID_FETCH_LIMIT.toLong())
             }

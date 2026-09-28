@@ -1,21 +1,59 @@
 package com.iptvcinema.tv.core.platform
 
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.os.LocaleListCompat
+import android.app.Activity
+import android.content.Context
+import android.content.res.Configuration
+import android.content.res.Resources
+import java.util.Locale
 
+/**
+ * App language chosen in Settings.
+ *
+ * Android TV builds often ship without the system per-app language service, so
+ * AppCompatDelegate.setApplicationLocales silently does nothing there. The choice is kept
+ * here instead and applied to each activity's context in attachBaseContext.
+ */
 object AppLocaleHelper {
     const val LANGUAGE_EN = "en"
     const val LANGUAGE_AR = "ar"
 
-    fun currentLanguageTag(): String {
-        val locales = AppCompatDelegate.getApplicationLocales()
-        return when {
-            locales.isEmpty -> LANGUAGE_EN
-            else -> locales[0]?.language ?: LANGUAGE_EN
-        }
+    private val SUPPORTED = setOf(LANGUAGE_EN, LANGUAGE_AR)
+    private const val PREFS = "app_locale"
+    private const val KEY_LANGUAGE = "language"
+
+    fun resolveLanguage(saved: String?, systemLanguage: String): String = when {
+        saved != null && saved in SUPPORTED -> saved
+        systemLanguage in SUPPORTED -> systemLanguage
+        else -> LANGUAGE_EN
     }
 
-    fun applyLanguage(languageTag: String) {
-        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(languageTag))
+    fun currentLanguageTag(context: Context): String =
+        resolveLanguage(savedLanguage(context), systemLanguage())
+
+    /** Wraps [base] so resources, layout direction and formatting use the chosen language. */
+    fun wrap(base: Context): Context {
+        val locale = Locale.forLanguageTag(currentLanguageTag(base))
+        Locale.setDefault(locale)
+        val config = Configuration(base.resources.configuration).apply {
+            setLocale(locale)
+            setLayoutDirection(locale)
+        }
+        return base.createConfigurationContext(config)
     }
+
+    /** Saves the choice and restarts the activity so every screen picks it up. */
+    fun applyLanguage(activity: Activity, languageTag: String) {
+        if (languageTag == currentLanguageTag(activity)) return
+        activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_LANGUAGE, languageTag)
+            .commit()
+        activity.recreate()
+    }
+
+    private fun savedLanguage(context: Context): String? =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_LANGUAGE, null)
+
+    private fun systemLanguage(): String =
+        Resources.getSystem().configuration.locales[0]?.language ?: LANGUAGE_EN
 }

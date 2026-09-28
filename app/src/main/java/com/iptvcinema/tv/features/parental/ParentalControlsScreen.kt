@@ -128,7 +128,9 @@ fun ParentalControlsScreen(
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap)) {
             SettingsMenu(
-                items = sectionLabels.map { SettingsMenuItem(label = it) },
+                items = sections.mapIndexed { index, section ->
+                    SettingsMenuItem(label = sectionLabels[index], icon = section.icon)
+                },
                 selectedIndex = sections.indexOf(SettingsSection.ParentalControls),
                 onSelected = { index ->
                     if (sections[index] != SettingsSection.ParentalControls) {

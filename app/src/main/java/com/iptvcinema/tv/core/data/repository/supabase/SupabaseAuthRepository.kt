@@ -10,21 +10,33 @@ import io.github.jan.supabase.auth.status.SessionStatus
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Singleton
 class SupabaseAuthRepository @Inject constructor(
     private val supabaseClient: SupabaseClient,
     private val appSessionRepository: AppSessionRepository,
 ) : AuthRepository {
-    override val isAuthenticated: Flow<Boolean> = supabaseClient.auth.sessionStatus.map { status ->
-        status is SessionStatus.Authenticated
-    }
+    override val isAuthenticated: Flow<Boolean> = supabaseClient.auth.sessionStatus
+        .map { it.hasUsableSession() }
+        .distinctUntilChanged()
 
-    override val currentUserId: Flow<String?> = supabaseClient.auth.sessionStatus.map { status ->
-        (status as? SessionStatus.Authenticated)?.session?.user?.id
-    }
+    // Skips transient states (initializing, refresh failing) so collectors only see real
+    // account changes: a user id on sign-in, null on sign-out.
+    override val currentUserId: Flow<String?> = supabaseClient.auth.sessionStatus
+        .mapNotNull { status ->
+            when (val action = status.toMirrorAction()) {
+                is AuthMirrorAction.SignedIn -> action.userId?.let { UserIdEvent(it) }
+                AuthMirrorAction.SignedOut -> UserIdEvent(null)
+                AuthMirrorAction.NoChange -> null
+            }
+        }
+        .map { it.userId }
+        .distinctUntilChanged()
 
     override suspend fun currentUserEmail(): String? =
         supabaseClient.auth.currentSessionOrNull()?.user?.email
@@ -40,30 +52,40 @@ class SupabaseAuthRepository @Inject constructor(
 
     override suspend fun awaitAuthInitialization() {
         if (!isConfigured()) return
-        supabaseClient.auth.sessionStatus.first { it !is SessionStatus.Initializing }
+        withTimeoutOrNull(AUTH_INIT_TIMEOUT_MS) {
+            supabaseClient.auth.sessionStatus.first { it !is SessionStatus.Initializing }
+        }
     }
 
     override suspend fun syncSessionToLocal() {
         awaitAuthInitialization()
-        val session = supabaseClient.auth.currentSessionOrNull()
-        if (session != null) {
-            appSessionRepository.setAuthenticated(
+        applyToLocal(supabaseClient.auth.sessionStatus.value)
+    }
+
+    suspend fun applyToLocal(status: SessionStatus) {
+        when (val action = status.toMirrorAction()) {
+            is AuthMirrorAction.SignedIn -> appSessionRepository.setAuthenticated(
                 authenticated = true,
-                userId = session.user?.id,
+                userId = action.userId,
             )
-        } else {
-            appSessionRepository.setAuthenticated(authenticated = false, userId = null)
+            AuthMirrorAction.SignedOut -> appSessionRepository.setAuthenticated(authenticated = false)
+            AuthMirrorAction.NoChange -> Unit
         }
     }
 
     override suspend fun importSession(accessToken: String, refreshToken: String) {
-        supabaseClient.auth.importAuthToken(accessToken = accessToken, refreshToken = refreshToken)
+        supabaseClient.auth.importAuthToken(
+            accessToken = accessToken,
+            refreshToken = refreshToken,
+            retrieveUser = true,
+            autoRefresh = true,
+        )
         syncSessionToLocal()
     }
 
     override suspend fun hasActiveSession(): Boolean {
-        syncSessionToLocal()
-        return supabaseClient.auth.currentSessionOrNull() != null
+        awaitAuthInitialization()
+        return supabaseClient.auth.sessionStatus.value.hasUsableSession()
     }
 
     override suspend fun signOut() {
@@ -73,4 +95,10 @@ class SupabaseAuthRepository @Inject constructor(
 
     override fun isConfigured(): Boolean =
         BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_ANON_KEY.isNotBlank()
+
+    private data class UserIdEvent(val userId: String?)
+
+    private companion object {
+        const val AUTH_INIT_TIMEOUT_MS = 10_000L
+    }
 }

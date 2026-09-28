@@ -14,13 +14,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @HiltViewModel
 class SessionViewModel @Inject constructor(
-    appSessionRepository: AppSessionRepository,
+    private val appSessionRepository: AppSessionRepository,
     cloudAccountStatus: CloudAccountStatus,
     private val cloudAccountRetryCoordinator: CloudAccountRetryCoordinator,
     private val authRepository: AuthRepository,
@@ -38,11 +40,10 @@ class SessionViewModel @Inject constructor(
     private val _activeProfileName = MutableStateFlow<String?>(null)
     val activeProfileName: StateFlow<String?> = _activeProfileName.asStateFlow()
 
+    // Only the hydration flag is set here. Identity refresh does network work and runs in its
+    // own collector, so it never delays session changes reaching the route guards.
     val sessionState: StateFlow<AppSessionState> = appSessionRepository.sessionState
-        .onEach { session ->
-            _isHydrated.value = true
-            refreshShellIdentity(session)
-        }
+        .onEach { _isHydrated.value = true }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
@@ -51,7 +52,9 @@ class SessionViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            refreshShellIdentity(sessionState.value)
+            appSessionRepository.sessionState
+                .distinctUntilChangedBy { it.userId to it.currentProfileId }
+                .collectLatest { session -> refreshShellIdentity(session) }
         }
     }
 
@@ -62,6 +65,11 @@ class SessionViewModel @Inject constructor(
     }
 
     private suspend fun refreshShellIdentity(session: AppSessionState) {
+        if (!session.isAuthenticated) {
+            _accountDisplayName.value = ""
+            _activeProfileName.value = null
+            return
+        }
         _accountDisplayName.value = authRepository.currentUserDisplayName().orEmpty()
         val profileId = session.currentProfileId
         _activeProfileName.value = if (profileId == null) {

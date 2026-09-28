@@ -64,9 +64,10 @@ class AppSessionRepository @Inject constructor(
         }
     }
 
+    /** Clears everything tied to the signed-in account. Device preferences stay. */
     suspend fun clearSession() {
         dataStore.edit { preferences ->
-            preferences.clear()
+            AppPreferences.SESSION_KEYS.forEach { key -> preferences.remove(key) }
         }
     }
 }

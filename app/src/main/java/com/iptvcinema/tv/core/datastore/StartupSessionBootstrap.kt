@@ -32,8 +32,8 @@ class StartupSessionBootstrap @Inject constructor(
     private val watchedSeriesEpisodePrefetcher: WatchedSeriesEpisodePrefetcher,
     private val catalogSyncScheduler: CatalogSyncScheduler,
     @ApplicationScope private val applicationScope: CoroutineScope,
-) {
-    suspend fun prepareSessionState(): AppSessionState {
+) : SessionPreparer {
+    override suspend fun prepareSessionState(): AppSessionState {
         if (authRepository.isConfigured()) {
             authRepository.awaitAuthInitialization()
             authRepository.syncSessionToLocal()
@@ -47,7 +47,7 @@ class StartupSessionBootstrap @Inject constructor(
         return state
     }
 
-    suspend fun authenticateLocalDev(): AppSessionState {
+    override suspend fun authenticateLocalDev(): AppSessionState {
         appSessionRepository.setAuthenticated(authenticated = true, userId = "local-dev-user")
         restoreActiveSourceIfNeeded()
         return appSessionRepository.sessionState.first()

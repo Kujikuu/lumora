@@ -24,15 +24,19 @@ class CloudUserDataCache @Inject constructor(
     private val userDataCacheDao: UserDataCacheDao,
     private val json: Json,
 ) {
+    suspend fun clearAll() = userDataCacheDao.clearAll()
+
     suspend fun getFavorites(profileId: String): List<FavoriteItem>? =
         userDataCacheDao.getFavorites(profileId)
             .takeIf { it.isNotEmpty() }
             ?.map { it.toDomain() }
 
+    /** [favorites] must be newest first (the server order); the cache keeps that order. */
     suspend fun saveFavorites(profileId: String, favorites: List<FavoriteItem>) {
+        val now = System.currentTimeMillis()
         userDataCacheDao.replaceFavorites(
             profileId = profileId,
-            favorites = favorites.map { it.toEntity() },
+            favorites = favorites.mapIndexed { index, item -> item.toEntity(sortKey = now - index) },
         )
     }
 
@@ -75,7 +79,7 @@ class CloudUserDataCache @Inject constructor(
         )
     }
 
-    private fun FavoriteItem.toEntity() = CachedFavoriteEntity(
+    private fun FavoriteItem.toEntity(sortKey: Long) = CachedFavoriteEntity(
         id = id,
         profileId = profileId,
         sourceId = sourceId,
@@ -83,7 +87,7 @@ class CloudUserDataCache @Inject constructor(
         contentType = contentType.name,
         title = title,
         posterUrl = posterUrl,
-        createdAtEpochMs = System.currentTimeMillis(),
+        createdAtEpochMs = sortKey,
     )
 
     private fun CachedFavoriteEntity.toDomain() = FavoriteItem(

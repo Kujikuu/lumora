@@ -107,12 +107,6 @@ data class CastMember(
     val role: String,
 )
 
-data class AccountSummary(
-    val name: String,
-    val email: String,
-    val plan: String,
-    val renewalDate: String,
-)
 
 data class SearchResults(
     val movies: List<MovieItem>,

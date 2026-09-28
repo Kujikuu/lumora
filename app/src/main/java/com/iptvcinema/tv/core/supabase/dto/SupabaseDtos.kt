@@ -105,7 +105,14 @@ data class ParentalControlsDto(
 
 @Serializable
 data class SessionExchangeRequest(
-    val code: String,
+    @SerialName("session_id") val sessionId: String,
+    @SerialName("qr_token") val qrToken: String,
+)
+
+@Serializable
+data class ActivationStatusDto(
+    val status: String,
+    @SerialName("expires_at") val expiresAt: String,
 )
 
 @Serializable

@@ -52,11 +52,12 @@ class LocalProfilesRepository @Inject constructor() : ProfilesRepository {
         profile
     }
 
-    override suspend fun updateProfile(profileId: String, name: String): UserProfile = mutex.withLock {
+    override suspend fun updateProfile(profileId: String, name: String, type: String): UserProfile = mutex.withLock {
         val index = profiles.indexOfFirst { it.id == profileId }
         require(index >= 0) { "Profile not found" }
         val updated = profiles[index].copy(
             name = name,
+            type = runCatching { ProfileType.valueOf(type) }.getOrDefault(profiles[index].type),
             avatarInitial = name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
         )
         profiles[index] = updated

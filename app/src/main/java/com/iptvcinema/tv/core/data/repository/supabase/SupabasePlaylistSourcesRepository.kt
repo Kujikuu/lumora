@@ -30,13 +30,19 @@ class SupabasePlaylistSourcesRepository @Inject constructor(
     private val cloudCredentialsCipher: CloudCredentialsCipher,
     private val cloudUserDataCache: CloudUserDataCache,
 ) : PlaylistSourcesRepository {
-    private var cachedSources: List<PlaylistSourceRecord>? = null
-    private var cachedSourcesAtMs: Long = 0L
+    // One immutable snapshot, swapped atomically and tied to the user it was fetched for,
+    // so a different account never sees the previous account's sources.
+    private data class SourceCache(val userId: String, val sources: List<PlaylistSourceRecord>, val atMs: Long)
+
+    @Volatile
+    private var sourceCache: SourceCache? = null
 
     override suspend fun getSources(): List<PlaylistSourceRecord> {
         val userId = requireUserId()
         val now = System.currentTimeMillis()
-        cachedSources?.takeIf { now - cachedSourcesAtMs <= SOURCE_CACHE_TTL_MS }?.let { return it }
+        sourceCache
+            ?.takeIf { it.userId == userId && now - it.atMs <= SOURCE_CACHE_TTL_MS }
+            ?.let { return it.sources }
 
         val remote = supabaseClient.from(TABLE)
             .select(
@@ -60,8 +66,7 @@ class SupabasePlaylistSourcesRepository @Inject constructor(
             .decodeList<PlaylistSourceDto>()
             .map { it.toDomain() }
 
-        cachedSources = remote
-        cachedSourcesAtMs = now
+        sourceCache = SourceCache(userId = userId, sources = remote, atMs = now)
         cloudUserDataCache.savePlaylistSources(userId, remote)
         return remote
     }
@@ -314,9 +319,11 @@ class SupabasePlaylistSourcesRepository @Inject constructor(
     }
 
     private fun invalidateSourceCache() {
-        cachedSources = null
-        cachedSourcesAtMs = 0L
+        sourceCache = null
     }
+
+    /** Drops the in-memory copy; called on sign-out. */
+    fun clearMemoryCache() = invalidateSourceCache()
 
     private suspend fun deactivateAllSources(userId: String) {
         supabaseClient.from(TABLE)

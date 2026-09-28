@@ -41,10 +41,9 @@ import androidx.tv.material3.Text
 import com.iptvcinema.tv.BuildConfig
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.catalog.CatalogRefreshState
-import com.iptvcinema.tv.core.design.components.AccountAvatar
 import com.iptvcinema.tv.core.design.components.AccountDegradedBanner
 import com.iptvcinema.tv.core.design.components.CinemaButton
-import com.iptvcinema.tv.core.design.components.CinemaButtonVariant
+import com.iptvcinema.tv.core.design.components.CinemaConfirmDialog
 import com.iptvcinema.tv.core.design.components.CinemaScreen
 import com.iptvcinema.tv.core.design.components.FilterChipRow
 import com.iptvcinema.tv.core.design.components.SettingsHintText
@@ -56,7 +55,9 @@ import com.iptvcinema.tv.core.design.components.SettingsToggle
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.datastore.connectedSourceLabel
-import com.iptvcinema.tv.core.model.AccountSummary
+import com.iptvcinema.tv.core.navigation.ProfileSelectionMode
+import com.iptvcinema.tv.core.parental.PinCheck
+import com.iptvcinema.tv.features.parental.messageOrNull
 import com.iptvcinema.tv.core.model.UserSettings
 import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.SessionViewModel
@@ -65,6 +66,11 @@ import com.iptvcinema.tv.core.navigation.navigateOnboardingClearingStack
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
 import com.iptvcinema.tv.core.platform.AppLocaleHelper
 import com.iptvcinema.tv.core.player.StreamingQualityOption
+
+private enum class SignOutRequest {
+    SignOut,
+    SwitchAccount,
+}
 
 private enum class PlaybackSubPanel {
     None,
@@ -109,15 +115,20 @@ fun SettingsScreen(
     val detailFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState("settings")
     val session by viewModel.sessionState.collectAsState()
-    val account by viewModel.accountSummary.collectAsState()
+    val account by viewModel.account.collectAsState()
+    val isSigningOut by viewModel.isSigningOut.collectAsState()
+    val isSyncing by viewModel.isSyncing.collectAsState()
+    val lastSyncedAt by viewModel.lastSyncedAt.collectAsState()
+    val isWriteDegraded by viewModel.isCloudWriteDegraded.collectAsState()
+    val activeProfileName by sessionViewModel.activeProfileName.collectAsState()
+    var signOutRequest by remember { mutableStateOf<SignOutRequest?>(null) }
     val userSettings by viewModel.userSettings.collectAsState()
     val refreshState by viewModel.refreshState.collectAsState()
     val isCloudDegraded by sessionViewModel.isCloudDegraded.collectAsState()
     val connectedSource = session.connectedSourceLabel()
     var pendingProtectedAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     var showPlaylistPin by remember { mutableStateOf(false) }
-    var playlistPinError by remember { mutableStateOf<String?>(null) }
-    val incorrectPinMessage = stringResource(R.string.error_incorrect_pin)
+    var playlistPinCheck by remember { mutableStateOf<PinCheck?>(null) }
     val refreshTrailing = when (val state = refreshState) {
         CatalogRefreshState.Idle -> null
         is CatalogRefreshState.Refreshing -> {
@@ -131,11 +142,12 @@ fun SettingsScreen(
         is CatalogRefreshState.Failed -> state.message
     }
 
-    val displayAccount = account ?: AccountSummary(
-        name = stringResource(R.string.nav_profile_guest),
-        email = "—",
-        plan = "Lumora Play",
-        renewalDate = "—",
+    val cloudSync = CloudSyncUi(
+        isCloudAccount = account.isCloudAccount,
+        isDegraded = isCloudDegraded,
+        isWriteDegraded = isWriteDegraded,
+        isSyncing = isSyncing,
+        lastSyncedAt = lastSyncedAt,
     )
 
     fun runProtected(action: () -> Unit) {
@@ -151,29 +163,59 @@ fun SettingsScreen(
         com.iptvcinema.tv.features.parental.PinEntryDialog(
             mode = com.iptvcinema.tv.features.parental.PinEntryMode.Verify,
             title = stringResource(R.string.pin_enter),
-            errorMessage = playlistPinError,
+            errorMessage = playlistPinCheck?.messageOrNull(),
             onDismiss = {
                 showPlaylistPin = false
-                playlistPinError = null
+                playlistPinCheck = null
                 pendingProtectedAction = null
             },
             onPinComplete = { pin ->
-                if (viewModel.verifyParentalPin(pin)) {
+                val check = viewModel.checkParentalPin(pin)
+                if (check == PinCheck.Accepted) {
                     showPlaylistPin = false
-                    playlistPinError = null
+                    playlistPinCheck = null
                     pendingProtectedAction?.invoke()
                     pendingProtectedAction = null
                 } else {
-                    playlistPinError = incorrectPinMessage
+                    playlistPinCheck = check
                 }
             },
+        )
+    }
+
+    signOutRequest?.let { request ->
+        val switching = request == SignOutRequest.SwitchAccount
+        CinemaConfirmDialog(
+            title = stringResource(
+                if (switching) R.string.settings_switch_account_confirm_title else R.string.settings_sign_out_confirm_title,
+            ),
+            message = if (isSigningOut) {
+                stringResource(R.string.settings_signing_out)
+            } else {
+                stringResource(
+                    if (switching) R.string.settings_switch_account_confirm_body else R.string.settings_sign_out_confirm_body,
+                )
+            },
+            confirmLabel = stringResource(if (switching) R.string.settings_switch_account else R.string.btn_sign_out),
+            cancelLabel = stringResource(R.string.btn_cancel),
+            destructive = true,
+            isWorking = isSigningOut,
+            onConfirm = {
+                viewModel.signOut {
+                    signOutRequest = null
+                    navController.navigateOnboardingClearingStack(
+                        if (switching) AppRoute.ACTIVATION else AppRoute.WELCOME,
+                    )
+                }
+            },
+            onDismiss = { signOutRequest = null },
         )
     }
 
     BackHandler {
         when {
             playbackSubPanel != PlaybackSubPanel.None -> playbackSubPanel = PlaybackSubPanel.None
-            else -> navController.navigateMainShellHome()
+            !navController.popBackStack() -> navController.navigateMainShellHome()
         }
     }
 
@@ -210,16 +252,11 @@ fun SettingsScreen(
                     modifier = Modifier.width(300.dp),
                     verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
                 ) {
-                    SettingsPanelHeader(
-                        title = stringResource(R.string.settings_title),
-                        subtitle = stringResource(R.string.settings_subtitle),
-                    )
+                    SettingsPanelHeader(title = stringResource(R.string.settings_title))
+                    // Only the menu scrolls, so the header stays put on a 960x540dp screen.
                     SettingsMenu(
-                        items = buildSettingsMenuItems(
-                            sections = sections,
-                            userSettings = userSettings,
-                            connectedSource = connectedSource,
-                        ),
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                        items = buildSettingsMenuItems(sections),
                         selectedIndex = sections.indexOf(selectedSection).coerceAtLeast(0),
                         onSelected = { index ->
                             val section = sections[index]
@@ -261,13 +298,29 @@ fun SettingsScreen(
                         )
                         PlaybackSubPanel.None -> when (selectedSection) {
                             SettingsSection.Account -> AccountSettingsPanel(
-                                account = displayAccount,
+                                account = account,
+                                sync = cloudSync,
                                 firstItemFocusRequester = detailFocus,
-                                onSignOut = {
-                                    viewModel.signOut {
-                                        navController.navigateOnboardingClearingStack(AppRoute.WELCOME)
-                                    }
+                                onSwitchProfile = {
+                                    navController.navigate(AppRoute.profileSelection(ProfileSelectionMode.SwitchProfile))
                                 },
+                                onSwitchAccount = { signOutRequest = SignOutRequest.SwitchAccount },
+                                onSignOut = { signOutRequest = SignOutRequest.SignOut },
+                            )
+                            SettingsSection.Profiles -> ProfilesSettingsPanel(
+                                activeProfileName = activeProfileName,
+                                firstItemFocusRequester = detailFocus,
+                                onSwitchProfile = {
+                                    navController.navigate(AppRoute.profileSelection(ProfileSelectionMode.SwitchProfile))
+                                },
+                                onManageProfiles = {
+                                    navController.navigate(AppRoute.profileSelection(ProfileSelectionMode.Manage))
+                                },
+                            )
+                            SettingsSection.Sync -> SyncSettingsPanel(
+                                sync = cloudSync,
+                                firstItemFocusRequester = detailFocus,
+                                onSyncNow = viewModel::syncNow,
                             )
                             SettingsSection.Playback -> PlaybackSettingsPanel(
                                 userSettings = userSettings,
@@ -301,9 +354,12 @@ fun SettingsScreen(
                                 onOpenEmptyPreview = { navController.navigate(AppRoute.EMPTY_STATE) },
                                 onOpenErrorPreview = { navController.navigate(AppRoute.ERROR_STATE) },
                             )
-                            SettingsSection.Subscription -> SubscriptionSettingsPanel(account = displayAccount)
-                            SettingsSection.Support -> SupportSettingsPanel()
-                            SettingsSection.About -> AboutSettingsPanel()
+                            SettingsSection.Support -> SupportSettingsPanel(
+                                account = account,
+                                userId = session.userId,
+                                firstItemFocusRequester = detailFocus,
+                            )
+                            SettingsSection.About -> AboutSettingsPanel(firstItemFocusRequester = detailFocus)
                             SettingsSection.ParentalControls -> Unit
                         }
                     }
@@ -314,33 +370,10 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun buildSettingsMenuItems(
-    sections: List<SettingsSection>,
-    userSettings: UserSettings?,
-    connectedSource: String?,
-): List<SettingsMenuItem> {
-    val context = LocalContext.current
-    val deviceName = remember {
-        Settings.Global.getString(context.contentResolver, Settings.Global.DEVICE_NAME)
-            ?: Build.MODEL
+private fun buildSettingsMenuItems(sections: List<SettingsSection>): List<SettingsMenuItem> =
+    sections.map { section ->
+        SettingsMenuItem(label = stringResource(section.labelRes), icon = section.icon)
     }
-    val appLanguage = when (AppLocaleHelper.currentLanguageTag()) {
-        AppLocaleHelper.LANGUAGE_AR -> stringResource(R.string.settings_language_arabic)
-        else -> stringResource(R.string.settings_language_english)
-    }
-    return sections.map { section ->
-        SettingsMenuItem(
-            label = stringResource(section.labelRes),
-            summary = when (section) {
-                SettingsSection.Playback -> streamingQualitySummary(userSettings?.streamingQuality)
-                SettingsSection.Language -> appLanguage
-                SettingsSection.DevicePreferences -> connectedSource ?: deviceName
-                SettingsSection.Account -> null
-                else -> null
-            },
-        )
-    }
-}
 
 @Composable
 private fun playbackAudioSummary(languageCode: String?): String {
@@ -362,54 +395,6 @@ private fun subtitlesSummary(userSettings: UserSettings?): String {
         return stringResource(R.string.settings_subtitles_off)
     }
     return playbackAudioSummary(userSettings.defaultSubtitleLanguage ?: userSettings.defaultAudioLanguage)
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun AccountSettingsPanel(
-    account: AccountSummary,
-    firstItemFocusRequester: FocusRequester,
-    onSignOut: () -> Unit,
-) {
-    SettingsPanelHeader(
-        title = stringResource(R.string.settings_account),
-        subtitle = stringResource(R.string.settings_account_desc),
-    )
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AccountAvatar(size = 120.dp)
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                text = account.name,
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    color = CinemaColors.White,
-                    fontWeight = FontWeight.Black,
-                ),
-            )
-            Text(
-                text = account.email,
-                style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
-            )
-            Text(
-                text = stringResource(R.string.settings_active),
-                style = MaterialTheme.typography.titleMedium.copy(
-                    color = CinemaColors.Success,
-                    fontWeight = FontWeight.Bold,
-                ),
-            )
-        }
-    }
-    CinemaButton(
-        text = stringResource(R.string.btn_sign_out),
-        variant = CinemaButtonVariant.SecondaryDark,
-        onClick = onSignOut,
-        modifier = Modifier
-            .focusRequester(firstItemFocusRequester)
-            .padding(top = 12.dp),
-    )
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -555,7 +540,9 @@ private fun PlaybackQualitySubPanel(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun LanguageSettingsPanel(firstItemFocusRequester: FocusRequester) {
-    var selectedLanguage by remember { mutableStateOf(AppLocaleHelper.currentLanguageTag()) }
+    val activity = LocalActivity.current
+    val context = LocalContext.current
+    val selectedLanguage = remember { AppLocaleHelper.currentLanguageTag(context) }
     val labels = listOf(
         stringResource(R.string.settings_language_english),
         stringResource(R.string.settings_language_arabic),
@@ -570,8 +557,7 @@ private fun LanguageSettingsPanel(firstItemFocusRequester: FocusRequester) {
         selectedIndex = if (selectedLanguage == AppLocaleHelper.LANGUAGE_AR) 1 else 0,
         onSelected = { index ->
             val tag = if (index == 1) AppLocaleHelper.LANGUAGE_AR else AppLocaleHelper.LANGUAGE_EN
-            selectedLanguage = tag
-            AppLocaleHelper.applyLanguage(tag)
+            activity?.let { AppLocaleHelper.applyLanguage(it, tag) }
         },
         chipFocusRequester = firstItemFocusRequester,
         focusedChipIndex = if (selectedLanguage == AppLocaleHelper.LANGUAGE_AR) 1 else 0,
@@ -665,48 +651,6 @@ private fun DeviceSettingsPanel(
             )
         }
     }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun SubscriptionSettingsPanel(account: AccountSummary) {
-    SettingsPanelHeader(
-        title = stringResource(R.string.settings_subscription),
-        subtitle = stringResource(R.string.settings_subscription_desc),
-    )
-    SettingsRow(
-        label = stringResource(R.string.settings_account),
-        isSelected = false,
-        onClick = {},
-        enabled = false,
-        trailing = account.email,
-    )
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun AboutSettingsPanel() {
-    SettingsPanelHeader(
-        title = stringResource(R.string.settings_about),
-        subtitle = stringResource(R.string.settings_about_version, BuildConfig.VERSION_NAME),
-    )
-    Text(
-        text = stringResource(R.string.settings_user_agreement),
-        style = MaterialTheme.typography.titleLarge.copy(color = CinemaColors.White, fontWeight = FontWeight.Bold),
-    )
-    Text(
-        text = stringResource(R.string.settings_about_desc),
-        style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
-    )
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun SupportSettingsPanel() {
-    SettingsPanelHeader(
-        title = stringResource(R.string.settings_support),
-        subtitle = stringResource(R.string.settings_support_contact),
-    )
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)

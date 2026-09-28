@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.core.supabase.mapper
 
+import com.iptvcinema.tv.core.data.repository.ActivationStatusSnapshot
 import com.iptvcinema.tv.core.model.ActivationSessionStatus
 import com.iptvcinema.tv.core.model.DeviceActivationSession
 import com.iptvcinema.tv.core.model.FavoriteContentType
@@ -14,6 +15,7 @@ import com.iptvcinema.tv.core.model.UserSettings
 import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.model.WatchHistoryItem
 import com.iptvcinema.tv.core.player.StreamingQualityOption
+import com.iptvcinema.tv.core.supabase.dto.ActivationStatusDto
 import com.iptvcinema.tv.core.supabase.dto.DeviceActivationSessionDto
 import com.iptvcinema.tv.core.supabase.dto.FavoriteDto
 import com.iptvcinema.tv.core.supabase.dto.ParentalControlsDto
@@ -33,11 +35,20 @@ fun DeviceActivationSessionDto.toDomain(): DeviceActivationSession = DeviceActiv
     id = id,
     code = code,
     qrToken = qrToken,
-    status = runCatching { ActivationSessionStatus.valueOf(status) }.getOrDefault(ActivationSessionStatus.PENDING),
+    status = parseActivationStatus(status),
     userId = userId,
     deviceName = deviceName,
     expiresAt = parseSupabaseInstant(expiresAt),
 )
+
+fun ActivationStatusDto.toSnapshot(): ActivationStatusSnapshot = ActivationStatusSnapshot(
+    status = parseActivationStatus(status),
+    expiresAt = parseSupabaseInstant(expiresAt),
+)
+
+// An unknown status must end polling, so it counts as expired rather than pending.
+fun parseActivationStatus(raw: String): ActivationSessionStatus =
+    runCatching { ActivationSessionStatus.valueOf(raw) }.getOrDefault(ActivationSessionStatus.EXPIRED)
 
 fun PlaylistSourceDto.toDomain(): PlaylistSourceRecord = PlaylistSourceRecord(
     id = id,

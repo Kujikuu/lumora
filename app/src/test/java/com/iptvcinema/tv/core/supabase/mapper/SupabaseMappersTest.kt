@@ -5,10 +5,12 @@ import com.iptvcinema.tv.core.model.FavoriteContentType
 import com.iptvcinema.tv.core.model.ProfileType
 import com.iptvcinema.tv.core.model.SourceStatus
 import com.iptvcinema.tv.core.model.SourceType
+import com.iptvcinema.tv.core.supabase.dto.ActivationStatusDto
 import com.iptvcinema.tv.core.supabase.dto.DeviceActivationSessionDto
 import com.iptvcinema.tv.core.supabase.dto.FavoriteDto
 import com.iptvcinema.tv.core.supabase.dto.ProfileDto
 import com.iptvcinema.tv.core.supabase.dto.UserSettingsDto
+import java.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
@@ -111,5 +113,22 @@ class SupabaseMappersTest {
 
         assertEquals(SourceType.DEMO, source.type)
         assertEquals(SourceStatus.ACTIVE, source.status)
+    }
+
+    @Test
+    fun parseActivationStatus_unknownValue_isExpired() {
+        assertEquals(ActivationSessionStatus.EXPIRED, parseActivationStatus("REVOKED"))
+        assertEquals(ActivationSessionStatus.APPROVED, parseActivationStatus("APPROVED"))
+    }
+
+    @Test
+    fun activationStatusDto_mapsToSnapshot() {
+        val snapshot = ActivationStatusDto(
+            status = "PENDING",
+            expiresAt = "2026-09-28T10:15:00+00:00",
+        ).toSnapshot()
+
+        assertEquals(ActivationSessionStatus.PENDING, snapshot.status)
+        assertEquals(Instant.parse("2026-09-28T10:15:00Z"), snapshot.expiresAt)
     }
 }

@@ -3,7 +3,6 @@ package com.iptvcinema.tv.core.data.fake
 import com.iptvcinema.tv.core.design.components.ChannelTileData
 import com.iptvcinema.tv.core.design.components.PosterCardData
 import com.iptvcinema.tv.core.epg.GuideLayoutHelper
-import com.iptvcinema.tv.core.model.AccountSummary
 import com.iptvcinema.tv.core.model.CastMember
 import com.iptvcinema.tv.core.model.ChannelItem
 import com.iptvcinema.tv.core.model.EpgProgram
@@ -30,12 +29,6 @@ object FakeDataProvider {
         UserProfile("4", "Guest", ProfileType.GUEST, "G"),
     )
 
-    val accountSummary = AccountSummary(
-        name = "Alex Rivera",
-        email = "alex@example.com",
-        plan = "Premium Plan",
-        renewalDate = "July 15, 2026",
-    )
 
     val featuredHero = MovieItem(
         id = "hero-1",

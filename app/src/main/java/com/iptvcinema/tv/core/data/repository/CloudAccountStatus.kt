@@ -1,6 +1,9 @@
 package com.iptvcinema.tv.core.data.repository
 
 import com.iptvcinema.tv.core.model.ParentalControls
+import android.util.Log
+import com.iptvcinema.tv.core.util.safeSummary
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -27,7 +30,8 @@ class CloudAccountStatus @Inject constructor(
         read || write
     }.stateIn(scope, SharingStarted.Eagerly, false)
 
-    fun reportCloudReadFailure() {
+    fun reportCloudReadFailure(error: Throwable? = null) {
+        Log.w(TAG, "Cloud read failed: ${error.safeSummary()}")
         if (authRepository.isConfigured()) {
             _readDegraded.value = true
         }
@@ -37,7 +41,8 @@ class CloudAccountStatus @Inject constructor(
         _readDegraded.value = false
     }
 
-    fun reportCloudWriteFailure() {
+    fun reportCloudWriteFailure(error: Throwable? = null) {
+        Log.w(TAG, "Cloud write failed: ${error.safeSummary()}")
         if (authRepository.isConfigured()) {
             _writeDegraded.value = true
         }
@@ -46,7 +51,23 @@ class CloudAccountStatus @Inject constructor(
     fun reportCloudWriteSuccess() {
         _writeDegraded.value = false
     }
+
+    private val _lastSyncedAt = MutableStateFlow<Instant?>(null)
+    val lastSyncedAt: StateFlow<Instant?> = _lastSyncedAt.asStateFlow()
+
+    fun markSynced(at: Instant = Instant.now()) {
+        _lastSyncedAt.value = at
+    }
+
+    fun reset() {
+        _readDegraded.value = false
+        _writeDegraded.value = false
+        _lastSyncedAt.value = null
+    }
 }
+
+private const val TAG = "CloudAccountStatus"
+
 
 object ParentalControlsDefaults {
     fun restrictiveFallback(profileId: String): ParentalControls = ParentalControls(

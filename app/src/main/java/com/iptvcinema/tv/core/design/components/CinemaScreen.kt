@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -133,6 +134,7 @@ fun CinemaNavRail(
         RailEntry(NavItem.Series, Icons.Default.VideoLibrary) { onNavigate(NavItem.Series) },
         RailEntry(NavItem.LiveTv, Icons.Default.LiveTv) { onNavigate(NavItem.LiveTv) },
         RailEntry(NavItem.MyList, Icons.Default.Bookmarks) { onNavigate(NavItem.MyList) },
+        RailEntry(NavItem.Settings, Icons.Default.Settings, onSettingsClick),
     )
     val selectedInRail = primaryItems.any { it.navItem == selected }
 
@@ -170,13 +172,14 @@ fun CinemaNavRail(
                     onExpandedChange(true)
                 }
             }
-            .padding(vertical = 30.dp, horizontal = RailHorizontalPadding),
+            .padding(vertical = 16.dp, horizontal = RailHorizontalPadding),
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         RailLogo(showFull = layoutExpanded, expansion = expansion)
 
-        Spacer(Modifier.height(36.dp))
+        // Tighter than before so the Settings row fits a 540dp-tall screen.
+        Spacer(Modifier.height(12.dp))
 
         primaryItems.forEach { entry ->
             val isSelected = entry.navItem == selected

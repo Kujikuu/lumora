@@ -6,15 +6,18 @@ import com.iptvcinema.tv.core.catalog.CatalogRefreshController
 import com.iptvcinema.tv.core.catalog.CatalogRefreshState
 import com.iptvcinema.tv.core.catalog.CatalogRefreshSupport
 import com.iptvcinema.tv.core.catalog.CatalogSyncProgressTracker
-import com.iptvcinema.tv.core.data.local.LocalCredentialsStore
 import com.iptvcinema.tv.core.data.repository.AuthRepository
+import com.iptvcinema.tv.core.data.repository.CloudAccountRetryCoordinator
+import com.iptvcinema.tv.core.data.repository.CloudAccountStatus
+import com.iptvcinema.tv.core.data.repository.SessionTeardown
 import com.iptvcinema.tv.core.data.repository.ParentalControlsRepository
 import com.iptvcinema.tv.core.data.repository.UserSettingsRepository
 import com.iptvcinema.tv.core.model.ParentalControls
 import com.iptvcinema.tv.core.parental.ParentalGate
 import com.iptvcinema.tv.core.datastore.AppSessionRepository
 import com.iptvcinema.tv.core.datastore.AppSessionState
-import com.iptvcinema.tv.core.model.AccountSummary
+import com.iptvcinema.tv.core.device.DeviceIdentity
+import com.iptvcinema.tv.core.parental.PinCheck
 import com.iptvcinema.tv.core.model.UserSettings
 import com.iptvcinema.tv.core.player.StreamingQualityOption
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,6 +26,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.time.Instant
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -34,9 +39,12 @@ class SettingsViewModel @Inject constructor(
     private val userSettingsRepository: UserSettingsRepository,
     private val parentalControlsRepository: ParentalControlsRepository,
     private val parentalGate: ParentalGate,
-    private val localCredentialsStore: LocalCredentialsStore,
     private val catalogRefreshController: CatalogRefreshController,
     private val catalogSyncProgressTracker: CatalogSyncProgressTracker,
+    private val sessionTeardown: SessionTeardown,
+    private val cloudAccountStatus: CloudAccountStatus,
+    private val cloudAccountRetryCoordinator: CloudAccountRetryCoordinator,
+    deviceIdentity: DeviceIdentity,
 ) : ViewModel() {
     val sessionState: StateFlow<AppSessionState> = appSessionRepository.sessionState
         .stateIn(
@@ -45,14 +53,25 @@ class SettingsViewModel @Inject constructor(
             initialValue = AppSessionState(),
         )
 
-    private val _accountSummary = MutableStateFlow<AccountSummary?>(null)
-    val accountSummary: StateFlow<AccountSummary?> = _accountSummary.asStateFlow()
+    private val _account = MutableStateFlow(SettingsAccountUi(deviceName = deviceIdentity.deviceName()))
+    val account: StateFlow<SettingsAccountUi> = _account.asStateFlow()
+
+    private val _isSigningOut = MutableStateFlow(false)
+    val isSigningOut: StateFlow<Boolean> = _isSigningOut.asStateFlow()
+
+    private val _isSyncing = MutableStateFlow(false)
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
+    val isCloudDegraded: StateFlow<Boolean> = cloudAccountStatus.isDegraded
+    val isCloudWriteDegraded: StateFlow<Boolean> = cloudAccountStatus.isWriteDegraded
+    val lastSyncedAt: StateFlow<Instant?> = cloudAccountStatus.lastSyncedAt
 
     private val _userSettings = MutableStateFlow<UserSettings?>(null)
     val userSettings: StateFlow<UserSettings?> = _userSettings.asStateFlow()
 
     private val _parentalControls = MutableStateFlow<ParentalControls?>(null)
     val parentalControls: StateFlow<ParentalControls?> = _parentalControls.asStateFlow()
+    private val _parentalControlsLoaded = MutableStateFlow(false)
 
     private val _refreshState = MutableStateFlow<CatalogRefreshState>(CatalogRefreshState.Idle)
     val refreshState: StateFlow<CatalogRefreshState> = _refreshState.asStateFlow()
@@ -65,39 +84,64 @@ class SettingsViewModel @Inject constructor(
                 _userSettings.value = settings
             }
         }
-        loadAccountAndParentalControls()
+        // This view model is activity scoped, so it outlives a sign-out. Reload whenever the
+        // account or profile changes, and drop the previous account's data first.
+        viewModelScope.launch {
+            appSessionRepository.sessionState
+                .distinctUntilChangedBy { it.userId to it.currentProfileId }
+                .collect { session ->
+                    _parentalControls.value = null
+                    _parentalControlsLoaded.value = false
+                    if (session.isAuthenticated) loadAccountAndParentalControls() else clearAccount()
+                }
+        }
     }
 
     fun loadAccountAndParentalControls() {
         viewModelScope.launch {
-            val email = authRepository.currentUserEmail()
-            val displayName = authRepository.currentUserDisplayName()
-                ?: email?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
-                ?: "Guest"
-            _accountSummary.value = AccountSummary(
-                name = displayName,
-                email = email ?: "—",
-                plan = "Lumora Play",
-                renewalDate = "—",
+            _account.value = _account.value.copy(
+                displayName = authRepository.currentUserDisplayName(),
+                email = authRepository.currentUserEmail(),
+                isCloudAccount = authRepository.isConfigured(),
             )
-            val profileId = appSessionRepository.sessionState.first().currentProfileId
-            if (profileId != null) {
-                runCatching {
-                    _parentalControls.value = parentalControlsRepository.getControls(profileId)
+            val profileId = appSessionRepository.sessionState.first().currentProfileId ?: return@launch
+            runCatching { parentalControlsRepository.getControls(profileId) }
+                .onSuccess { controls ->
+                    _parentalControls.value = controls
+                    _parentalControlsLoaded.value = true
                 }
-            }
         }
     }
 
-    fun verifyParentalPin(pin: String): Boolean {
-        val controls = _parentalControls.value ?: return true
-        return parentalGate.verifyPin(controls, pin)
+    private fun clearAccount() {
+        _account.value = SettingsAccountUi(deviceName = _account.value.deviceName)
+    }
+
+    /**
+     * Checks a PIN for protected settings. Fails closed when parental controls could not be
+     * loaded, and locks out after repeated wrong tries.
+     */
+    fun checkParentalPin(pin: String): PinCheck {
+        val controls = _parentalControls.value.takeIf { _parentalControlsLoaded.value }
+        return parentalGate.checkPin(controls, pin)
     }
 
     fun requiresPlaylistPin(): Boolean {
         val controls = _parentalControls.value ?: return false
         return parentalGate.requiresPinForSettings(controls) &&
             !parentalGate.isPinVerified(controls.profileId)
+    }
+
+    fun syncNow() {
+        if (_isSyncing.value) return
+        viewModelScope.launch {
+            _isSyncing.value = true
+            try {
+                cloudAccountRetryCoordinator.retryCloudSync()
+            } finally {
+                _isSyncing.value = false
+            }
+        }
     }
 
     fun updateAutoplayNextEpisode(enabled: Boolean) {
@@ -147,12 +191,13 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun signOut(onComplete: () -> Unit) {
+        if (_isSigningOut.value) return
         viewModelScope.launch {
-            localCredentialsStore.clearAll()
-            if (authRepository.isConfigured()) {
-                authRepository.signOut()
-            } else {
-                appSessionRepository.clearSession()
+            _isSigningOut.value = true
+            try {
+                sessionTeardown.signOut()
+            } finally {
+                _isSigningOut.value = false
             }
             onComplete()
         }

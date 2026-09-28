@@ -82,4 +82,29 @@ interface UserDataCacheDao {
 
     @Query("DELETE FROM cached_playlist_sources WHERE userId = :userId")
     suspend fun deletePlaylistSources(userId: String)
+
+    @Query("DELETE FROM cached_favorites")
+    suspend fun deleteAllFavorites()
+
+    @Query("DELETE FROM cached_watch_history")
+    suspend fun deleteAllWatchHistory()
+
+    @Query("DELETE FROM cached_user_settings")
+    suspend fun deleteAllUserSettings()
+
+    @Query("DELETE FROM cached_parental_controls")
+    suspend fun deleteAllParentalControls()
+
+    @Query("DELETE FROM cached_playlist_sources")
+    suspend fun deleteAllPlaylistSources()
+
+    /** Wipes every cached user row; used on sign-out so the next account starts clean. */
+    @Transaction
+    suspend fun clearAll() {
+        deleteAllFavorites()
+        deleteAllWatchHistory()
+        deleteAllUserSettings()
+        deleteAllParentalControls()
+        deleteAllPlaylistSources()
+    }
 }

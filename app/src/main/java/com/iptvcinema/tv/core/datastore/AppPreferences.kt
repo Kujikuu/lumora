@@ -12,4 +12,14 @@ object AppPreferences {
     val SOURCE_TYPE = stringPreferencesKey("source_type")
     val IS_DEMO_MODE = booleanPreferencesKey("is_demo_mode")
     val SEARCH_KEYBOARD_LAYOUT = stringPreferencesKey("search_keyboard_layout")
+
+    val SESSION_KEYS = listOf(
+        IS_AUTHENTICATED,
+        USER_ID,
+        HAS_SOURCE,
+        CURRENT_PROFILE_ID,
+        CURRENT_SOURCE_ID,
+        SOURCE_TYPE,
+        IS_DEMO_MODE,
+    )
 }

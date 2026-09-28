@@ -21,36 +21,36 @@ class CloudAccountRetryCoordinator @Inject constructor(
     private val parentalControlsRepository: SupabaseParentalControlsRepository,
     private val playlistSourcesRepository: SupabasePlaylistSourcesRepository,
 ) {
-    suspend fun retryCloudSync() {
-        if (!authRepository.isConfigured() || !authRepository.hasActiveSession()) return
+    /**
+     * Re-reads the account's cloud data. Returns true when every read succeeded.
+     *
+     * It only reads, so it clears the read warning but never the write warning: a failed
+     * write is not replayed and must not be hidden by a later successful read.
+     */
+    suspend fun retryCloudSync(): Boolean {
+        if (!authRepository.isConfigured() || !authRepository.hasActiveSession()) return true
 
-        val profileId = appSessionRepository.sessionState.first().currentProfileId
-        var readSuccess = false
-
-        runCatching { userSettingsRepository.refresh() }
-            .onSuccess { readSuccess = true }
-
-        if (profileId != null) {
-            runCatching { favoritesRepository.refresh(profileId) }
-                .onSuccess { readSuccess = true }
-
-            runCatching { watchHistoryRepository.refresh(profileId) }
-                .onSuccess { readSuccess = true }
-
-            runCatching { parentalControlsRepository.getControls(profileId) }
-                .onSuccess { readSuccess = true }
-        }
-
-        runCatching {
-            val userId = appSessionRepository.sessionState.first().userId
-            if (userId != null) {
-                playlistSourcesRepository.getSourcesCached(userId)
+        val session = appSessionRepository.sessionState.first()
+        val profileId = session.currentProfileId
+        val results = buildList {
+            add(runCatching { userSettingsRepository.refresh() })
+            if (profileId != null) {
+                add(runCatching { favoritesRepository.refresh(profileId) })
+                add(runCatching { watchHistoryRepository.refresh(profileId) })
+                add(runCatching { parentalControlsRepository.getControls(profileId) })
             }
-        }.onSuccess { readSuccess = true }
-
-        if (readSuccess) {
-            cloudAccountStatus.reportCloudReadSuccess()
-            cloudAccountStatus.reportCloudWriteSuccess()
+            session.userId?.let { userId ->
+                add(runCatching { playlistSourcesRepository.getSourcesCached(userId) })
+            }
         }
+
+        val allSucceeded = results.all { it.isSuccess }
+        if (allSucceeded) {
+            cloudAccountStatus.reportCloudReadSuccess()
+            cloudAccountStatus.markSynced()
+        } else {
+            cloudAccountStatus.reportCloudReadFailure(results.firstNotNullOfOrNull { it.exceptionOrNull() })
+        }
+        return allSucceeded
     }
 }

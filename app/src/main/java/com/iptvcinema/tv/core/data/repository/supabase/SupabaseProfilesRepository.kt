@@ -51,10 +51,10 @@ class SupabaseProfilesRepository @Inject constructor(
             .toUserProfile()
     }
 
-    override suspend fun updateProfile(profileId: String, name: String): UserProfile {
+    override suspend fun updateProfile(profileId: String, name: String, type: String): UserProfile {
         val userId = requireUserId()
         return supabaseClient.from(TABLE)
-            .update(ProfileUpdateDto(name = name)) {
+            .update(ProfileUpdateDto(name = name, type = type)) {
                 filter {
                     eq(COLUMN_ID, profileId)
                     eq(COLUMN_USER_ID, userId)
@@ -90,6 +90,7 @@ class SupabaseProfilesRepository @Inject constructor(
     @Serializable
     private data class ProfileUpdateDto(
         val name: String,
+        val type: String,
     )
 
     companion object {

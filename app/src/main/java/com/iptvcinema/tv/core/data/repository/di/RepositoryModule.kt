@@ -16,6 +16,10 @@ import com.iptvcinema.tv.core.data.repository.RoutingWatchHistoryRepository
 import com.iptvcinema.tv.core.data.repository.supabase.SupabaseAuthRepository
 import com.iptvcinema.tv.core.data.repository.supabase.SupabaseDeviceActivationRepository
 import com.iptvcinema.tv.core.data.repository.supabase.SupabasePlaylistSourcesRepository
+import com.iptvcinema.tv.core.datastore.SessionPreparer
+import com.iptvcinema.tv.core.datastore.StartupSessionBootstrap
+import com.iptvcinema.tv.core.device.AndroidDeviceIdentity
+import com.iptvcinema.tv.core.device.DeviceIdentity
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -56,4 +60,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindParentalControlsRepository(impl: RoutingParentalControlsRepository): ParentalControlsRepository
+
+    @Binds
+    abstract fun bindSessionPreparer(impl: StartupSessionBootstrap): SessionPreparer
+
+    @Binds
+    abstract fun bindDeviceIdentity(impl: AndroidDeviceIdentity): DeviceIdentity
 }

@@ -2,15 +2,17 @@ package com.iptvcinema.tv.core.navigation
 
 import androidx.navigation.NavController
 
+// Pops the whole graph, not just SPLASH: SPLASH is gone after the first navigation, and
+// popping to a missing route is a no-op that lets the back stack grow forever.
 fun NavController.navigateOnboardingClearingStack(route: String) {
     navigate(route) {
-        popUpTo(AppRoute.SPLASH) { inclusive = true }
+        popUpTo(graph.id) { inclusive = true }
     }
 }
 
 fun NavController.navigateToMainShell(route: String = AppRoute.HOME) {
     navigate(route) {
-        popUpTo(AppRoute.SPLASH) { inclusive = true }
+        popUpTo(graph.id) { inclusive = true }
         launchSingleTop = true
     }
 }
@@ -49,6 +51,7 @@ fun NavController.navigateToLiveChannel(channelId: String) {
 enum class ProfileSelectionMode {
     Onboarding,
     SwitchProfile,
+    Manage,
 }
 
 enum class AddSourceMode {

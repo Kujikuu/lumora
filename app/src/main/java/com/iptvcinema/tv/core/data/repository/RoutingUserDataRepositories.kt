@@ -40,8 +40,8 @@ class RoutingProfilesRepository @Inject constructor(
     override suspend fun createProfile(name: String, type: String): UserProfile =
         resolveBackend().createProfile(name, type)
 
-    override suspend fun updateProfile(profileId: String, name: String): UserProfile =
-        resolveBackend().updateProfile(profileId, name)
+    override suspend fun updateProfile(profileId: String, name: String, type: String): UserProfile =
+        resolveBackend().updateProfile(profileId, name, type)
 
     override suspend fun deleteProfile(profileId: String) = resolveBackend().deleteProfile(profileId)
 }
@@ -68,7 +68,7 @@ class RoutingFavoritesRepository @Inject constructor(
         val backend = resolveBackend()
         return runCatching {
             backend.isFavorite(profileId, contentId, contentType)
-        }.onFailure { cloudAccountStatus.reportCloudReadFailure() }
+        }.onFailure { cloudAccountStatus.reportCloudReadFailure(it) }
             .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
             .getOrDefault(false)
     }
@@ -93,7 +93,7 @@ class RoutingFavoritesRepository @Inject constructor(
                 sourceId,
                 currentlyFavorite,
             )
-        }.onFailure { cloudAccountStatus.reportCloudWriteFailure() }
+        }.onFailure { cloudAccountStatus.reportCloudWriteFailure(it) }
             .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
             .getOrDefault(currentlyFavorite ?: false)
     }
@@ -102,7 +102,7 @@ class RoutingFavoritesRepository @Inject constructor(
         val backend = resolveBackend()
         runCatching {
             backend.removeFavorite(profileId, favorite)
-        }.onFailure { cloudAccountStatus.reportCloudWriteFailure() }
+        }.onFailure { cloudAccountStatus.reportCloudWriteFailure(it) }
             .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
     }
 }
@@ -133,7 +133,7 @@ class RoutingWatchHistoryRepository @Inject constructor(
         val backend = resolveBackend()
         return runCatching {
             backend.getProgress(profileId, contentId, contentType)
-        }.onFailure { cloudAccountStatus.reportCloudReadFailure() }
+        }.onFailure { cloudAccountStatus.reportCloudReadFailure(it) }
             .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
             .getOrNull()
     }
@@ -162,14 +162,14 @@ class RoutingWatchHistoryRepository @Inject constructor(
                 sourceId,
                 seriesId,
             )
-        }.onFailure { cloudAccountStatus.reportCloudWriteFailure() }
+        }.onFailure { cloudAccountStatus.reportCloudWriteFailure(it) }
             .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
     }
 
     override suspend fun getDistinctSeriesIds(profileId: String): List<String> {
         val backend = resolveBackend()
         return runCatching { backend.getDistinctSeriesIds(profileId) }
-            .onFailure { cloudAccountStatus.reportCloudReadFailure() }
+            .onFailure { cloudAccountStatus.reportCloudReadFailure(it) }
             .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
             .getOrDefault(emptyList())
     }
@@ -182,7 +182,7 @@ class RoutingWatchHistoryRepository @Inject constructor(
         val backend = resolveBackend()
         return runCatching {
             backend.getEpisodeHistoryForSeries(profileId, sourceId, seriesId)
-        }.onFailure { cloudAccountStatus.reportCloudReadFailure() }
+        }.onFailure { cloudAccountStatus.reportCloudReadFailure(it) }
             .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
             .getOrDefault(emptyList())
     }
@@ -194,7 +194,7 @@ class RoutingWatchHistoryRepository @Inject constructor(
     ) {
         val backend = resolveBackend()
         runCatching { backend.remove(profileId, contentId, contentType) }
-            .onFailure { cloudAccountStatus.reportCloudWriteFailure() }
+            .onFailure { cloudAccountStatus.reportCloudWriteFailure(it) }
             .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
     }
 
@@ -221,7 +221,7 @@ class RoutingUserSettingsRepository @Inject constructor(
     override suspend fun getSettings(): UserSettings? {
         val backend = resolveBackend()
         return runCatching { backend.getSettings() }
-            .onFailure { cloudAccountStatus.reportCloudReadFailure() }
+            .onFailure { cloudAccountStatus.reportCloudReadFailure(it) }
             .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
             .getOrNull()
     }
@@ -229,7 +229,7 @@ class RoutingUserSettingsRepository @Inject constructor(
     override suspend fun updateSettings(settings: UserSettings) {
         val backend = resolveBackend()
         runCatching { backend.updateSettings(settings) }
-            .onFailure { cloudAccountStatus.reportCloudWriteFailure() }
+            .onFailure { cloudAccountStatus.reportCloudWriteFailure(it) }
             .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
     }
 }
@@ -253,7 +253,9 @@ class RoutingParentalControlsRepository @Inject constructor(
                         controls
                     }
                     authRepository.isConfigured() -> {
-                        cloudAccountStatus.reportCloudReadFailure()
+                        cloudAccountStatus.reportCloudReadFailure(
+                            IllegalStateException("Parental controls unavailable for profile $profileId"),
+                        )
                         ParentalControlsDefaults.restrictiveFallback(profileId)
                     }
                     else -> controls
@@ -265,7 +267,7 @@ class RoutingParentalControlsRepository @Inject constructor(
     override suspend fun getControls(profileId: String): ParentalControls? {
         val backend = resolveBackend()
         return runCatching { backend.getControls(profileId) }
-            .onFailure { cloudAccountStatus.reportCloudReadFailure() }
+            .onFailure { cloudAccountStatus.reportCloudReadFailure(it) }
             .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
             .getOrElse { ParentalControlsDefaults.restrictiveFallback(profileId) }
     }
@@ -273,14 +275,14 @@ class RoutingParentalControlsRepository @Inject constructor(
     override suspend fun updateControls(controls: ParentalControls) {
         val backend = resolveBackend()
         runCatching { backend.updateControls(controls) }
-            .onFailure { cloudAccountStatus.reportCloudWriteFailure() }
+            .onFailure { cloudAccountStatus.reportCloudWriteFailure(it) }
             .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
     }
 
     override suspend fun ensureControls(profileId: String): ParentalControls {
         val backend = resolveBackend()
         return runCatching { backend.ensureControls(profileId) }
-            .onFailure { cloudAccountStatus.reportCloudWriteFailure() }
+            .onFailure { cloudAccountStatus.reportCloudWriteFailure(it) }
             .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
             .getOrElse { ParentalControlsDefaults.restrictiveFallback(profileId) }
     }

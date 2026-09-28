@@ -49,7 +49,7 @@ class SupabaseFavoritesRepository @Inject constructor(
                 flow {
                     val favorites = runCatching { getFavorites(profileId) }
                         .onSuccess { cloudUserDataCache.saveFavorites(profileId, it) }
-                        .getOrDefault(cloudUserDataCache.getFavorites(profileId).orEmpty())
+                        .getOrElse { cloudUserDataCache.getFavorites(profileId).orEmpty() }
                     emit(favorites)
                 }
             },
@@ -106,7 +106,11 @@ class SupabaseFavoritesRepository @Inject constructor(
             title = title,
             posterUrl = posterUrl,
         )
-        supabaseClient.from(TABLE).insert(insert)
+        // Upsert so a stale "not favorite" state (another device added it) still succeeds.
+        supabaseClient.from(TABLE).upsert(insert) {
+            onConflict = "profile_id,content_id,content_type"
+            ignoreDuplicates = true
+        }
         refreshTrigger.emit(Unit)
         return true
     }

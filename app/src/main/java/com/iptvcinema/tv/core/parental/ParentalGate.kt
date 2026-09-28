@@ -67,13 +67,23 @@ class ParentalGate @Inject constructor(
 ) {
     val pinEnabled: (ParentalControls) -> Boolean = { controls -> !controls.pinHash.isNullOrBlank() }
 
-    fun verifyPin(controls: ParentalControls, pin: String): Boolean {
-        val valid = pinHasher.verifyPin(pin, controls.pinHash)
-        if (valid) {
-            parentalSession.markVerified(controls.profileId)
-        }
-        return valid
+    // One limiter per profile: wrong guesses on one profile's PIN must not lock out another.
+    private val attemptLimiters = java.util.concurrent.ConcurrentHashMap<String, PinAttemptLimiter>()
+
+    /**
+     * Checks a PIN with lockout after repeated wrong tries. [controls] is null when they
+     * could not be loaded; that fails closed instead of letting any PIN through.
+     */
+    fun checkPin(controls: ParentalControls?, pin: String): PinCheck {
+        if (controls == null) return PinCheck.Unavailable
+        val limiter = attemptLimiters.getOrPut(controls.profileId) { PinAttemptLimiter() }
+        val result = limiter.check(correct = pinHasher.verifyPin(pin, controls.pinHash))
+        if (result == PinCheck.Accepted) parentalSession.markVerified(controls.profileId)
+        return result
     }
+
+    fun verifyPin(controls: ParentalControls, pin: String): Boolean =
+        checkPin(controls, pin) == PinCheck.Accepted
 
     fun isPinVerified(profileId: String): Boolean = parentalSession.isVerified(profileId)
 

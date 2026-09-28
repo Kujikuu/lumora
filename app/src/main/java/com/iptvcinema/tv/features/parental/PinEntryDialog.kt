@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.features.parental
 
+import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -55,6 +59,22 @@ fun PinEntryDialog(
         firstKeyFocus.requestFocus()
     }
 
+    fun addDigit(digit: String) {
+        if (digits.length >= PIN_LENGTH) return
+        val next = digits + digit
+        if (next.length == PIN_LENGTH) {
+            // Clear right away so a wrong PIN leaves empty dots and the next try can start.
+            digits = ""
+            onPinComplete(next)
+        } else {
+            digits = next
+        }
+    }
+
+    fun removeDigit() {
+        if (digits.isNotEmpty()) digits = digits.dropLast(1)
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -63,13 +83,33 @@ fun PinEntryDialog(
             modifier = Modifier
                 .fillMaxWidth(0.45f)
                 .background(CinemaColors.Surface, CinemaShapes.Large)
-                .padding(CinemaSpacing.SectionGap),
+                .padding(CinemaSpacing.SectionGap)
+                .onPreviewKeyEvent { event ->
+                    // The remote's number keys type digits directly, without the keypad.
+                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    val code = event.nativeKeyEvent.keyCode
+                    when {
+                        code in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> {
+                            addDigit((code - KeyEvent.KEYCODE_0).toString())
+                            true
+                        }
+                        code in KeyEvent.KEYCODE_NUMPAD_0..KeyEvent.KEYCODE_NUMPAD_9 -> {
+                            addDigit((code - KeyEvent.KEYCODE_NUMPAD_0).toString())
+                            true
+                        }
+                        code == KeyEvent.KEYCODE_DEL -> {
+                            removeDigit()
+                            true
+                        }
+                        else -> false
+                    }
+                },
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
             )
             Text(
                 text = stringResource(R.string.pin_enter_4_digit),
@@ -91,18 +131,8 @@ fun PinEntryDialog(
             }
             PinKeypad(
                 firstKeyFocus = firstKeyFocus,
-                onDigit = { digit ->
-                    if (digits.length < PIN_LENGTH) {
-                        val next = digits + digit
-                        digits = next
-                        if (next.length == PIN_LENGTH) {
-                            onPinComplete(next)
-                        }
-                    }
-                },
-                onBackspace = {
-                    if (digits.isNotEmpty()) digits = digits.dropLast(1)
-                },
+                onDigit = ::addDigit,
+                onBackspace = ::removeDigit,
                 onClear = { digits = "" },
             )
             CinemaButton(

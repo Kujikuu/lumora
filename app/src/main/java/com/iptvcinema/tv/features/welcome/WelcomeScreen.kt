@@ -50,13 +50,17 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.data.fake.FakeDataProvider
 import com.iptvcinema.tv.core.design.components.CinemaAsyncImage
@@ -65,7 +69,6 @@ import com.iptvcinema.tv.core.design.components.CinemaButtonVariant
 import com.iptvcinema.tv.core.design.components.CinemaScreen
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
-import com.iptvcinema.tv.core.navigation.BlockBackHandler
 import kotlinx.coroutines.delay
 
 private const val WelcomePageCount = 4
@@ -82,7 +85,9 @@ fun WelcomeScreen(
     var currentPage by remember { mutableIntStateOf(0) }
     var lastNavAt by remember { mutableLongStateOf(0L) }
 
-    BlockBackHandler()
+    val activity = LocalActivity.current
+    // Welcome is the root screen when signed out, so Back leaves the app.
+    BackHandler { activity?.finish() }
 
     LaunchedEffect(currentPage) {
         delay(120)
@@ -312,6 +317,8 @@ private fun WelcomeIntroPage(
     onGetStarted: () -> Unit,
     buttonFocus: FocusRequester,
 ) {
+    // The tilt leans away from the text, so it flips with the layout direction.
+    val tilt = if (LocalLayoutDirection.current == LayoutDirection.Rtl) 8f else -8f
     WelcomePageShell(
         onGetStarted = onGetStarted,
         buttonFocus = buttonFocus,
@@ -321,7 +328,7 @@ private fun WelcomeIntroPage(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .offset(x = 170.dp)
-                    .graphicsLayer { rotationZ = -8f },
+                    .graphicsLayer { rotationZ = tilt },
             )
         },
     )
@@ -513,7 +520,8 @@ private fun BoxScope.PosterWall(
 ) {
     val images = remember {
         (FakeDataProvider.movies.mapNotNull { it.imageUrl } + FakeDataProvider.seriesList.mapNotNull { it.imageUrl })
-            .take(12)
+            // Two rows fill a 960x540dp screen; more would load images nobody sees.
+            .take(8)
     }
     Column(
         modifier = modifier,

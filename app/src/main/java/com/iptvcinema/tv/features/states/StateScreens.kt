@@ -145,13 +145,6 @@ fun ErrorStateScreen(
                 onClick = { navController.popBackStack() },
             )
         }
-        Text(
-            text = stringResource(R.string.error_session_id),
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 64.dp),
-            style = MaterialTheme.typography.titleMedium.copy(color = CinemaColors.TextMuted),
-        )
     }
 }
 

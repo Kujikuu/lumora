@@ -40,10 +40,10 @@ class SupabaseParentalControlsRepository @Inject constructor(
         emitAll(
             refreshTrigger.flatMapLatest {
                 flow {
-                    val controls = runCatching { getControls(profileId) }
-                        .onSuccess { control ->
-                            control?.let { cloudUserDataCache.saveParentalControls(it) }
-                        }
+                    // Only the first profile gets a row at sign-up. A profile added later has
+                    // none, which is normal, not an error: create it with the server defaults.
+                    val controls = runCatching { getControls(profileId) ?: ensureControls(profileId) }
+                        .onSuccess { cloudUserDataCache.saveParentalControls(it) }
                         .getOrNull()
                         ?: cloudUserDataCache.getParentalControls(profileId)
                     emit(controls)
@@ -68,14 +68,18 @@ class SupabaseParentalControlsRepository @Inject constructor(
 
     override suspend fun updateControls(controls: ParentalControls) {
         val userId = requireUserId()
+        // Controls may be a local fallback with no server row yet; make sure one exists and
+        // update by profile (unique) rather than by an id the server may not know.
+        val existing = ensureControls(controls.profileId)
+        val toSave = controls.copy(id = existing.id, userId = userId)
         supabaseClient.from(TABLE)
-            .update(controls.toDto()) {
+            .update(toSave.toDto()) {
                 filter {
-                    eq(COLUMN_ID, controls.id)
+                    eq(COLUMN_PROFILE_ID, controls.profileId)
                     eq(COLUMN_USER_ID, userId)
                 }
             }
-        cloudUserDataCache.saveParentalControls(controls)
+        cloudUserDataCache.saveParentalControls(toSave)
         refreshTrigger.emit(Unit)
     }
 

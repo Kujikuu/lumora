@@ -39,6 +39,11 @@ import com.iptvcinema.tv.features.movies.MoviesScreen
 import com.iptvcinema.tv.features.mylist.MyListScreen
 import com.iptvcinema.tv.features.parental.ParentalControlsScreen
 import com.iptvcinema.tv.features.player.PlayerScreen
+import com.iptvcinema.tv.core.parental.PinCheck
+import com.iptvcinema.tv.features.parental.messageOrNull
+import com.iptvcinema.tv.features.profiles.ProfileEditorActions
+import com.iptvcinema.tv.features.profiles.ProfileEditorDialog
+import com.iptvcinema.tv.features.profiles.ProfileScreenActions
 import com.iptvcinema.tv.features.profiles.ProfileSelectionScreen
 import com.iptvcinema.tv.features.profiles.ProfileViewModel
 import com.iptvcinema.tv.features.search.SearchScreen
@@ -103,14 +108,12 @@ fun AppNavGraph(
 
             ActivationScreenWithViewModel(
                 viewModel = viewModel,
-                onEnterAccount = {
-                    viewModel.authenticate { destination ->
-                        navController.navigateOnboardingClearingStack(destination.route())
-                    }
+                onSignedIn = { destination ->
+                    navController.navigateOnboardingClearingStack(destination.route())
                 },
-                onCreateAccount = {
-                    viewModel.authenticate { destination ->
-                        navController.navigateOnboardingClearingStack(destination.route())
+                onBack = {
+                    if (!navController.popBackStack()) {
+                        navController.navigateOnboardingClearingStack(AppRoute.WELCOME)
                     }
                 },
             )
@@ -199,10 +202,10 @@ fun AppNavGraph(
                     backStackEntry.arguments?.getString("mode") ?: ProfileSelectionMode.Onboarding.name,
                 )
             }.getOrDefault(ProfileSelectionMode.Onboarding)
-            val requirement = if (mode == ProfileSelectionMode.SwitchProfile) {
-                SessionRequirement.Ready
-            } else {
+            val requirement = if (mode == ProfileSelectionMode.Onboarding) {
                 SessionRequirement.HasSource
+            } else {
+                SessionRequirement.Ready
             }
             val viewModel: ProfileViewModel = hiltViewModel()
             val session by viewModel.sessionState.collectAsState()
@@ -213,34 +216,44 @@ fun AppNavGraph(
                 requirement = requirement,
                 sessionViewModel = sessionViewModel,
             ) {
+                val editor by viewModel.editor.collectAsState()
                 ProfileSelectionScreen(
                     mode = mode,
                     currentProfileId = session.currentProfileId,
                     profilesUiState = profilesUiState,
-                    onProfileSelected = { profileId ->
-                        viewModel.selectProfile(profileId) {
-                            when (mode) {
-                                ProfileSelectionMode.Onboarding -> {
-                                    navController.navigateToMainShell(AppRoute.HOME)
-                                }
-                                ProfileSelectionMode.SwitchProfile -> {
-                                    navController.popBackStack()
-                                }
-                            }
-                        }
-                    },
-                    onRetry = viewModel::loadProfiles,
-                    onManageProfiles = { navController.navigate(AppRoute.SETTINGS) },
-                    onBack = {
-                        when (mode) {
-                            ProfileSelectionMode.Onboarding -> {
-                                if (!navController.popBackStack()) {
-                                    navController.navigateOnboardingClearingStack(AppRoute.addSource())
+                    canAddProfile = viewModel.canAddProfile(),
+                    actions = ProfileScreenActions(
+                        onProfileSelected = { profileId ->
+                            viewModel.selectProfile(profileId) {
+                                when (mode) {
+                                    ProfileSelectionMode.Onboarding -> navController.navigateToMainShell(AppRoute.HOME)
+                                    ProfileSelectionMode.SwitchProfile,
+                                    ProfileSelectionMode.Manage,
+                                    -> navController.popBackStack()
                                 }
                             }
-                            ProfileSelectionMode.SwitchProfile -> {
-                                navController.popBackStack()
+                        },
+                        onEditProfile = viewModel::startEdit,
+                        onAddProfile = viewModel::startCreate,
+                        onRetry = viewModel::loadProfiles,
+                        onBack = {
+                            if (!navController.popBackStack() && mode == ProfileSelectionMode.Onboarding) {
+                                navController.navigateOnboardingClearingStack(AppRoute.addSource())
                             }
+                        },
+                    ),
+                    editorContent = {
+                        editor?.let { state ->
+                            ProfileEditorDialog(
+                                state = state,
+                                actions = ProfileEditorActions(
+                                    onNameChange = viewModel::updateEditorName,
+                                    onTypeChange = viewModel::updateEditorType,
+                                    onSave = viewModel::saveEditor,
+                                    onDelete = viewModel::deleteEditingProfile,
+                                    onDismiss = viewModel::dismissEditor,
+                                ),
+                            )
                         }
                     },
                 )
@@ -423,8 +436,7 @@ fun AppNavGraph(
             val sourcesUiState by viewModel.uiState.collectAsState()
             val syncMessage by viewModel.syncMessage.collectAsState()
             var showAddSourcePin by remember { mutableStateOf(false) }
-            var addSourcePinError by remember { mutableStateOf<String?>(null) }
-            val incorrectPinMessage = stringResource(R.string.error_incorrect_pin)
+            var addSourcePinCheck by remember { mutableStateOf<PinCheck?>(null) }
 
             fun navigateToAddSource() {
                 navController.navigate(AppRoute.addSource(AddSourceMode.FromSettings))
@@ -434,18 +446,19 @@ fun AppNavGraph(
                 com.iptvcinema.tv.features.parental.PinEntryDialog(
                     mode = com.iptvcinema.tv.features.parental.PinEntryMode.Verify,
                     title = stringResource(R.string.pin_enter),
-                    errorMessage = addSourcePinError,
+                    errorMessage = addSourcePinCheck?.messageOrNull(),
                     onDismiss = {
                         showAddSourcePin = false
-                        addSourcePinError = null
+                        addSourcePinCheck = null
                     },
                     onPinComplete = { pin ->
-                        if (settingsViewModel.verifyParentalPin(pin)) {
+                        val check = settingsViewModel.checkParentalPin(pin)
+                        if (check == PinCheck.Accepted) {
                             showAddSourcePin = false
-                            addSourcePinError = null
+                            addSourcePinCheck = null
                             navigateToAddSource()
                         } else {
-                            addSourcePinError = incorrectPinMessage
+                            addSourcePinCheck = check
                         }
                     },
                 )

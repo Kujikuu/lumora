@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.merge
+import kotlinx.serialization.json.JsonObject
 
 @Singleton
 class SupabaseUserSettingsRepository @Inject constructor(
@@ -72,12 +73,16 @@ class SupabaseUserSettingsRepository @Inject constructor(
 
     override suspend fun updateSettings(settings: UserSettings) {
         val userId = requireUserId()
-        supabaseClient.from(TABLE)
+        val updated = supabaseClient.from(TABLE)
             .update(settings.toDto(userId)) {
                 filter {
                     eq(COLUMN_USER_ID, userId)
                 }
+                select(Columns.list(COLUMN_USER_ID))
             }
+            .decodeList<JsonObject>()
+        // No row means nothing was saved; fail so the caller rolls back instead of caching it.
+        check(updated.isNotEmpty()) { "No settings row for this account" }
         cloudUserDataCache.saveUserSettings(settings)
         refreshTrigger.emit(Unit)
     }

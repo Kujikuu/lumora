@@ -1,6 +1,9 @@
 package com.iptvcinema.tv.core.design.components
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +25,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.iptvcinema.tv.R
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -31,11 +35,10 @@ import androidx.tv.material3.Text
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
-import com.iptvcinema.tv.core.model.AccountSummary
 
 data class SettingsMenuItem(
     val label: String,
-    val summary: String? = null,
+    val icon: ImageVector? = null,
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -51,7 +54,7 @@ fun SettingsPanelHeader(
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.displaySmall.copy(
+            style = MaterialTheme.typography.headlineSmall.copy(
                 color = CinemaColors.White,
                 fontWeight = FontWeight.Black,
             ),
@@ -89,20 +92,82 @@ fun SettingsMenu(
     focusedItemIndex: Int = 0,
 ) {
     Column(
-        modifier = modifier.width(260.dp),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         items.forEachIndexed { index, item ->
-            SettingsRow(
-                label = item.label,
+            SettingsMenuRow(
+                item = item,
                 isSelected = index == selectedIndex,
                 onClick = { onSelected(index) },
-                trailing = item.summary,
                 modifier = if (index == focusedItemIndex && firstItemFocusRequester != null) {
                     Modifier.focusRequester(firstItemFocusRequester)
                 } else {
                     Modifier
                 },
+            )
+        }
+    }
+}
+
+/**
+ * A quiet list row: no background until focused. The open section is marked with an accent
+ * bar and bold white text, so "where am I" and "where is focus" never look the same.
+ */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun SettingsMenuRow(
+    item: SettingsMenuItem,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    FocusableCinemaCard(
+        modifier = modifier.fillMaxWidth(),
+        onClick = onClick,
+        shape = CinemaShapes.Medium,
+        defaultBorderWidth = 0.dp,
+        focusedBorderWidth = 0.dp,
+        focusScale = 1.0f,
+    ) { focused ->
+        val contentColor = when {
+            focused -> CinemaColors.Background
+            isSelected -> CinemaColors.White
+            else -> CinemaColors.TextSecondary
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .background(if (focused) CinemaColors.White else Color.Transparent, CinemaShapes.Medium)
+                .padding(end = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(24.dp)
+                    .clip(CinemaShapes.Pill)
+                    .background(if (isSelected && !focused) CinemaColors.Accent else Color.Transparent),
+            )
+            Spacer(Modifier.width(12.dp))
+            item.icon?.let { icon ->
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(Modifier.width(14.dp))
+            }
+            Text(
+                text = item.label,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    color = contentColor,
+                    fontWeight = if (isSelected || focused) FontWeight.Bold else FontWeight.Medium,
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -141,27 +206,33 @@ fun SettingsRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .defaultMinSize(minHeight = 92.dp)
+                .defaultMinSize(minHeight = 56.dp)
                 .background(rowBackground, CinemaShapes.Pill)
-                .padding(horizontal = 38.dp, vertical = 22.dp),
+                .padding(horizontal = 24.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = label,
+                modifier = Modifier.weight(1f, fill = false),
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontWeight = FontWeight.Black,
                     color = rowContent,
                 ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             when {
                 trailing != null -> {
                     Text(
                         text = trailing,
-                        style = MaterialTheme.typography.titleMedium.copy(
+                        modifier = Modifier.padding(start = 16.dp),
+                        style = MaterialTheme.typography.bodyLarge.copy(
                             color = if (focused || isSelected) CinemaColors.TextMuted else CinemaColors.TextSecondary,
                             fontWeight = FontWeight.Bold,
                         ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 trailingIcon != null && enabled -> {
@@ -174,7 +245,7 @@ fun SettingsRow(
                 }
                 enabled -> {
                     Icon(
-                        imageVector = Icons.Default.ChevronRight,
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = null,
                         tint = if (focused || isSelected) CinemaColors.TextMuted else CinemaColors.TextSecondary,
                         modifier = Modifier.size(34.dp),
@@ -219,64 +290,6 @@ fun SettingsToggle(
                 ),
             )
         }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-fun AccountSummaryCard(
-    account: AccountSummary,
-    onManageAccount: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(CinemaShapes.Medium)
-            .background(CinemaColors.SurfaceSoft)
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CinemaShapes.Medium)
-                    .background(CinemaColors.Accent),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = account.name.take(1),
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        color = CinemaColors.White,
-                        fontWeight = FontWeight.Bold,
-                    ),
-                )
-            }
-            Column {
-                Text(
-                    text = account.name,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = CinemaColors.White,
-                    ),
-                )
-                Text(text = account.email, style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary))
-                Text(text = account.plan, style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.Accent))
-                Text(
-                    text = stringResource(R.string.settings_renews, account.renewalDate),
-                    style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
-                )
-            }
-        }
-        CinemaButton(
-            text = stringResource(R.string.btn_manage_account),
-            variant = CinemaButtonVariant.SecondaryDark,
-            onClick = onManageAccount,
-        )
     }
 }
 

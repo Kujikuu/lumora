@@ -20,11 +20,15 @@ class CloudDataSyncWorker @AssistedInject constructor(
         if (!authRepository.isConfigured() || !authRepository.hasActiveSession()) {
             return Result.success()
         }
-        return runCatching {
-            cloudAccountRetryCoordinator.retryCloudSync()
-        }.fold(
-            onSuccess = { Result.success() },
-            onFailure = { Result.retry() },
-        )
+        val synced = cloudAccountRetryCoordinator.retryCloudSync()
+        return when {
+            synced -> Result.success()
+            runAttemptCount < MAX_RETRIES -> Result.retry()
+            else -> Result.success()
+        }
+    }
+
+    private companion object {
+        const val MAX_RETRIES = 3
     }
 }
