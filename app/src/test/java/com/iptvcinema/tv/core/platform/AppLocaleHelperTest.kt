@@ -21,4 +21,12 @@ class AppLocaleHelperTest {
         assertEquals("en", AppLocaleHelper.resolveLanguage(saved = null, systemLanguage = "fr"))
         assertEquals("en", AppLocaleHelper.resolveLanguage(saved = "xx", systemLanguage = "fr"))
     }
+
+    @Test
+    fun arabic_formatsNumbersWithWesternDigits() {
+        val locale = AppLocaleHelper.localeFor("ar")
+
+        assertEquals("ar", locale.language)
+        assertEquals("S1 · 25", String.format(locale, "S%d · %d", 1, 25))
+    }
 }

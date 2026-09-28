@@ -67,6 +67,7 @@ import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
+import com.iptvcinema.tv.core.util.isolateDirection
 import kotlinx.coroutines.delay
 
 /** Pure scrubbing and time rules for the player overlay, unit tested. */
@@ -125,8 +126,7 @@ fun PlayerOverlay(
     channelLogoUrl: String? = null,
     currentLiveProgram: PlayerLiveProgramDisplay? = null,
     nextLiveProgram: PlayerLiveProgramDisplay? = null,
-    upNextItems: List<PosterCardData> = emptyList(),
-    onUpNextClick: (String) -> Unit = {},
+    nextEpisodeCode: String? = null,
     showNextEpisode: Boolean = false,
     showEpisodes: Boolean = false,
     showChannels: Boolean = false,
@@ -152,9 +152,6 @@ fun PlayerOverlay(
             )
             Spacer(Modifier.weight(1f))
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                if (!isLive && upNextItems.isNotEmpty()) {
-                    PlayerUpNextRail(items = upNextItems, onItemClick = onUpNextClick)
-                }
                 if (isLive) {
                     PlayerLiveNowNext(current = currentLiveProgram, next = nextLiveProgram)
                 } else if (durationMs > 0L) {
@@ -169,6 +166,7 @@ fun PlayerOverlay(
                     isLive = isLive,
                     isPlaying = isPlaying,
                     showNextEpisode = showNextEpisode,
+                    nextEpisodeCode = nextEpisodeCode,
                     showEpisodes = showEpisodes,
                     showChannels = showChannels,
                     onPlayPause = onPlayPause,
@@ -229,7 +227,7 @@ private fun PlayerInfoHeader(
                 qualityLabel?.let { PlayerQualityPill(label = it) }
             }
             Text(
-                text = title,
+                text = title.isolateDirection(),
                 style = MaterialTheme.typography.headlineSmall.copy(
                     color = CinemaColors.White,
                     fontWeight = FontWeight.Bold,
@@ -239,7 +237,7 @@ private fun PlayerInfoHeader(
             )
             if (subtitle.isNotBlank()) {
                 Text(
-                    text = subtitle,
+                    text = subtitle.isolateDirection(),
                     style = MaterialTheme.typography.titleSmall.copy(color = CinemaColors.TextSecondary),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -440,6 +438,7 @@ private fun PlayerControlRow(
     isLive: Boolean,
     isPlaying: Boolean,
     showNextEpisode: Boolean,
+    nextEpisodeCode: String?,
     showEpisodes: Boolean,
     showChannels: Boolean,
     onPlayPause: () -> Unit,
@@ -485,7 +484,8 @@ private fun PlayerControlRow(
             if (showNextEpisode) {
                 ControlButton(
                     icon = Icons.Default.SkipNext,
-                    label = stringResource(R.string.player_next_episode),
+                    label = nextEpisodeCode?.let { stringResource(R.string.player_next_episode_code, it) }
+                        ?: stringResource(R.string.player_next_episode),
                     onClick = onNextEpisode,
                     mirrorIcon = isRtl,
                 )

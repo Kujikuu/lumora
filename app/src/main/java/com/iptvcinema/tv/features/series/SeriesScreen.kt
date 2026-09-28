@@ -131,6 +131,7 @@ fun SeriesScreen(
         ContinueWatchingMenuDialog(
             card = continueMenuCard,
             onDismiss = { continueMenuCard = null },
+            onResume = { card -> navigateSeriesCardToPlayer(navController, card) },
             onViewDetails = { card -> openContinueWatchingDetails(navController, card) },
             onRemove = viewModel::removeContinueWatching,
         )

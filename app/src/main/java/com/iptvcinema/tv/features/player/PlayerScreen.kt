@@ -243,7 +243,6 @@ fun PlayerScreen(
         stringResource(R.string.player_resume_from, PlayerScrubLogic.format(it))
     }
     val nextEpisodeTitle = screenState.nextEpisodeTitle
-        ?: screenState.upNextItems.firstOrNull()?.title
         ?: stringResource(R.string.player_next_episode)
     val currentEpisodeId = screenState.playbackRequest?.contentId
     val currentChannelId = screenState.playbackRequest?.contentId
@@ -298,7 +297,10 @@ fun PlayerScreen(
             .fillMaxSize()
             .background(CinemaColors.Background)
             .onPreviewKeyEvent { event ->
-                    if (trackPickerOpen || pickerOpen) return@onPreviewKeyEvent false
+                    // The next-episode card has its own buttons; let them get OK and arrows.
+                    if (trackPickerOpen || pickerOpen || screenState.showAutoplayCountdown) {
+                        return@onPreviewKeyEvent false
+                    }
                     if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
 
                     if (controlsVisible) {
@@ -400,8 +402,7 @@ fun PlayerScreen(
                             progress = program.progress,
                         )
                     },
-                    upNextItems = if (screenState.isEpisode) screenState.upNextItems else emptyList(),
-                    onUpNextClick = { episodeId -> viewModel.playUpNextEpisode(episodeId) },
+                    nextEpisodeCode = screenState.nextEpisodeCode,
                     // Live channel changes live on channel up/down and the Channels list, so
                     // there is no separate "next channel" button duplicating them.
                     showNextEpisode = screenState.isEpisode,
@@ -448,6 +449,9 @@ fun PlayerScreen(
                 AutoplayCountdownOverlay(
                     secondsRemaining = screenState.autoplayCountdownSeconds,
                     nextTitle = nextEpisodeTitle,
+                    nextCode = screenState.nextEpisodeCode,
+                    imageUrl = screenState.nextEpisodeImageUrl,
+                    onPlayNow = { viewModel.playNextNow() },
                     onCancel = { viewModel.cancelAutoplayCountdown() },
                 )
             }

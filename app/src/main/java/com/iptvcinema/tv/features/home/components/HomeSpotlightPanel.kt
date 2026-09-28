@@ -63,6 +63,7 @@ import com.iptvcinema.tv.core.model.MovieItem
 import com.iptvcinema.tv.features.home.HeroCarouselLogic
 import com.iptvcinema.tv.features.home.HomeSpotlight
 import com.iptvcinema.tv.features.home.HomeSpotlightKind
+import com.iptvcinema.tv.core.util.isolateDirection
 
 private const val SLIDE_DURATION_MS = 8_000
 private const val TEXT_FADE_IN_MS = 180
@@ -149,7 +150,7 @@ private fun SpotlightText(spotlight: HomeSpotlight) {
             ),
         )
         Text(
-            text = spotlight.title,
+            text = spotlight.title.isolateDirection(),
             style = MaterialTheme.typography.displaySmall.copy(
                 fontWeight = FontWeight.Black,
                 color = CinemaColors.White,
@@ -171,7 +172,7 @@ private fun SpotlightText(spotlight: HomeSpotlight) {
         spotlight.progress?.let { progress -> SpotlightProgress(progress) }
         spotlight.plot?.let { plot ->
             Text(
-                text = plot,
+                text = plot.isolateDirection(),
                 style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,

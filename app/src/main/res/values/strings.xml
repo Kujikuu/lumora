@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Lumora Play</string>
+    <string name="app_name" translatable="false">Lumora Play</string>
     <string name="splash_brand_name" translatable="false">LUMORA</string>
     <string name="splash_lockup_tagline">IPTV PLAYER AND MORE</string>
     <string name="phase1_subtitle">Phase 1 — Foundation ready</string>
@@ -105,7 +105,7 @@
     <string name="activation_error_network_body">Check that the TV is connected to the internet, then try again.</string>
     <string name="activation_error_server_title">Couldn\'t create an activation code</string>
     <string name="activation_error_server_body">Something went wrong on our side. Try again in a moment.</string>
-    <string name="activation_url">iptv.afifistudio.com</string>
+    <string name="activation_url" translatable="false">iptv.afifistudio.com</string>
     <string name="activation_generating">Generating activation code…</string>
     <string name="activation_signed_in_continuing">Signed in. Continuing…</string>
     <string name="benefit_sync_watchlist">Sync Watchlist</string>
@@ -120,7 +120,7 @@
     <string name="source_title">Add Your IPTV Source</string>
     <string name="source_subtitle">Connect your provider to start watching live TV, movies, and series.</string>
     <string name="source_footer">Lumora Play does not provide channels or streams. Use your own legal provider.</string>
-    <string name="source_xtream_title">Xtream Codes</string>
+    <string name="source_xtream_title" translatable="false">Xtream Codes</string>
     <string name="source_xtream_desc">Use server URL, username, and password.</string>
     <string name="source_m3u_title">M3U Playlist</string>
     <string name="source_m3u_desc">Add a playlist URL with optional EPG.</string>
@@ -144,8 +144,8 @@
     <string name="field_playlist_name">Playlist Name</string>
     <string name="field_m3u_url">M3U URL</string>
     <string name="field_epg_url">EPG URL (Optional)</string>
-    <string name="field_user_agent">User-Agent</string>
-    <string name="field_referer">Referer</string>
+    <string name="field_user_agent" translatable="false">User-Agent</string>
+    <string name="field_referer" translatable="false">Referer</string>
     <string name="field_headers">Headers</string>
     <string name="sync_status_title">Sync Status</string>
     <string name="sync_channels">Channels: %1$d</string>
@@ -213,11 +213,11 @@
     <string name="empty_try_another">Try another category or sync your playlist.</string>
     <string name="error_title">Stream unavailable</string>
     <string name="error_description">This channel could not be loaded. Try again or choose another stream.</string>
-    <string name="error_code">STREAM_TIMEOUT</string>
+    <string name="error_code" translatable="false">STREAM_TIMEOUT</string>
     <string name="error_code_label">Error code: %1$s</string>
     <string name="error_unable_load_content">Unable to load content</string>
     <string name="error_catalog_generic">Something went wrong while loading your catalog.</string>
-    <string name="error_catalog_code">CATALOG_ERROR</string>
+    <string name="error_catalog_code" translatable="false">CATALOG_ERROR</string>
     <string name="error_subscription_expired">Subscription expired</string>
     <string name="error_subscription_expired_desc">Your IPTV account has expired. Reconnect with updated credentials or choose another source.</string>
     <string name="error_invalid_playlist">Invalid playlist</string>
@@ -249,6 +249,7 @@
 
     <!-- Home / Browse -->
     <string name="home_continue_watching">Continue watching</string>
+    <string name="continue_watching_menu_resume">Resume</string>
     <string name="continue_watching_menu_view_movie">View movie details</string>
     <string name="continue_watching_menu_view_series">View series details</string>
     <string name="continue_watching_menu_remove">Remove from Continue Watching</string>
@@ -389,7 +390,7 @@
     <string name="player_no_episodes">No episodes available</string>
     <string name="player_no_channels">No channels available</string>
     <string name="player_episode_watched">Watched</string>
-    <string name="player_up_next_in">Up Next in %1$d s</string>
+    <string name="player_up_next_in">Next episode in %1$d s</string>
     <string name="player_seek_hint">Use ◀ ▶ to seek</string>
     <string name="player_btn_rewind">Rewind</string>
     <string name="player_btn_rewind_10">Back 10</string>
@@ -554,4 +555,17 @@
     <string name="settings_support_email_label">Contact us</string>
     <string name="settings_support_account_id">Account ID</string>
     <string name="settings_support_your_account">Your account</string>
+    <string name="player_next_episode_code">Next episode · %1$s</string>
+    <string name="player_play_now">Play now</string>
+    <string name="source_error_invalid_credentials">Wrong username or password.</string>
+    <string name="source_error_expired">This subscription has expired.</string>
+    <string name="source_error_unreachable">Can\'t reach the server. Check the address and your connection.</string>
+    <string name="source_error_invalid_url">The server address is not valid.</string>
+    <string name="source_error_generic">Couldn\'t connect to this source. Try again.</string>
+    <string name="source_error_save">Couldn\'t save the source. Check your connection and try again.</string>
+    <string name="source_error_load">Couldn\'t load your sources. Check your connection and try again.</string>
+    <string name="source_check_server">Server reachable</string>
+    <string name="source_check_auth">Account verified</string>
+    <string name="parental_error_load">Couldn\'t load parental controls. Check your connection and try again.</string>
+    <string name="parental_error_save">Couldn\'t save parental controls. Try again.</string>
 </resources>

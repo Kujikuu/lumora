@@ -131,6 +131,7 @@ fun MoviesScreen(
         ContinueWatchingMenuDialog(
             card = continueMenuCard,
             onDismiss = { continueMenuCard = null },
+            onResume = { card -> navigateMoviesCardToPlayer(navController, card) },
             onViewDetails = { card -> openContinueWatchingDetails(navController, card) },
             onRemove = viewModel::removeContinueWatching,
         )

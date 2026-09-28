@@ -32,7 +32,7 @@ object AppLocaleHelper {
 
     /** Wraps [base] so resources, layout direction and formatting use the chosen language. */
     fun wrap(base: Context): Context {
-        val locale = Locale.forLanguageTag(currentLanguageTag(base))
+        val locale = localeFor(currentLanguageTag(base))
         Locale.setDefault(locale)
         val config = Configuration(base.resources.configuration).apply {
             setLocale(locale)
@@ -40,6 +40,13 @@ object AppLocaleHelper {
         }
         return base.createConfigurationContext(config)
     }
+
+    /**
+     * Arabic uses Western digits (1 2 3), like most Arabic apps; the "nu-latn" extension keeps
+     * the Arabic strings and right-to-left layout while numbers format as Latin digits.
+     */
+    fun localeFor(languageTag: String): Locale =
+        if (languageTag == LANGUAGE_AR) Locale.forLanguageTag("ar-u-nu-latn") else Locale.forLanguageTag(languageTag)
 
     /** Saves the choice and restarts the activity so every screen picks it up. */
     fun applyLanguage(activity: Activity, languageTag: String) {

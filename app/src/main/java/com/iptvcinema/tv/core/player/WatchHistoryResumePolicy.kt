@@ -6,7 +6,9 @@ import com.iptvcinema.tv.core.model.WatchHistoryItem
 object WatchHistoryResumePolicy {
     const val RESUME_MIN_MS = 5_000L
     const val RESUME_MAX_RATIO = 0.95
-    const val AUTOPLAY_REMAINING_MS = 30_000L
+    // The next-episode card shows for the last 20 seconds; the episode itself plays to the end.
+    const val AUTOPLAY_REMAINING_MS = 20_000L
+    const val AUTOPLAY_ADVANCE_MS = 500L
     const val AUTOPLAY_RELEASE_BUFFER_MS = 5_000L
     /** @deprecated Use [shouldShowAutoplay] for fixed remaining-time UX. */
     const val AUTOPLAY_THRESHOLD_RATIO = 0.95
@@ -45,6 +47,16 @@ object WatchHistoryResumePolicy {
         val remainingMs = (durationMs - positionMs).coerceAtLeast(0L)
         return remainingMs > remainingThresholdMs + AUTOPLAY_RELEASE_BUFFER_MS
     }
+
+    /** Whole seconds left in the episode, rounded up, for the countdown on the card. */
+    fun secondsUntilEnd(positionMs: Long, durationMs: Long): Int {
+        val remainingMs = (durationMs - positionMs).coerceAtLeast(0L)
+        return ((remainingMs + 999L) / 1000L).toInt()
+    }
+
+    /** Some IPTV streams never report "ended"; treat the last half second as the end. */
+    fun shouldAdvanceToNext(positionMs: Long, durationMs: Long): Boolean =
+        durationMs > 0L && durationMs - positionMs <= AUTOPLAY_ADVANCE_MS
 
     fun isNearEnd(positionMs: Long, durationMs: Long?, thresholdRatio: Double = AUTOPLAY_THRESHOLD_RATIO): Boolean {
         if (durationMs == null || durationMs <= 0L) return false

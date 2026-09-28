@@ -2,6 +2,7 @@ package com.iptvcinema.tv.features.parental
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.data.repository.CatalogRepository
 import com.iptvcinema.tv.core.data.repository.ParentalControlsRepository
 import com.iptvcinema.tv.core.data.repository.ProfilesRepository
@@ -10,6 +11,7 @@ import com.iptvcinema.tv.core.model.UserProfile
 import com.iptvcinema.tv.core.model.catalog.CatalogContentType
 import com.iptvcinema.tv.core.parental.ParentalGate
 import com.iptvcinema.tv.core.parental.PinHasher
+import com.iptvcinema.tv.core.util.AppStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +36,7 @@ class ParentalControlsViewModel @Inject constructor(
     private val catalogRepository: CatalogRepository,
     private val pinHasher: PinHasher,
     private val parentalGate: ParentalGate,
+    private val appStrings: AppStrings,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<ParentalUiState>(ParentalUiState.Loading)
     val uiState: StateFlow<ParentalUiState> = _uiState.asStateFlow()
@@ -51,7 +54,7 @@ class ParentalControlsViewModel @Inject constructor(
             runCatching {
                 loadReadyState()
             }.onFailure { error ->
-                _uiState.value = ParentalUiState.Error(error.message ?: "Unable to load parental controls")
+                _uiState.value = ParentalUiState.Error(appStrings.get(R.string.parental_error_load))
             }
         }
     }
@@ -62,7 +65,7 @@ class ParentalControlsViewModel @Inject constructor(
             runCatching {
                 loadReadyState()
             }.onFailure { error ->
-                _uiState.value = ParentalUiState.Error(error.message ?: "Unable to load profile controls")
+                _uiState.value = ParentalUiState.Error(appStrings.get(R.string.parental_error_load))
             }
         }
     }
@@ -77,7 +80,7 @@ class ParentalControlsViewModel @Inject constructor(
                 parentalControlsRepository.updateControls(updated)
             }.onFailure { error ->
                 _uiState.value = ready.copy(controls = current)
-                _uiState.value = ParentalUiState.Error(error.message ?: "Unable to save parental controls")
+                _uiState.value = ParentalUiState.Error(appStrings.get(R.string.parental_error_save))
             }
         }
     }

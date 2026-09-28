@@ -1,6 +1,7 @@
 package com.iptvcinema.tv.core.design.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -194,74 +195,6 @@ data class PlayerLiveProgramDisplay(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun PlayerUpNextRail(
-    items: List<PosterCardData>,
-    onItemClick: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (items.isEmpty()) return
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = CinemaSpacing.ScreenPadding),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.player_up_next),
-            style = MaterialTheme.typography.labelMedium.copy(
-                color = CinemaColors.TextSecondary,
-                fontWeight = FontWeight.SemiBold,
-            ),
-        )
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
-        ) {
-            items(items, key = { it.contentId ?: it.title }) { item ->
-                item.contentId?.let { contentId ->
-                    FocusableCinemaCard(
-                        modifier = Modifier
-                            .width(120.dp)
-                            .height(68.dp),
-                        onClick = { onItemClick(contentId) },
-                        shape = CinemaShapes.Small,
-                        defaultBorderWidth = 0.dp,
-                    ) { _ ->
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            CinemaAsyncImage(
-                                imageUrl = item.imageUrl,
-                                contentDescription = item.title,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop,
-                                fallbackLabel = item.title,
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomStart)
-                                    .fillMaxWidth()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)),
-                                        ),
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 4.dp),
-                            ) {
-                                Text(
-                                    text = item.runtime ?: item.title,
-                                    style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.White),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
 fun PlayerTrackSidebar(
     audioTracks: List<TrackOption>,
     subtitleTracks: List<TrackOption>,
@@ -391,43 +324,75 @@ private fun PlayerSidePanel(
     }
 }
 
+/**
+ * Shown for the last seconds of an episode. "Play now" has focus, so OK starts the next
+ * episode right away; Cancel (or Back) keeps watching to the end.
+ */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun AutoplayCountdownOverlay(
     secondsRemaining: Int,
     nextTitle: String,
+    nextCode: String?,
+    imageUrl: String?,
+    onPlayNow: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val playNowFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { playNowFocus.requestFocus() } }
+
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomEnd,
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .padding(CinemaSpacing.ScreenPadding)
+                .width(460.dp)
                 .background(CinemaColors.SurfaceGlass, CinemaShapes.Medium)
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(
-                text = stringResource(R.string.player_up_next_in, secondsRemaining),
-                style = MaterialTheme.typography.titleSmall.copy(
-                    color = CinemaColors.White,
-                    fontWeight = FontWeight.SemiBold,
-                ),
+            CinemaAsyncImage(
+                imageUrl = imageUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .width(150.dp)
+                    .aspectRatio(16f / 9f)
+                    .clip(CinemaShapes.Small),
+                contentScale = ContentScale.Crop,
+                fallbackLabel = nextCode.orEmpty(),
             )
-            Text(
-                text = nextTitle,
-                style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            CinemaButton(
-                text = stringResource(R.string.btn_cancel),
-                variant = CinemaButtonVariant.SecondaryDark,
-                onClick = onCancel,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = stringResource(R.string.player_up_next_in, secondsRemaining),
+                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextSecondary),
+                )
+                Text(
+                    text = listOfNotNull(nextCode, nextTitle.takeIf { it.isNotBlank() }).joinToString(" · "),
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        color = CinemaColors.White,
+                        fontWeight = FontWeight.SemiBold,
+                    ),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    CinemaButton(
+                        text = stringResource(R.string.player_play_now),
+                        variant = CinemaButtonVariant.PrimaryAccent,
+                        onClick = onPlayNow,
+                        icon = Icons.Default.PlayArrow,
+                        modifier = Modifier.focusRequester(playNowFocus),
+                    )
+                    CinemaButton(
+                        text = stringResource(R.string.btn_cancel),
+                        variant = CinemaButtonVariant.SecondaryDark,
+                        onClick = onCancel,
+                    )
+                }
+            }
         }
     }
 }

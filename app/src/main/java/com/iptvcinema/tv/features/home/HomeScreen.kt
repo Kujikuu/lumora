@@ -133,6 +133,7 @@ fun HomeScreen(
         ContinueWatchingMenuDialog(
             card = continueMenuCard,
             onDismiss = { continueMenuCard = null },
+            onResume = { card -> navigateToPlayer(navController, card) },
             onViewDetails = { card -> openContinueWatchingDetails(navController, card) },
             onRemove = viewModel::removeContinueWatching,
         )

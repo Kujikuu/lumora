@@ -92,7 +92,7 @@ class SourceViewModel @Inject constructor(
                 val sources = playlistSourcesRepository.getSources().map { it.toUiItem() }
                 _uiState.value = SourcesUiState.Ready(sources)
             }.onFailure { error ->
-                _uiState.value = SourcesUiState.Error(error.message ?: "Unable to load sources")
+                _uiState.value = SourcesUiState.Error(appStrings.get(R.string.source_error_load))
             }
         }
     }
@@ -104,7 +104,7 @@ class SourceViewModel @Inject constructor(
                     val source = playlistSourcesRepository.saveDemoSource()
                     persistSource(source, isDemoMode = true, onComplete)
                 }.onFailure { error ->
-                    _uiState.value = SourcesUiState.Error(error.message ?: "Unable to save demo source")
+                    _uiState.value = SourcesUiState.Error(appStrings.get(R.string.source_error_save))
                 }
             } else {
                 appSessionRepository.setSource(
@@ -127,13 +127,21 @@ class SourceViewModel @Inject constructor(
             val authResult = xtreamRepository.validateAndAuthenticate(credentials)
             updateChecklistFromAuth(authResult)
             if (authResult !is XtreamAuthResult.Success) {
-                val message = when (authResult) {
-                    is XtreamAuthResult.InvalidCredentials -> authResult.message
-                    is XtreamAuthResult.Expired -> authResult.message
-                    is XtreamAuthResult.Unreachable -> authResult.message
-                    is XtreamAuthResult.Error -> authResult.message
-                    else -> "Authentication failed"
-                }
+                // Server-provided text is often English or cryptic; show our own message.
+                val message = appStrings.get(
+                    when (authResult) {
+                        is XtreamAuthResult.InvalidCredentials -> R.string.source_error_invalid_credentials
+                        is XtreamAuthResult.Expired -> R.string.source_error_expired
+                        is XtreamAuthResult.Unreachable -> R.string.source_error_unreachable
+                        is XtreamAuthResult.Error ->
+                            if (authResult.message == INVALID_SERVER_URL) {
+                                R.string.source_error_invalid_url
+                            } else {
+                                R.string.source_error_generic
+                            }
+                        else -> R.string.source_error_generic
+                    },
+                )
                 _xtreamConnectState.value = XtreamConnectUiState(
                     isConnecting = false,
                     checklist = _xtreamConnectState.value.checklist,
@@ -151,7 +159,7 @@ class SourceViewModel @Inject constructor(
                         _xtreamConnectState.value = XtreamConnectUiState(
                             isConnecting = false,
                             checklist = _xtreamConnectState.value.checklist,
-                            errorMessage = error.message ?: "Unable to activate source",
+                            errorMessage = appStrings.get(R.string.source_error_save),
                         )
                         return@launch
                     }
@@ -161,7 +169,7 @@ class SourceViewModel @Inject constructor(
                             _xtreamConnectState.value = XtreamConnectUiState(
                                 isConnecting = false,
                                 checklist = _xtreamConnectState.value.checklist,
-                                errorMessage = error.message ?: "Unable to save source",
+                                errorMessage = appStrings.get(R.string.source_error_save),
                             )
                             return@launch
                         }
@@ -291,7 +299,7 @@ class SourceViewModel @Inject constructor(
                     .getOrElse { error ->
                         _m3uConnectState.value = M3uConnectUiState(
                             isConnecting = false,
-                            errorMessage = error.message ?: "Unable to save M3U source",
+                            errorMessage = appStrings.get(R.string.source_error_save),
                         )
                         return@launch
                     }
@@ -340,7 +348,7 @@ class SourceViewModel @Inject constructor(
                 loadSources()
                 onComplete()
             }.onFailure { error ->
-                _uiState.value = SourcesUiState.Error(error.message ?: "Unable to set active source")
+                _uiState.value = SourcesUiState.Error(appStrings.get(R.string.source_error_save))
             }
         }
     }
@@ -353,7 +361,7 @@ class SourceViewModel @Inject constructor(
                 catalogRepository.purgeSource(sourceId)
                 loadSources()
             }.onFailure { error ->
-                _uiState.value = SourcesUiState.Error(error.message ?: "Unable to delete source")
+                _uiState.value = SourcesUiState.Error(appStrings.get(R.string.source_error_save))
             }
         }
     }
@@ -410,13 +418,13 @@ class SourceViewModel @Inject constructor(
             is XtreamAuthResult.Expired,
             -> true
             is XtreamAuthResult.Unreachable -> false
-            is XtreamAuthResult.Error -> result.message != "Invalid server URL"
+            is XtreamAuthResult.Error -> result.message != INVALID_SERVER_URL
         }
         _xtreamConnectState.value = XtreamConnectUiState(
             isConnecting = true,
             checklist = listOf(
-                "Server reachable" to serverReachable,
-                "Authentication" to (result is XtreamAuthResult.Success),
+                appStrings.get(R.string.source_check_server) to serverReachable,
+                appStrings.get(R.string.source_check_auth) to (result is XtreamAuthResult.Success),
             ),
         )
     }
@@ -470,3 +478,6 @@ class SourceViewModel @Inject constructor(
             appStrings.get(R.string.refresh_catalog_up_to_date)
         }
 }
+
+// Message XtreamUrlNormalizer throws for a malformed server address.
+private const val INVALID_SERVER_URL = "Invalid server URL"

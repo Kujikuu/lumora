@@ -6,12 +6,19 @@ import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 
 object ContinueWatchingMenuOptionId {
+    const val RESUME = "resume"
     const val VIEW_DETAILS = "view_details"
     const val REMOVE = "remove"
 }
 
 @Composable
 fun continueWatchingMenuOptions(card: HomeContentCard): List<CinemaMenuOption> = buildList {
+    add(
+        CinemaMenuOption(
+            id = ContinueWatchingMenuOptionId.RESUME,
+            label = stringResource(R.string.continue_watching_menu_resume),
+        ),
+    )
     when (card.contentType) {
         "episode" -> {
             if (!card.seriesId.isNullOrBlank()) {
@@ -45,6 +52,7 @@ fun continueWatchingMenuOptions(card: HomeContentCard): List<CinemaMenuOption> =
 fun ContinueWatchingMenuDialog(
     card: HomeContentCard?,
     onDismiss: () -> Unit,
+    onResume: (HomeContentCard) -> Unit,
     onViewDetails: (HomeContentCard) -> Unit,
     onRemove: (HomeContentCard) -> Unit,
 ) {
@@ -56,6 +64,7 @@ fun ContinueWatchingMenuDialog(
         onDismiss = onDismiss,
         onOptionSelected = { option ->
             when (option.id) {
+                ContinueWatchingMenuOptionId.RESUME -> onResume(card)
                 ContinueWatchingMenuOptionId.VIEW_DETAILS -> onViewDetails(card)
                 ContinueWatchingMenuOptionId.REMOVE -> onRemove(card)
             }

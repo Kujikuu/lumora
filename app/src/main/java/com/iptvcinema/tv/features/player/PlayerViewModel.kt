@@ -10,7 +10,6 @@ import com.iptvcinema.tv.core.datastore.AppSessionRepository
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toChannelItem
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toChannelTileData
 import com.iptvcinema.tv.core.design.components.ChannelTileData
-import com.iptvcinema.tv.core.design.components.PosterCardData
 import com.iptvcinema.tv.core.di.ApplicationScope
 import com.iptvcinema.tv.core.epg.GuideLayoutHelper
 import com.iptvcinema.tv.core.model.EpgProgram
@@ -33,6 +32,7 @@ import com.iptvcinema.tv.core.player.PlayerUiState
 import com.iptvcinema.tv.core.player.WatchHistoryResumePolicy
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.parental.ParentalPlaybackGuard
+import com.iptvcinema.tv.core.util.isolateDirection
 import com.iptvcinema.tv.core.util.AppStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -54,13 +54,14 @@ data class PlayerScreenState(
     val loadErrorCode: String? = null,
     val playbackRequest: PlaybackRequest? = null,
     val resumeFromMs: Long = 0L,
-    val upNextItems: List<PosterCardData> = emptyList(),
     val showAutoplayCountdown: Boolean = false,
     val autoplayCountdownSeconds: Int = 0,
     val channelChangeBanner: String? = null,
     val isEpisode: Boolean = false,
     val seriesId: String? = null,
     val nextEpisodeTitle: String? = null,
+    val nextEpisodeCode: String? = null,
+    val nextEpisodeImageUrl: String? = null,
     val episodePickerOpen: Boolean = false,
     val episodePickerSeasons: List<SeasonItem> = emptyList(),
     val episodePickerLoading: Boolean = false,
@@ -120,6 +121,7 @@ class PlayerViewModel @Inject constructor(
     private var continueWatchingEnabled = true
     private var autoplayNextEpisode = false
     private var pendingNextEpisode: CatalogEpisode? = null
+    private var autoplayNext: AutoplayTarget? = null
     private var pendingPreviousRequest: PlaybackRequest? = null
     private var pendingTransitionSourceId: String? = null
     private var channelPickerJob: Job? = null
@@ -230,8 +232,16 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun playUpNextEpisode(episodeId: String) {
-        playEpisodeById(episodeId, markCurrentCompleted = true)
+    /** "Play now" on the next-episode card, or the stream reaching its end. */
+    fun playNextNow() {
+        val target = autoplayNext ?: run {
+            skipToNextEpisode()
+            return
+        }
+        autoplayNext = null
+        viewModelScope.launch {
+            playEpisode(target.episode, target.sourceId, previousRequest = target.previousRequest)
+        }
     }
 
     fun playEpisodeFromPicker(episodeId: String) {
@@ -400,6 +410,7 @@ class PlayerViewModel @Inject constructor(
     private fun dismissAutoplayUi(userCancelled: Boolean = false) {
         autoplayJob?.cancel()
         autoplayJob = null
+        if (userCancelled) autoplayNext = null
         if (userCancelled) {
             autoplayState = AutoplayState.SUPPRESSED
         } else if (autoplayState == AutoplayState.COUNTDOWN_ACTIVE) {
@@ -504,10 +515,10 @@ class PlayerViewModel @Inject constructor(
             val seriesImageUrl = series?.posterUrl?.takeIf { it.isNotBlank() }
                 ?: series?.backdropUrl?.takeIf { it.isNotBlank() }
             val next = nextEpisodeResolver.nextEpisode(sourceId, episode)
-            val upNext = nextEpisodeResolver.upNextEpisodes(sourceId, episode, limit = 3)
             _screenState.value = _screenState.value.copy(
                 nextEpisodeTitle = next?.title,
-                upNextItems = upNext.map { it.toPosterCardData(seriesImageUrl) },
+                nextEpisodeCode = next?.episodeCode(),
+                nextEpisodeImageUrl = next?.thumbnailUrl?.takeIf { it.isNotBlank() } ?: seriesImageUrl,
                 seriesTitle = series?.title ?: _screenState.value.seriesTitle,
                 seriesPosterUrl = seriesImageUrl ?: _screenState.value.seriesPosterUrl,
             )
@@ -551,6 +562,7 @@ class PlayerViewModel @Inject constructor(
                     pendingNextEpisode = null
                     pendingPreviousRequest = null
                     pendingTransitionSourceId = null
+                    autoplayNext = null
                     currentEpisode = catalogRepository.getEpisode(sourceId, episode.id) ?: episode
                     autoplaySuppressedContentId = null
                     autoplayState = AutoplayState.IDLE
@@ -561,8 +573,9 @@ class PlayerViewModel @Inject constructor(
                         loadErrorCode = null,
                         isEpisode = true,
                         seriesId = episode.seriesId,
-                        upNextItems = emptyList(),
                         nextEpisodeTitle = null,
+                        nextEpisodeCode = null,
+                        nextEpisodeImageUrl = null,
                         episodePickerOpen = false,
                         episodePickerSeasons = emptyList(),
                     )
@@ -774,7 +787,10 @@ class PlayerViewModel @Inject constructor(
         if (request.isLive || request.contentType != WatchHistoryContentType.EPISODE) return
         if (!autoplayNextEpisode || isEpisodeTransitionInProgress) return
         if (request.contentId == autoplaySuppressedContentId) return
-        if (_screenState.value.showAutoplayCountdown) return
+        if (_screenState.value.showAutoplayCountdown) {
+            playNextNow()
+            return
+        }
         if (autoplayState != AutoplayState.IDLE) return
         viewModelScope.launch {
             val sourceId = request.sourceId ?: return@launch
@@ -813,8 +829,21 @@ class PlayerViewModel @Inject constructor(
         if (durationMs <= 0L) return
 
         if (WatchHistoryResumePolicy.isBeforeAutoplayWindow(state.positionMs, durationMs)) {
+            // Seeking back out of the last seconds hides the card again.
+            if (_screenState.value.showAutoplayCountdown) dismissAutoplayUi()
             if (request.contentId != autoplaySuppressedContentId) {
                 autoplayState = AutoplayState.IDLE
+            }
+            return
+        }
+
+        if (autoplayState == AutoplayState.COUNTDOWN_ACTIVE && _screenState.value.showAutoplayCountdown) {
+            if (WatchHistoryResumePolicy.shouldAdvanceToNext(state.positionMs, durationMs)) {
+                playNextNow()
+            } else {
+                _screenState.value = _screenState.value.copy(
+                    autoplayCountdownSeconds = WatchHistoryResumePolicy.secondsUntilEnd(state.positionMs, durationMs),
+                )
             }
             return
         }
@@ -825,10 +854,12 @@ class PlayerViewModel @Inject constructor(
         if (!WatchHistoryResumePolicy.shouldShowAutoplay(state.positionMs, durationMs)) return
 
         autoplayState = AutoplayState.COUNTDOWN_ACTIVE
-        startAutoplayCountdown()
+        startAutoplayCountdown(WatchHistoryResumePolicy.secondsUntilEnd(state.positionMs, durationMs))
     }
 
-    private fun startAutoplayCountdown() {
+    // Shows the card only. The countdown follows the real time left (updated from player
+    // progress) and the next episode starts when this one ends, not after a fixed timer.
+    private fun startAutoplayCountdown(secondsLeft: Int) {
         autoplayJob?.cancel()
         autoplayJob = viewModelScope.launch {
             val request = _screenState.value.playbackRequest ?: run {
@@ -863,26 +894,15 @@ class PlayerViewModel @Inject constructor(
                 autoplayState = AutoplayState.SUPPRESSED
                 return@launch
             }
+            autoplayNext = AutoplayTarget(episode = next, sourceId = sourceId, previousRequest = request)
             _screenState.value = _screenState.value.copy(
                 showAutoplayCountdown = true,
-                autoplayCountdownSeconds = AUTOPLAY_COUNTDOWN_SECONDS,
+                autoplayCountdownSeconds = secondsLeft,
                 nextEpisodeTitle = next.title,
+                nextEpisodeCode = next.episodeCode(),
+                nextEpisodeImageUrl = next.thumbnailUrl?.takeIf { it.isNotBlank() }
+                    ?: _screenState.value.nextEpisodeImageUrl,
             )
-            var remaining = AUTOPLAY_COUNTDOWN_SECONDS
-            while (remaining > 0 && isActive) {
-                delay(1_000)
-                if (request.contentId == autoplaySuppressedContentId) {
-                    dismissAutoplayUi(userCancelled = true)
-                    return@launch
-                }
-                remaining--
-                _screenState.value = _screenState.value.copy(autoplayCountdownSeconds = remaining)
-            }
-            if (isActive && request.contentId != autoplaySuppressedContentId) {
-                playEpisode(next, sourceId, previousRequest = request)
-            } else {
-                dismissAutoplayUi(userCancelled = true)
-            }
         }
     }
 
@@ -1095,7 +1115,6 @@ class PlayerViewModel @Inject constructor(
 
     companion object {
         private const val PROGRESS_SAVE_DEBOUNCE_MS = 10_000L
-        private const val AUTOPLAY_COUNTDOWN_SECONDS = 10
         private const val EPG_REFRESH_INTERVAL_MS = 60_000L
     }
 }
@@ -1107,9 +1126,11 @@ private enum class AutoplayState {
     TRANSITIONING,
 }
 
-private fun CatalogEpisode.toPosterCardData(seriesImageUrl: String? = null): PosterCardData = PosterCardData(
-    title = title,
-    runtime = "S${seasonNumber}E$episodeNumber",
-    imageUrl = thumbnailUrl?.takeIf { it.isNotBlank() } ?: seriesImageUrl,
-    contentId = id,
+private data class AutoplayTarget(
+    val episode: CatalogEpisode,
+    val sourceId: String,
+    val previousRequest: PlaybackRequest,
 )
+
+private fun CatalogEpisode.episodeCode(): String = "S${seasonNumber}E$episodeNumber".isolateDirection()
+

@@ -59,6 +59,7 @@ fun FocusableCinemaCard(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     var isFocused by remember { mutableStateOf(false) }
+    val selectPress = remember { SelectPressState() }
 
     val targetScale = when {
         !enabled -> 1f
@@ -98,19 +99,37 @@ fun FocusableCinemaCard(
                 role = Role.Button
                 contentDescription?.let { this.contentDescription = it }
             }
-            .onFocusChanged { isFocused = it.isFocused }
+            .onFocusChanged { state ->
+                isFocused = state.isFocused
+                if (!state.isFocused) {
+                    selectPress.pressed = false
+                    selectPress.longPressFired = false
+                }
+            }
             .onKeyEvent { event ->
-                if (
-                    enabled &&
-                    event.type == KeyEventType.KeyUp &&
-                    (event.key == Key.DirectionCenter ||
-                        event.key == Key.Enter ||
-                        event.key == Key.NumPadEnter)
-                ) {
-                    onClick()
-                    true
-                } else {
-                    false
+                if (!enabled || !event.key.isSelectKey()) return@onKeyEvent false
+                when (event.type) {
+                    KeyEventType.KeyDown -> {
+                        val held = event.nativeKeyEvent.repeatCount > 0 || event.nativeKeyEvent.isLongPress
+                        if (!held) {
+                            selectPress.pressed = true
+                            selectPress.longPressFired = false
+                        } else if (onLongClick != null && selectPress.pressed && !selectPress.longPressFired) {
+                            selectPress.longPressFired = true
+                            onLongClick()
+                        }
+                        true
+                    }
+                    KeyEventType.KeyUp -> {
+                        // Only a press that started on this card counts. After a long press
+                        // opens a menu, the release lands on the menu's first option and must
+                        // not select it.
+                        if (selectPress.pressed && !selectPress.longPressFired) onClick()
+                        selectPress.pressed = false
+                        selectPress.longPressFired = false
+                        true
+                    }
+                    else -> false
                 }
             }
             .focusable(enabled = enabled, interactionSource = interactionSource)
@@ -137,6 +156,15 @@ fun FocusableCinemaCard(
         content(isFocused && enabled)
     }
 }
+
+/** Tracks one OK/Enter press on a card; plain fields, since nothing redraws from them. */
+private class SelectPressState {
+    var pressed = false
+    var longPressFired = false
+}
+
+private fun Key.isSelectKey(): Boolean =
+    this == Key.DirectionCenter || this == Key.Enter || this == Key.NumPadEnter
 
 @Composable
 fun BoxScope.FocusableCardSurface(

@@ -55,6 +55,7 @@ import com.iptvcinema.tv.core.model.CastMember
 import com.iptvcinema.tv.core.model.EpgProgram
 import com.iptvcinema.tv.core.player.EpisodeWatchProgress
 import com.iptvcinema.tv.core.player.EpisodeWatchVisualState
+import com.iptvcinema.tv.core.util.isolateDirection
 
 private val DetailPosterInsetWidth = 120.dp
 private val EpisodeLandscapeCardWidth = 220.dp
@@ -184,7 +185,7 @@ fun DetailHero(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = title,
+                text = title.isolateDirection(),
                 style = MaterialTheme.typography.displaySmall.copy(
                     fontWeight = FontWeight.Black,
                     color = CinemaColors.White,
@@ -197,7 +198,7 @@ fun DetailHero(
             }
             if (synopsis.isNotBlank()) {
                 Text(
-                    text = synopsis,
+                    text = synopsis.isolateDirection(),
                     style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextPrimary),
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
@@ -516,7 +517,7 @@ private fun ChannelProgramRow(
         )
         if (program.description.isNotBlank()) {
             Text(
-                text = program.description,
+                text = program.description.isolateDirection(),
                 style = MaterialTheme.typography.bodySmall.copy(color = CinemaColors.TextSecondary),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -658,7 +659,7 @@ fun EpisodeCard(
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = title,
+                    text = title.isolateDirection(),
                     style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.White),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -736,7 +737,7 @@ fun PlayerEpisodeSidebarRow(
                     ),
                 )
                 Text(
-                    text = title,
+                    text = title.isolateDirection(),
                     style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.White),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,

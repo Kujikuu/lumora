@@ -49,6 +49,7 @@ import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
+import com.iptvcinema.tv.core.util.isolateDirection
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -167,7 +168,7 @@ fun HeroBanner(
                 textColor = CinemaColors.Secondary,
             )
             Text(
-                text = title,
+                text = title.isolateDirection(),
                 style = MaterialTheme.typography.displayMedium.copy(
                     fontWeight = FontWeight.Black,
                     color = CinemaColors.White,
@@ -177,7 +178,7 @@ fun HeroBanner(
             )
             if (description.isNotBlank()) {
                 Text(
-                        text = description,
+                        text = description.isolateDirection(),
                     style = MaterialTheme.typography.bodyLarge.copy(
                         color = CinemaColors.TextPrimary,
                     ),

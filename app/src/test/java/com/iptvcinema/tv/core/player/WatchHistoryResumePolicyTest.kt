@@ -37,13 +37,13 @@ class WatchHistoryResumePolicyTest {
     }
 
     @Test
-    fun shouldShowAutoplay_true_when30SecondsRemain() {
-        assertTrue(WatchHistoryResumePolicy.shouldShowAutoplay(270_000L, 300_000L))
+    fun shouldShowAutoplay_true_when20SecondsRemain() {
+        assertTrue(WatchHistoryResumePolicy.shouldShowAutoplay(280_000L, 300_000L))
     }
 
     @Test
-    fun shouldShowAutoplay_false_whenMoreThan30SecondsRemain() {
-        assertFalse(WatchHistoryResumePolicy.shouldShowAutoplay(260_000L, 300_000L))
+    fun shouldShowAutoplay_false_whenMoreThan20SecondsRemain() {
+        assertFalse(WatchHistoryResumePolicy.shouldShowAutoplay(270_000L, 300_000L))
     }
 
     @Test
@@ -138,4 +138,17 @@ class WatchHistoryResumePolicyTest {
         durationMs = 100_000L,
         lastWatchedAt = java.time.Instant.ofEpochSecond(lastWatchedEpochSecond),
     )
+
+    @Test
+    fun secondsUntilEnd_roundsUp() {
+        assertEquals(20, WatchHistoryResumePolicy.secondsUntilEnd(280_000L, 300_000L))
+        assertEquals(1, WatchHistoryResumePolicy.secondsUntilEnd(299_200L, 300_000L))
+        assertEquals(0, WatchHistoryResumePolicy.secondsUntilEnd(300_000L, 300_000L))
+    }
+
+    @Test
+    fun shouldAdvanceToNext_onlyAtTheVeryEnd() {
+        assertFalse(WatchHistoryResumePolicy.shouldAdvanceToNext(290_000L, 300_000L))
+        assertTrue(WatchHistoryResumePolicy.shouldAdvanceToNext(299_600L, 300_000L))
+    }
 }
