@@ -1,4 +1,4 @@
-package com.iptvcinema.tv.core.design.components
+package com.iptvcinema.tv.features.home
 
 import com.iptvcinema.tv.core.model.MovieItem
 import org.junit.Assert.assertEquals

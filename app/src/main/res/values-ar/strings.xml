@@ -222,6 +222,17 @@
     <string name="home_favorites">المفضلة</string>
     <string name="home_new_releases">New Releases</string>
     <string name="home_recommended_series">Recommended Series</string>
+    <string name="home_next_episode">الحلقة التالية</string>
+    <string name="home_new_movies">أفلام جديدة</string>
+    <string name="home_because_you_watched">لأنك شاهدت %1$s</string>
+    <string name="home_top_rated_movies">الأفلام الأعلى تقييمًا</string>
+    <string name="home_top_rated_series">المسلسلات الأعلى تقييمًا</string>
+    <string name="home_more_in_category">المزيد من %1$s</string>
+    <string name="home_recent_channels">قنوات شاهدتها مؤخرًا</string>
+    <string name="home_kind_movie">فيلم</string>
+    <string name="home_kind_series">مسلسل</string>
+    <string name="home_kind_episode">حلقة</string>
+    <string name="home_live_label">مباشر</string>
     <string name="home_arabic_subtitles">With Arabic Subtitles</string>
     <string name="home_popular_series">مسلسلات شائعة</string>
     <string name="home_mood_row_title">تصفح حسب المزاج</string>

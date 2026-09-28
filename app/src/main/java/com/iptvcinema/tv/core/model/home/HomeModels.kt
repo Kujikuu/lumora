@@ -24,6 +24,9 @@ data class HomeContentCard(
     val remainingTimeLabel: String? = null,
     val isFavorite: Boolean = false,
     val showTop10Badge: Boolean = false,
+    /** Position in a ranked rail (1-based), drawn as a large number on Home cards. */
+    val rank: Int? = null,
+    val rating: String? = null,
     val primaryAction: HomeCardAction = HomeCardAction.WatchNow,
 )
 
@@ -31,6 +34,7 @@ fun HomeContentCard.toFavoriteContentType(): FavoriteContentType = when (content
     "movie" -> FavoriteContentType.MOVIE
     "series" -> FavoriteContentType.SERIES
     "episode" -> FavoriteContentType.EPISODE
+    "channel" -> FavoriteContentType.CHANNEL
     else -> FavoriteContentType.MOVIE
 }
 

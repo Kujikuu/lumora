@@ -234,6 +234,17 @@
     <string name="home_favorites">Favorites</string>
     <string name="home_new_releases">New Releases</string>
     <string name="home_recommended_series">Recommended Series</string>
+    <string name="home_next_episode">Next episode</string>
+    <string name="home_new_movies">New movies</string>
+    <string name="home_because_you_watched">Because you watched %1$s</string>
+    <string name="home_top_rated_movies">Top rated movies</string>
+    <string name="home_top_rated_series">Top rated series</string>
+    <string name="home_more_in_category">More in %1$s</string>
+    <string name="home_recent_channels">Recently watched channels</string>
+    <string name="home_kind_movie">Movie</string>
+    <string name="home_kind_series">Series</string>
+    <string name="home_kind_episode">Episode</string>
+    <string name="home_live_label">Live</string>
     <string name="home_arabic_subtitles">With Arabic Subtitles</string>
     <string name="home_popular_series">Popular Series</string>
     <string name="home_mood_row_title">Browse by Mood</string>

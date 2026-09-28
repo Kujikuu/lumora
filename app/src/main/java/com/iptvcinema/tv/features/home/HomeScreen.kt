@@ -1,11 +1,20 @@
 package com.iptvcinema.tv.features.home
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -13,7 +22,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.Key
@@ -23,182 +34,101 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
-import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.data.repository.CatalogLoadState
 import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.ContinueWatchingMenuDialog
-import com.iptvcinema.tv.core.design.components.EmptyState
-import com.iptvcinema.tv.core.design.components.ExpandedPosterCardVariant
-import com.iptvcinema.tv.core.design.components.FocusAwareContentRail
-import com.iptvcinema.tv.core.design.components.HeroCarousel
-import com.iptvcinema.tv.core.design.components.Top10Rail
-import com.iptvcinema.tv.core.design.components.isSectionVisible
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.navigation.AppRoute
-import com.iptvcinema.tv.core.navigation.MainShellBackHandler
 import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
+import com.iptvcinema.tv.core.navigation.ScreenFocusState
 import com.iptvcinema.tv.core.navigation.openContinueWatchingDetails
 import com.iptvcinema.tv.core.navigation.rememberCatalogStateCallbacks
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
+import com.iptvcinema.tv.features.home.components.HomeBackdrop
+import com.iptvcinema.tv.features.home.components.HomeDimens
+import com.iptvcinema.tv.features.home.components.HomeRail
+import com.iptvcinema.tv.features.home.components.HomeSpotlightPanel
+import com.iptvcinema.tv.features.home.components.glideItemToStart
+import com.iptvcinema.tv.features.home.components.rememberHomeSpotlightState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-private object HomeSections {
-    const val CONTINUE = "home_continue"
-    const val RECOMMENDED = "home_recommended"
-    const val RECENTLY_ADDED = "home_recently_added"
-    const val TRENDING = "home_trending"
-}
+/** Room below the last rail so it can scroll up to the top of the rails area too. */
+private val RailsBottomPadding = 200.dp
 
-private data class HomeSectionIndices(
-    val hero: Int,
-    val continueWatching: Int,
-    val recommended: Int,
-    val top10: Int,
-    val recentlyAdded: Int,
-    val maxIndex: Int,
-)
-
-@OptIn(ExperimentalTvMaterial3Api::class)
+/**
+ * Home: a fixed spotlight (backdrop, title, hero buttons) over a rails area.
+ *
+ * Only the rails area scrolls. The focused rail glides to the top of that area and the
+ * spotlight follows the focused card. Up and Down between rails are handled here instead of
+ * by geometric focus search, which could otherwise jump from a rail to the hero buttons.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val watchNowFocus = remember { FocusRequester() }
-    val fallbackContentFocus = remember { FocusRequester() }
+    val sections = uiState.sections
+    val hero = uiState.hero
     val focusState = rememberScreenFocusState("home")
+    val spotlight = rememberHomeSpotlightState()
     val catalogCallbacks = rememberCatalogStateCallbacks(navController)
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
+    val watchNowFocus = remember { FocusRequester() }
+    val railRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    // Captured once: where focus was when the viewer left Home (for example to open details).
+    val restoreTarget = remember { focusState.sectionId to focusState.itemIndex }
     var continueMenuCard by remember { mutableStateOf<HomeContentCard?>(null) }
+    var focusPlaced by remember { mutableStateOf(false) }
 
-    val hasHeroFocusTarget = uiState.heroMovies.isNotEmpty()
-    val hasContinueWatching = uiState.continueWatching.isNotEmpty()
-    val hasRecommendedSeries = uiState.featuredSeries.isNotEmpty()
-    val hasRecentlyAdded = uiState.recentlyAdded.isNotEmpty()
-    val hasTop10 = uiState.trending.isNotEmpty()
-    val hasAnyRail = hasContinueWatching || hasRecommendedSeries || hasRecentlyAdded || hasTop10
-    val hasFallbackFocusTarget = hasAnyRail
-
-    val sectionIndices = remember(
-        hasHeroFocusTarget,
-        hasContinueWatching,
-        hasRecommendedSeries,
-        hasTop10,
-        hasRecentlyAdded,
-    ) {
-        var index = 1 // banner
-        val hero = if (hasHeroFocusTarget) index++ else -1
-        val continueWatching = if (hasContinueWatching) index++ else -1
-        val recommended = if (hasRecommendedSeries) index++ else -1
-        val top10 = if (hasTop10) index++ else -1
-        val recentlyAdded = if (hasRecentlyAdded) index++ else -1
-        HomeSectionIndices(
-            hero = hero,
-            continueWatching = continueWatching,
-            recommended = recommended,
-            top10 = top10,
-            recentlyAdded = recentlyAdded,
-            maxIndex = (index - 1).coerceAtLeast(0),
-        )
-    }
-    val listState = rememberLazyListState(
-        initialFirstVisibleItemIndex = focusState.scrollOffset.coerceIn(0, sectionIndices.maxIndex),
-    )
-
-    val scrollToSection: suspend (Int) -> Unit = { sectionIndex ->
-        if (sectionIndex >= 0 && !listState.isSectionVisible(sectionIndex)) {
-            listState.animateScrollToItem(sectionIndex)
+    // Remembered so rail lambdas that capture it stay equal across recompositions (for
+    // example sync banner ticks) and the rails can skip recomposing.
+    val currentSections by rememberUpdatedState(sections)
+    val moves = remember(hero.isNotEmpty()) {
+        HomeFocusMoves(scope, listState, focusState, watchNowFocus, hasHero = hero.isNotEmpty()) { index ->
+            currentSections.getOrNull(index)?.let { railRequesters.getOrPut(it.id) { FocusRequester() } }
         }
-    }
-    val focusHeroOrFirstRail: () -> Unit = {
-        scope.launch {
-            val targetSection = when {
-                sectionIndices.hero >= 0 -> sectionIndices.hero
-                sectionIndices.continueWatching >= 0 -> sectionIndices.continueWatching
-                sectionIndices.recommended >= 0 -> sectionIndices.recommended
-                sectionIndices.top10 >= 0 -> sectionIndices.top10
-                sectionIndices.recentlyAdded >= 0 -> sectionIndices.recentlyAdded
-                else -> 0
-            }
-            listState.animateScrollToItem(targetSection)
-            val target = if (hasHeroFocusTarget) watchNowFocus else fallbackContentFocus
-            runCatching { target.requestFocus() }
-        }
-    }
-    val returnToHeroOnUp = if (hasHeroFocusTarget) {
-        Modifier.onPreviewKeyEvent { event ->
-            if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionUp) {
-                focusHeroOrFirstRail()
-                true
-            } else {
-                false
-            }
-        }
-    } else {
-        Modifier
-    }
-
-    val firstRailSection = when {
-        hasContinueWatching -> HomeSections.CONTINUE
-        hasRecommendedSeries -> HomeSections.RECOMMENDED
-        hasTop10 -> HomeSections.TRENDING
-        hasRecentlyAdded -> HomeSections.RECENTLY_ADDED
-        else -> null
-    }
-    fun railModifierAndFocus(sectionId: String): Pair<Modifier, FocusRequester?> {
-        val isFirstRail = sectionId == firstRailSection
-        return (if (isFirstRail) returnToHeroOnUp else Modifier) to
-            (if (isFirstRail && !hasHeroFocusTarget) fallbackContentFocus else null)
     }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                viewModel.refreshContinueWatching()
-            }
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshContinueWatching()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    LaunchedEffect(uiState.loadState) {
-        if (uiState.loadState != CatalogLoadState.Ready || focusState.initialFocusHandled) return@LaunchedEffect
-        val target = if (hasHeroFocusTarget) watchNowFocus else fallbackContentFocus
-        if (focusState.hasSavedFocus) {
-            listState.scrollToItem(focusState.scrollOffset.coerceIn(0, sectionIndices.maxIndex))
-            focusState.restoreFocus(target)
+    LaunchedEffect(uiState.loadState, sections.isNotEmpty(), hero.isNotEmpty()) {
+        if (focusPlaced || uiState.loadState != CatalogLoadState.Ready) return@LaunchedEffect
+        val savedRail = sections.indexOfFirst { it.id == restoreTarget.first }
+        focusPlaced = if (focusState.hasSavedFocus && savedRail >= 0) {
+            listState.scrollToItem(savedRail)
+            moves.railRequester(savedRail)?.let { focusState.restoreFocus(it) } ?: false
         } else {
-            listState.scrollToItem(0)
-            focusState.requestInitialFocus(target)
+            val target = if (hero.isNotEmpty()) watchNowFocus else moves.railRequester(0)
+            target?.let { focusState.requestInitialFocus(it) } ?: false
         }
-    }
-
-    LaunchedEffect(listState.firstVisibleItemIndex) {
-        focusState.saveBrowseFocus(
-            sectionId = focusState.sectionId,
-            itemIndex = focusState.itemIndex,
-            scrollOffset = listState.firstVisibleItemIndex,
-            categoryIndex = focusState.focusIndex,
-        )
     }
 
     MainShellScaffold(
         navController = navController,
         selectedNavItem = NavItem.Home,
-        onRailExitRight = focusHeroOrFirstRail,
+        onRailExitRight = { if (hero.isNotEmpty()) moves.toHero() else moves.toRail(0) },
     ) {
         ContinueWatchingMenuDialog(
             card = continueMenuCard,
@@ -220,144 +150,147 @@ fun HomeScreen(
             onEditSource = catalogCallbacks.onEditSource,
             onRefreshCatalog = viewModel::refreshCurrentSource,
         ) {
-            val heroMovies = uiState.heroMovies
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
-            ) {
-                item(key = "banner") {
-                    CatalogRefreshBanner(
-                        syncBannerText = uiState.syncBannerText,
-                        refreshState = uiState.refreshState,
-                        onRefresh = viewModel::refreshCurrentSource,
-                    )
-                }
-                if (heroMovies.isNotEmpty()) {
-                    item(key = "hero") {
-                        HeroCarousel(
-                            movies = heroMovies,
-                            onWatchNow = { movie ->
-                                navController.navigate(AppRoute.player(movie.id, "movie"))
-                            },
-                            onDetails = { movie ->
-                                navController.navigate(AppRoute.movieDetails(movie.id))
-                            },
-                            onAddToList = { movie ->
-                                viewModel.addHeroToList(movie)
-                            },
-                            onFavorite = { movie ->
-                                viewModel.toggleHeroFavorite(movie)
-                            },
+            Box(modifier = Modifier.fillMaxSize()) {
+                HomeBackdrop(state = spotlight, hero = hero)
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(HomeDimens.SPOTLIGHT_WEIGHT)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.BottomStart,
+                    ) {
+                        HomeSpotlightPanel(
+                            state = spotlight,
+                            hero = hero,
                             watchNowFocusRequester = watchNowFocus,
+                            onWatchNow = { movie -> navController.navigate(AppRoute.player(movie.id, "movie")) },
+                            onDetails = { movie -> navController.navigate(AppRoute.movieDetails(movie.id)) },
+                            onAddToList = viewModel::addHeroToList,
+                            onMoveDown = { moves.toRail(0) },
                         )
                     }
-                }
-
-                if (hasContinueWatching) {
-                    item(key = HomeSections.CONTINUE) {
-                        val (railModifier, railFocus) = railModifierAndFocus(HomeSections.CONTINUE)
-                        FocusAwareContentRail(
-                            modifier = railModifier,
-                            title = stringResource(R.string.home_continue_watching),
-                            items = uiState.continueWatching,
-                            variant = ExpandedPosterCardVariant.Landscape,
-                            sectionId = HomeSections.CONTINUE,
-                            firstItemFocusRequester = railFocus,
-                            onEnteringRail = { scrollToSection(sectionIndices.continueWatching) },
-                            parentHandlesVerticalScroll = true,
-                            onWatchNow = { card -> navigateToPlayer(navController, card) },
-                            onAddToList = { card -> viewModel.toggleFavorite(card) },
-                            onFavorite = { card -> viewModel.toggleFavorite(card) },
-                            onCardClick = { card -> navigateToPlayer(navController, card) },
-                            onCardLongClick = { card -> continueMenuCard = card },
-                        )
+                    // Home places rails and cards itself (see HomeFocusMoves and HomeRail); the
+                    // default focus bring-into-view would fight those glides and leave rows
+                    // half-aligned, so it is switched off inside the rails area.
+                    CompositionLocalProvider(LocalBringIntoViewSpec provides NoBringIntoView) {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier
+                                .weight(HomeDimens.RAILS_WEIGHT)
+                                .fillMaxWidth(),
+                            userScrollEnabled = false,
+                            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                            contentPadding = PaddingValues(bottom = RailsBottomPadding),
+                        ) {
+                            itemsIndexed(sections, key = { _, section -> section.id }) { index, section ->
+                                HomeRail(
+                                    section = section,
+                                    entryRequester = railRequesters.getOrPut(section.id) { FocusRequester() },
+                                    initialFocusIndex = if (section.id == restoreTarget.first) restoreTarget.second else 0,
+                                    modifier = Modifier.onPreviewKeyEvent { event ->
+                                        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                                        when (event.key) {
+                                            Key.DirectionUp -> {
+                                                if (index > 0) moves.toRail(index - 1) else if (hero.isNotEmpty()) moves.toHero()
+                                                true
+                                            }
+                                            Key.DirectionDown -> {
+                                                if (index < sections.lastIndex) moves.toRail(index + 1)
+                                                true
+                                            }
+                                            else -> false
+                                        }
+                                    },
+                                    onCardFocused = { card, itemIndex ->
+                                        spotlight.showCard(card)
+                                        focusState.saveBrowseFocus(
+                                            sectionId = section.id,
+                                            itemIndex = itemIndex,
+                                            scrollOffset = index,
+                                            focusedContentId = card.contentId,
+                                        )
+                                        moves.alignRail(index)
+                                    },
+                                    onCardClick = { card -> openCard(navController, section, card) },
+                                    onCardLongClick = { card ->
+                                        if (section is HomeSection.ContinueWatching) {
+                                            continueMenuCard = card
+                                        } else {
+                                            viewModel.toggleFavorite(card)
+                                        }
+                                    },
+                                )
+                            }
+                        }
                     }
                 }
-
-                if (hasRecommendedSeries) {
-                    item(key = HomeSections.RECOMMENDED) {
-                        val (railModifier, railFocus) = railModifierAndFocus(HomeSections.RECOMMENDED)
-                        FocusAwareContentRail(
-                            modifier = railModifier,
-                            title = stringResource(R.string.home_recommended_series),
-                            items = uiState.featuredSeries,
-                            variant = ExpandedPosterCardVariant.LandscapePoster,
-                            sectionId = HomeSections.RECOMMENDED,
-                            firstItemFocusRequester = railFocus,
-                            onEnteringRail = { scrollToSection(sectionIndices.recommended) },
-                            parentHandlesVerticalScroll = true,
-                            onWatchNow = { card -> navigateToPlayer(navController, card) },
-                            onAddToList = { card -> viewModel.toggleFavorite(card) },
-                            onFavorite = { card -> viewModel.toggleFavorite(card) },
-                            onCardClick = { card -> navigateToDetails(navController, card) },
-                        )
-                    }
-                }
-
-                if (hasTop10) {
-                    item(key = HomeSections.TRENDING) {
-                        val (railModifier, railFocus) = railModifierAndFocus(HomeSections.TRENDING)
-                        Top10Rail(
-                            modifier = railModifier,
-                            title = stringResource(R.string.home_top_10_lumora),
-                            items = uiState.trending,
-                            firstItemFocusRequester = railFocus,
-                            onEnteringRail = { scrollToSection(sectionIndices.top10) },
-                            parentHandlesVerticalScroll = true,
-                            onCardClick = { card -> navigateToDetails(navController, card) },
-                        )
-                    }
-                }
-
-                if (hasRecentlyAdded) {
-                    item(key = HomeSections.RECENTLY_ADDED) {
-                        val (railModifier, railFocus) = railModifierAndFocus(HomeSections.RECENTLY_ADDED)
-                        FocusAwareContentRail(
-                            modifier = railModifier,
-                            title = stringResource(R.string.home_recently_added),
-                            items = uiState.recentlyAdded,
-                            variant = ExpandedPosterCardVariant.LandscapePoster,
-                            sectionId = HomeSections.RECENTLY_ADDED,
-                            firstItemFocusRequester = railFocus,
-                            onEnteringRail = { scrollToSection(sectionIndices.recentlyAdded) },
-                            parentHandlesVerticalScroll = true,
-                            onWatchNow = { card -> navigateToPlayer(navController, card) },
-                            onAddToList = { card -> viewModel.toggleFavorite(card) },
-                            onFavorite = { card -> viewModel.toggleFavorite(card) },
-                            onCardClick = { card -> navigateToDetails(navController, card) },
-                        )
-                    }
-                }
-
-                if (
-                    uiState.loadState == CatalogLoadState.Ready &&
-                    heroMovies.isEmpty() &&
-                    !hasAnyRail
-                ) {
-                    item(key = "empty") {
-                        EmptyState(
-                            title = stringResource(R.string.home_empty_title),
-                            description = stringResource(R.string.home_empty_desc),
-                            primaryAction = stringResource(R.string.btn_manage_sources),
-                            secondaryAction = null,
-                            onPrimary = catalogCallbacks.onManageSources,
-                            onSecondary = null,
-                        )
-                    }
-                }
+                CatalogRefreshBanner(
+                    syncBannerText = uiState.syncBannerText,
+                    refreshState = uiState.refreshState,
+                    onRefresh = viewModel::refreshCurrentSource,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = CinemaSpacing.ScreenPaddingVertical, end = CinemaSpacing.ScreenPadding),
+                )
             }
         }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+private val NoBringIntoView = object : BringIntoViewSpec {
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
+}
+
+/** Explicit vertical focus moves on Home. Each move glides the rails list and then focuses. */
+private class HomeFocusMoves(
+    private val scope: CoroutineScope,
+    private val listState: androidx.compose.foundation.lazy.LazyListState,
+    private val focusState: ScreenFocusState,
+    private val watchNowFocus: FocusRequester,
+    private val hasHero: Boolean,
+    val railRequester: (Int) -> FocusRequester?,
+) {
+    // Only the latest move may land. On a slow TV a focus request can retry for several frames;
+    // without this, an older request could pull focus back after a newer key press.
+    private var pendingMove: Job? = null
+
+    fun toRail(index: Int) {
+        val requester = railRequester(index) ?: return
+        move(index, requester)
+    }
+
+    fun toHero() {
+        if (hasHero) move(0, watchNowFocus)
+    }
+
+    private fun move(railIndex: Int, target: FocusRequester) {
+        pendingMove?.cancel()
+        pendingMove = scope.launch {
+            launch { listState.glideItemToStart(railIndex) }
+            focusState.restoreFocus(target)
+        }
+    }
+
+    /** Keeps the focused rail at the top of the rails area. */
+    fun alignRail(index: Int) {
+        if (listState.firstVisibleItemIndex == index && listState.firstVisibleItemScrollOffset == 0) return
+        scope.launch { listState.glideItemToStart(index) }
+    }
+}
+
+private fun openCard(navController: NavController, section: HomeSection, card: HomeContentCard) {
+    when (section) {
+        is HomeSection.ContinueWatching, is HomeSection.NextEpisode -> navigateToPlayer(navController, card)
+        is HomeSection.RecentChannels -> navController.navigate(AppRoute.liveTv(channelId = card.contentId))
+        is HomeSection.Rail, is HomeSection.TopRated -> navigateToDetails(navController, card)
     }
 }
 
 private fun navigateToPlayer(navController: NavController, card: HomeContentCard) {
     when (card.contentType) {
         "movie" -> navController.navigate(AppRoute.player(card.contentId, "movie"))
-        "series" -> navController.navigate(AppRoute.seriesDetails(card.contentId))
-        "episode" -> navController.navigate(
-            AppRoute.player(card.contentId, "episode", card.seriesId),
-        )
+        "episode" -> navController.navigate(AppRoute.player(card.contentId, "episode", card.seriesId))
         else -> navigateToDetails(navController, card)
     }
 }

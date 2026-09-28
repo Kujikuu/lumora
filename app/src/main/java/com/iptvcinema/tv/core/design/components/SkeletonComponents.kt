@@ -128,22 +128,6 @@ fun SkeletonPosterGrid(columns: Int = 5, rows: Int = 2, modifier: Modifier = Mod
 }
 
 @Composable
-fun SkeletonHeroBanner(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        SkeletonBox(modifier = Modifier.fillMaxWidth(), height = 400.dp)
-        SkeletonBox(width = 280.dp, height = 32.dp)
-        SkeletonBox(width = 400.dp, height = 16.dp)
-        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
-            SkeletonBox(width = 120.dp, height = 40.dp)
-            SkeletonBox(width = 100.dp, height = 40.dp)
-        }
-    }
-}
-
-@Composable
 fun SkeletonChannelRow(count: Int = 7, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -176,42 +160,33 @@ fun SkeletonEpgGrid(rows: Int = 6, modifier: Modifier = Modifier) {
     }
 }
 
+/** Mirrors the Home layout: spotlight text and buttons on top, then two rails. */
 @Composable
 fun SkeletonHomeContent(modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = CinemaSpacing.ContentStart, top = 96.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        SkeletonHeroBanner()
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SkeletonBox(width = 160.dp, height = 18.dp)
-            SkeletonBox(
-                modifier = Modifier
-                    .padding(start = CinemaSpacing.ContentStart)
-                    .fillMaxWidth(),
-                height = CinemaSpacing.ExpandedPosterCardHeight,
-            )
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SkeletonBox(width = 160.dp, height = 18.dp)
-            Row(
-                modifier = Modifier.padding(start = CinemaSpacing.ContentStart),
-                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
-            ) {
-                repeat(5) {
-                    SkeletonBox(width = CinemaSpacing.MoodTileSize, height = CinemaSpacing.MoodTileSize)
-                }
-            }
+        SkeletonBox(width = 80.dp, height = 14.dp)
+        SkeletonBox(width = 360.dp, height = 36.dp)
+        SkeletonBox(width = 240.dp, height = 14.dp)
+        SkeletonBox(width = 420.dp, height = 14.dp)
+        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
+            SkeletonBox(width = 132.dp, height = 40.dp)
+            SkeletonBox(width = 110.dp, height = 40.dp)
+            SkeletonBox(width = 110.dp, height = 40.dp)
         }
         repeat(2) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                modifier = Modifier.padding(top = CinemaSpacing.SectionGap),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 SkeletonBox(width = 160.dp, height = 18.dp)
-                SkeletonBox(
-                    modifier = Modifier
-                        .padding(start = CinemaSpacing.ContentStart)
-                        .fillMaxWidth(),
-                    height = CinemaSpacing.ExpandedPosterCardHeight,
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    repeat(8) { SkeletonBox(width = 104.dp, height = 156.dp) }
+                }
             }
         }
     }

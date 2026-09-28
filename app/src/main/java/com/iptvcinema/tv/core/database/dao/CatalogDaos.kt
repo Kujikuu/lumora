@@ -228,8 +228,8 @@ interface MovieDao {
         """
         SELECT * FROM movies
         WHERE sourceId = :sourceId
-            AND backdropUrl IS NOT NULL AND backdropUrl != ''
-            AND plot IS NOT NULL AND plot != ''
+            AND backdropUrl IS NOT NULL AND TRIM(backdropUrl) != ''
+            AND plot IS NOT NULL AND TRIM(plot) != ''
         ORDER BY
             CASE WHEN addedAt IS NULL THEN 0 ELSE 1 END DESC,
             addedAt DESC,
