@@ -210,6 +210,19 @@ create table public.device_activation_sessions (
 );
 ```
 
+Clients never touch this table directly (migration `008`). Access goes through functions:
+
+| Function | Caller | Purpose |
+|---|---|---|
+| `create_device_activation_session(code, qr_token, device_name)` | TV (anon) | Creates a `PENDING` row, expiry set by the server (15 min) |
+| `get_device_activation_session(session_id, session_qr_token)` | TV (anon) | Returns only `{status, expires_at}`; a stale `PENDING` reads as `EXPIRED` |
+| `preview_device_activation(code)` | Companion (signed in) | Returns the TV's `device_name` so the user can confirm before approving |
+| `approve_device_activation(code)` | Companion (signed in) | Marks the row `APPROVED` for `auth.uid()` |
+| `claim_approved_activation(session_id, qr_token)` | Edge function (service role) | One-time atomic claim; returns the approver's user id |
+| `purge_stale_activation_sessions(days)` | Service role / pg_cron | Deletes old rows |
+
+The code on screen is not enough to get a session: the exchange needs the `qr_token`, which only the TV knows.
+
 ### playlist_sources
 
 ```sql
@@ -217,7 +230,7 @@ create table public.playlist_sources (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   name text not null,
-  type text not null check (type in ('XTREAM_CODES', 'M3U')),
+  type text not null check (type in ('XTREAM_CODES', 'M3U', 'DEMO')),
   server_url text,
   playlist_url text,
   epg_url text,

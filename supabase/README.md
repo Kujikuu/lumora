@@ -44,13 +44,17 @@ Deploy the token exchange function (used by the TV app after approval):
 supabase functions deploy exchange-activation-session
 ```
 
-The companion website calls the `approve_device_activation` RPC directly with the signed-in user's JWT — no edge function needed for approval.
+The companion website calls the `approve_device_activation` RPC directly with the signed-in user's JWT, so approval needs no edge function.
 
 Flow:
 
-1. **TV** creates a `PENDING` session and shows QR + code
-2. **Companion** user signs in → RPC marks session `APPROVED`
-3. **TV** polls, then calls `exchange-activation-session` for auth tokens
+1. **TV** creates a `PENDING` session and shows QR + code. It keeps the session id and a secret `qr_token`.
+2. **Companion** user signs in, sees which TV the code belongs to, and taps to approve (RPC marks it `APPROVED`).
+3. **TV** polls with `session_id` + `qr_token`, then calls `exchange-activation-session` with the same pair. The function claims the session once and returns tokens.
+
+Deploy order matters: migration `008` and the new edge function change the request shape. Deploy them together with the TV app build that sends `session_id` + `qr_token`. Older app builds can no longer activate.
+
+Old activation rows are purged daily by pg_cron when the extension is enabled (Dashboard > Database > Extensions). Without pg_cron, run `select public.purge_stale_activation_sessions();` from any scheduler.
 
 ## 4. Activation companion (production)
 
@@ -84,7 +88,8 @@ Host the static files in [`activation-companion/`](activation-companion/) at **h
 - Email/password sign-in and sign-up (with email confirmation redirect)
 - Google OAuth (PKCE-safe; TV codes use `?activation=` not `?code=`)
 - Persists activation code across OAuth redirects (cookie + storage)
-- Calls `approve_device_activation` RPC after sign-in
+- Shows the TV's device name and waits for a tap before calling `approve_device_activation` (never approves on its own after sign-in)
+- Drops a saved code after 15 minutes
 - Polished cinema-themed UI with step indicator
 
 ## 5. End-to-end test
@@ -102,7 +107,7 @@ Host the static files in [`activation-companion/`](activation-companion/) at **h
 |---------|-----|
 | Website shows old UI | Re-upload `index.html`, `app.js`, `styles.css`; hard-refresh browser |
 | "Invalid or expired code" | Use a fresh code from TV; codes expire after 15 minutes |
-| TV says "not approved" after website success | Reinstall latest TV app (fixes double-exchange bug) |
+| TV says "not approved" after website success | Make sure migration `008`, the new edge function and the new TV app are all deployed |
 | TV codes expire immediately | Migration `003` must be applied; TV app must not send client `expires_at` |
 
 ## Tables

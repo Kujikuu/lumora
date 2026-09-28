@@ -42,6 +42,8 @@ const translations = {
     info_check_email: "Check your email to confirm, then return here.",
     info_signed_out: "Signed out.",
     account_fallback: "your account",
+    confirm_device: "Approve sign-in on this TV: {device}? Only approve a code you see on your own TV.",
+    confirm_device_unknown: "Approve sign-in on your TV? Only approve a code you see on your own TV.",
   },
   ar: {
     page_title: "Lumora Play — تفعيل التلفاز",
@@ -86,6 +88,8 @@ const translations = {
     info_check_email: "تحقق من بريدك للتأكيد ثم عد إلى هنا.",
     info_signed_out: "تم تسجيل الخروج.",
     account_fallback: "حسابك",
+    confirm_device: "هل توافق على تسجيل الدخول على هذا التلفاز: {device}؟ وافق فقط على رمز تراه على تلفازك.",
+    confirm_device_unknown: "هل توافق على تسجيل الدخول على تلفازك؟ وافق فقط على رمز تراه على تلفازك.",
   },
 };
 
@@ -125,8 +129,9 @@ export function applyLocale() {
   if (steps) steps.setAttribute("aria-label", locale === "ar" ? "خطوات التفعيل" : "Activation steps");
 }
 
-export function t(key) {
-  return translations[locale]?.[key] ?? translations.en[key] ?? key;
+export function t(key, params = {}) {
+  const text = translations[locale]?.[key] ?? translations.en[key] ?? key;
+  return text.replace(/\{(\w+)\}/g, (_, name) => params[name] ?? "");
 }
 
 export function mapErr(e) {

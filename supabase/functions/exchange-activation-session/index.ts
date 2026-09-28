@@ -1,17 +1,22 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
 
-const ACTIVATION_CODE_RE = /^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{2}$/;
-const MAX_ATTEMPTS_PER_WINDOW = 10;
+// The TV proves it owns the activation session with (session_id, qr_token). The code shown
+// on screen is not enough: anyone in the room can read it.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const QR_TOKEN_RE = /^[a-z0-9]{32}$/;
+const MAX_ATTEMPTS_PER_WINDOW = 20;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
 
 function clientIp(req: Request): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    ?? req.headers.get("cf-connecting-ip")
+  return req.headers.get("cf-connecting-ip")
+    ?? req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     ?? "unknown";
 }
 
+// Best effort only: buckets live in this worker's memory. The qr_token is what makes
+// guessing infeasible; this just slows down noisy clients.
 function checkRateLimit(key: string): boolean {
   const now = Date.now();
   const bucket = rateLimitBuckets.get(key);
@@ -26,8 +31,13 @@ function checkRateLimit(key: string): boolean {
   return true;
 }
 
-function logFailure(reason: string, code: string, ip: string) {
-  console.warn(JSON.stringify({ event: "activation_exchange_failed", reason, codePrefix: code.slice(0, 4), ip }));
+function logFailure(reason: string, sessionId: string, detail?: string) {
+  console.warn(JSON.stringify({
+    event: "activation_exchange_failed",
+    reason,
+    session: sessionId.slice(0, 8),
+    detail,
+  }));
 }
 
 async function mintSessionForUser(
@@ -39,51 +49,50 @@ async function mintSessionForUser(
     type: "magiclink",
     email,
   });
-
   if (linkError) {
-    throw new Error(`Unable to create auth session: ${linkError.message}`);
+    throw new Error(`generateLink: ${linkError.message}`);
   }
 
   const tokenHash = linkData.properties?.hashed_token;
   if (!tokenHash) {
-    throw new Error("Unable to create auth session: missing token hash");
+    throw new Error("generateLink: missing token hash");
   }
 
+  let lastError = "no session returned";
   for (const otpType of ["magiclink", "email"] as const) {
     const { data: authData, error: authError } = await anon.auth.verifyOtp({
       type: otpType,
       token_hash: tokenHash,
     });
-
     if (!authError && authData.session) {
       return authData.session;
     }
+    lastError = authError?.message ?? lastError;
   }
-
-  throw new Error("Unable to verify auth session for this account.");
+  throw new Error(`verifyOtp: ${lastError}`);
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+  if (req.method !== "POST") {
+    return jsonResponse({ error: "method_not_allowed" }, 405);
+  }
 
+  let sessionId = "";
   try {
-    const { code } = await req.json();
-    if (!code || typeof code !== "string") {
-      return jsonResponse({ error: "Activation code is required" }, 400);
+    const body = await req.json().catch(() => null);
+    sessionId = typeof body?.session_id === "string" ? body.session_id : "";
+    const qrToken = typeof body?.qr_token === "string" ? body.qr_token : "";
+
+    if (!UUID_RE.test(sessionId) || !QR_TOKEN_RE.test(qrToken)) {
+      return jsonResponse({ error: "invalid_request" }, 400);
     }
 
-    const normalizedCode = code.trim().toUpperCase();
-    if (!ACTIVATION_CODE_RE.test(normalizedCode)) {
-      return jsonResponse({ error: "Invalid activation code format." }, 400);
-    }
-
-    const ip = clientIp(req);
-    const rateKey = `${ip}:${normalizedCode}`;
-    if (!checkRateLimit(rateKey)) {
-      logFailure("rate_limited", normalizedCode, ip);
-      return jsonResponse({ error: "Too many attempts. Wait a minute and try again." }, 429);
+    if (!checkRateLimit(clientIp(req))) {
+      logFailure("rate_limited", sessionId);
+      return jsonResponse({ error: "rate_limited" }, 429);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -97,50 +106,34 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const { data: session, error: sessionError } = await admin
-      .from("device_activation_sessions")
-      .select("*")
-      .eq("code", normalizedCode)
-      .eq("status", "APPROVED")
-      .gt("expires_at", new Date().toISOString())
-      .maybeSingle();
-
-    if (sessionError) {
-      logFailure("session_lookup_error", normalizedCode, ip);
-      return jsonResponse({ error: sessionError.message }, 400);
+    // One-time claim: flips APPROVED -> EXPIRED and returns the approver. A second call
+    // (double tap, retry, or anyone else) gets nothing.
+    const { data: userId, error: claimError } = await admin.rpc("claim_approved_activation", {
+      session_id: sessionId,
+      session_qr_token: qrToken,
+    });
+    if (claimError) {
+      logFailure("claim_error", sessionId, claimError.message);
+      return jsonResponse({ error: "server_error" }, 500);
+    }
+    if (!userId) {
+      logFailure("not_approved", sessionId);
+      return jsonResponse({ error: "not_approved" }, 409);
     }
 
-    if (!session?.user_id) {
-      logFailure("not_approved", normalizedCode, ip);
-      return jsonResponse(
-        { error: "Activation session not approved yet. Approve the code on your phone first." },
-        400,
-      );
-    }
-
-    const { data: userData, error: userError } = await admin.auth.admin.getUserById(session.user_id);
+    const { data: userData, error: userError } = await admin.auth.admin.getUserById(userId);
     if (userError || !userData.user) {
-      logFailure("user_not_found", normalizedCode, ip);
-      return jsonResponse({ error: "Approved user not found" }, 400);
+      logFailure("user_not_found", sessionId, userError?.message);
+      return jsonResponse({ error: "user_not_found" }, 404);
     }
 
     const email = userData.user.email;
     if (!email) {
-      return jsonResponse(
-        {
-          error:
-            "This account has no email address. Sign in with email on iptv.afifistudio.com, then approve the TV again.",
-        },
-        400,
-      );
+      logFailure("no_email", sessionId);
+      return jsonResponse({ error: "account_has_no_email" }, 422);
     }
 
     const authSession = await mintSessionForUser(admin, anon, email);
-
-    await admin
-      .from("device_activation_sessions")
-      .update({ status: "EXPIRED" })
-      .eq("id", session.id);
 
     return jsonResponse({
       access_token: authSession.access_token,
@@ -150,6 +143,7 @@ Deno.serve(async (req) => {
       user_id: authSession.user.id,
     });
   } catch (error) {
-    return jsonResponse({ error: String(error) }, 500);
+    logFailure("exception", sessionId, error instanceof Error ? error.message : String(error));
+    return jsonResponse({ error: "server_error" }, 500);
   }
 });

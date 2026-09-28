@@ -5,6 +5,8 @@ const APP_VERSION = "3.3.0";
 const CODE_KEY = "iptv_cinema_activation_code";
 const ACTIVATION_PARAM = "activation";
 const CODE_RE = /^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{2}$/;
+// Codes live 15 minutes on the server; a saved code older than that is dead.
+const CODE_MAX_AGE_MS = 15 * 60 * 1000;
 
 applyLocale();
 
@@ -53,16 +55,32 @@ function formatCodeInput(raw) {
 function persist(code) {
   const c = norm(code);
   if (!validCode(c)) return "";
-  sessionStorage.setItem(CODE_KEY, c);
-  localStorage.setItem(CODE_KEY, c);
+  const stored = JSON.stringify({ code: c, savedAt: Date.now() });
+  sessionStorage.setItem(CODE_KEY, stored);
+  localStorage.setItem(CODE_KEY, stored);
   document.cookie = `${CODE_KEY}=${encodeURIComponent(c)}; path=/; max-age=900; SameSite=Lax; Secure`;
   return c;
 }
 
+function readStoredCode(storage) {
+  try {
+    const parsed = JSON.parse(storage.getItem(CODE_KEY) ?? "null");
+    if (!parsed || Date.now() - parsed.savedAt > CODE_MAX_AGE_MS) {
+      storage.removeItem(CODE_KEY);
+      return "";
+    }
+    const c = norm(parsed.code);
+    return validCode(c) ? c : "";
+  } catch {
+    storage.removeItem(CODE_KEY);
+    return "";
+  }
+}
+
 function loadCode() {
   for (const s of [sessionStorage, localStorage]) {
-    const c = norm(s.getItem(CODE_KEY));
-    if (validCode(c)) return c;
+    const c = readStoredCode(s);
+    if (c) return c;
   }
   const m = document.cookie.match(new RegExp(`(?:^|; )${CODE_KEY}=([^;]*)`));
   if (m && validCode(m[1])) return norm(decodeURIComponent(m[1]));
@@ -229,15 +247,27 @@ async function finishOAuthReturn() {
   return data.session;
 }
 
+// Never approve automatically after sign-in: a stale or planted code would sign this
+// account into someone else's TV. Show which TV it is and wait for a tap.
 async function onSessionReady(session) {
   if (!session) return;
   showBanner(session);
-  fillCodeInput(getCode());
-  if (getCode()) {
-    await approveTv(session);
-  } else {
+  const code = getCode();
+  fillCodeInput(code);
+  if (!code) {
     msg(t("info_signed_in_enter_code"), "info");
+    return;
   }
+  const { data: preview, error } = await supabase.rpc("preview_device_activation", {
+    activation_code: code,
+  });
+  if (error || !preview) {
+    msg(t("err_invalid_code"), "error");
+    return;
+  }
+  const device = preview.device_name?.trim();
+  msg(device ? t("confirm_device", { device }) : t("confirm_device_unknown"), "info");
+  els.linkTvBtn?.focus();
 }
 
 async function googleSignIn() {
