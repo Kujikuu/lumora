@@ -210,6 +210,76 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId AND id IN (:ids)")
     suspend fun getByIds(sourceId: String, ids: List<String>): List<LocalMovieEntity>
 
+    @Query(
+        """
+        SELECT * FROM movies
+        WHERE sourceId = :sourceId
+        ORDER BY
+            CASE WHEN addedAt IS NULL THEN 0 ELSE 1 END DESC,
+            addedAt DESC,
+            sortOrder DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun getNewest(sourceId: String, limit: Int): List<LocalMovieEntity>
+
+    /** Newest movies that can fill a full-screen hero: a backdrop and a plot. */
+    @Query(
+        """
+        SELECT * FROM movies
+        WHERE sourceId = :sourceId
+            AND backdropUrl IS NOT NULL AND backdropUrl != ''
+            AND plot IS NOT NULL AND plot != ''
+        ORDER BY
+            CASE WHEN addedAt IS NULL THEN 0 ELSE 1 END DESC,
+            addedAt DESC,
+            sortOrder DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun getNewestWithArtwork(sourceId: String, limit: Int): List<LocalMovieEntity>
+
+    // CAST reads the leading number, so "7.5" and "7.5/10" both rank as 7.5.
+    @Query(
+        """
+        SELECT * FROM movies
+        WHERE sourceId = :sourceId
+            AND rating IS NOT NULL
+            AND CAST(rating AS REAL) >= :minRating
+        ORDER BY CAST(rating AS REAL) DESC, year DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun getTopRated(sourceId: String, minRating: Double, limit: Int): List<LocalMovieEntity>
+
+    @Query(
+        """
+        SELECT * FROM movies
+        WHERE sourceId = :sourceId AND categoryName = :categoryName
+        ORDER BY
+            CASE WHEN addedAt IS NULL THEN 0 ELSE 1 END DESC,
+            addedAt DESC,
+            sortOrder DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun getByCategoryNameLimited(
+        sourceId: String,
+        categoryName: String,
+        limit: Int,
+    ): List<LocalMovieEntity>
+
+    @Query(
+        """
+        SELECT categoryName FROM movies
+        WHERE sourceId = :sourceId AND categoryName IS NOT NULL AND categoryName != ''
+        GROUP BY categoryName
+        ORDER BY COUNT(*) DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun getLargestCategoryNames(sourceId: String, limit: Int): List<String>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<LocalMovieEntity>)
 
@@ -305,6 +375,18 @@ interface SeriesDao {
 
     @Query("SELECT * FROM series WHERE sourceId = :sourceId AND id IN (:ids)")
     suspend fun getByIds(sourceId: String, ids: List<String>): List<LocalSeriesEntity>
+
+    @Query(
+        """
+        SELECT * FROM series
+        WHERE sourceId = :sourceId
+            AND rating IS NOT NULL
+            AND CAST(rating AS REAL) >= :minRating
+        ORDER BY CAST(rating AS REAL) DESC, year DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun getTopRated(sourceId: String, minRating: Double, limit: Int): List<LocalSeriesEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<LocalSeriesEntity>)
