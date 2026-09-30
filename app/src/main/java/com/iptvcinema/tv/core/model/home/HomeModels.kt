@@ -34,6 +34,7 @@ data class HomeContentCard(
 object BrowseCardTypes {
     const val MOVIE_CATEGORY = "movie_category"
     const val SERIES_CATEGORY = "series_category"
+    const val SEARCH_TERM = "search_term"
 }
 
 val HomeContentCard.isCategory: Boolean

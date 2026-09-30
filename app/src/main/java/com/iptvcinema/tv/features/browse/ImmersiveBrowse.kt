@@ -1,5 +1,7 @@
 package com.iptvcinema.tv.features.browse
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -27,6 +29,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -51,6 +55,7 @@ import kotlinx.coroutines.launch
 
 /** Room below the last rail so it can scroll up to the top of the rails area too. */
 private val RailsBottomPadding = 200.dp
+private const val TOP_PANEL_FADE_MS = 180
 
 /** What the hero buttons do. Only Home has a hero; other screens pass none. */
 class ImmersiveHeroActions(
@@ -74,6 +79,11 @@ class ImmersiveBrowseState internal constructor(
     private val railRequesters = mutableMapOf<String, FocusRequester>()
     internal var sections: List<HomeSection> = emptyList()
     internal var hasHero: Boolean = false
+    internal var upFromFirstRail: (() -> Unit)? = null
+
+    /** Whether focus is on a rail card (as opposed to the hero, a top panel or elsewhere). */
+    var railsHaveFocus by mutableStateOf(false)
+        internal set
 
     // Only the latest move may land. On a slow TV a focus request can retry for several frames;
     // without this, an older request could pull focus back after a newer key press.
@@ -97,6 +107,11 @@ class ImmersiveBrowseState internal constructor(
 
     internal fun toHero() {
         if (hasHero) move(0, watchNowFocus)
+    }
+
+    /** Up from the first rail: to the hero, or to whatever the screen puts above the rails. */
+    internal fun upFromRails() {
+        upFromFirstRail?.let { move -> move() } ?: toHero()
     }
 
     private fun move(railIndex: Int, target: FocusRequester) {
@@ -149,12 +164,22 @@ fun ImmersiveBrowse(
     heroActions: ImmersiveHeroActions? = null,
     spotlightWeight: Float = HomeDimens.SPOTLIGHT_WEIGHT,
     initialFocus: Pair<String, Int>? = null,
+    onUpFromFirstRail: (() -> Unit)? = null,
+    topContent: (@Composable BoxScope.() -> Unit)? = null,
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     val focusState = state.focusState
     val hasHero = hero.isNotEmpty() && heroActions != null
     state.sections = sections
     state.hasHero = hasHero
+    state.upFromFirstRail = onUpFromFirstRail
+    // With a top panel (for example Search's keyboard), the panel shows while focus is above the
+    // rails and the spotlight takes its place once focus is on a card; both keep their layout.
+    val spotlightAlpha by animateFloatAsState(
+        targetValue = if (topContent == null || state.railsHaveFocus) 1f else 0f,
+        animationSpec = tween(TOP_PANEL_FADE_MS),
+        label = "spotlightAlpha",
+    )
     // Captured once: where focus was when the viewer left the screen, or where it should start.
     val restoreTarget = remember {
         if (focusState.hasSavedFocus || initialFocus == null) {
@@ -196,7 +221,16 @@ fun ImmersiveBrowse(
                     onDetails = { heroActions?.onDetails?.invoke(it) },
                     onAddToList = { heroActions?.onAddToList?.invoke(it) },
                     onMoveDown = { state.toRail(0) },
+                    modifier = if (topContent == null) Modifier else Modifier.graphicsLayer { alpha = spotlightAlpha },
                 )
+                if (topContent != null) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .graphicsLayer { alpha = 1f - spotlightAlpha },
+                        content = topContent,
+                    )
+                }
             }
             // Rails and cards are placed by ImmersiveBrowseState and HomeRail; the default focus
             // bring-into-view would fight those glides and leave rows half-aligned, so it is
@@ -206,7 +240,8 @@ fun ImmersiveBrowse(
                     state = state.listState,
                     modifier = Modifier
                         .weight(1f - spotlightWeight)
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .onFocusChanged { state.railsHaveFocus = it.hasFocus },
                     userScrollEnabled = false,
                     verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
                     contentPadding = PaddingValues(bottom = RailsBottomPadding),
@@ -220,7 +255,7 @@ fun ImmersiveBrowse(
                                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                 when (event.key) {
                                     Key.DirectionUp -> {
-                                        if (index > 0) state.toRail(index - 1) else state.toHero()
+                                        if (index > 0) state.toRail(index - 1) else state.upFromRails()
                                         true
                                     }
                                     Key.DirectionDown -> {

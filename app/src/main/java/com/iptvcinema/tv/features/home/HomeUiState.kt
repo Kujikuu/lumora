@@ -87,12 +87,12 @@ sealed interface HomeSection {
         override fun withItems(items: List<HomeContentCard>) = copy(items = items)
     }
 
-    /** Category tiles; each opens the full catalog grid on that category. */
+    /** Text tiles: category tiles that open the catalog grid, or recent search terms. */
     data class Categories(
         override val title: HomeRailTitle,
         override val items: List<HomeContentCard>,
+        override val id: String = HomeSectionIds.CATEGORIES,
     ) : HomeSection {
-        override val id = HomeSectionIds.CATEGORIES
         override fun withItems(items: List<HomeContentCard>) = copy(items = items)
     }
 
@@ -141,7 +141,7 @@ fun List<HomeSection>.withFavorite(
     }
 }
 
-enum class HomeSpotlightKind { Movie, Series, Episode, Channel, Category }
+enum class HomeSpotlightKind { Movie, Series, Episode, Channel, Category, SearchTerm }
 
 /** What the top panel and backdrop show for the hero slide or the focused card. */
 data class HomeSpotlight(

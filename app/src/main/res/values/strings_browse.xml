@@ -14,6 +14,12 @@
     <string name="related_more_like_this">More like this</string>
     <string name="related_title">More like %1$s</string>
     <string name="related_empty">Nothing similar in your playlist yet.</string>
+    <string name="search_kind_recent">Recent search</string>
+    <string name="search_rail_movies">Movies</string>
+    <string name="search_rail_series">Series</string>
+    <string name="search_rail_channels">Live channels</string>
+    <string name="search_rail_recent">Recent searches</string>
+    <string name="search_error">Search failed. Try again.</string>
 
     <plurals name="browse_title_count">
         <item quantity="one">%d title</item>

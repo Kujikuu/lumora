@@ -125,6 +125,19 @@ class BrowseContentRepository @Inject constructor(
         )
     }
 
+    /** The best rated movies and series, suggested on Search before the viewer types. */
+    suspend fun loadSearchSuggestions(sourceId: String?, isDemoMode: Boolean): Pair<List<CatalogMovie>, List<CatalogSeries>> {
+        if (isDemoMode) return demoMoviesCatalog().topRated to demoSeriesCatalog().topRated
+        sourceId ?: return emptyList<CatalogMovie>() to emptyList()
+        val movies = safely("suggestedMovies", emptyList()) {
+            catalogDaoFacade.movies.getTopRated(sourceId, HomeContentRules.MIN_TOP_RATING, RAIL_FETCH_LIMIT).map { it.toDomain() }
+        }
+        val series = safely("suggestedSeries", emptyList()) {
+            catalogDaoFacade.series.getTopRated(sourceId, HomeContentRules.MIN_TOP_RATING, RAIL_FETCH_LIMIT).map { it.toDomain() }
+        }
+        return movies to series
+    }
+
     /** Titles like one movie: its category first, then top rated and new movies. */
     suspend fun loadMovieRelated(sourceId: String?, movieId: String, isDemoMode: Boolean): RelatedSnapshot? {
         if (isDemoMode) {

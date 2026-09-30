@@ -22,6 +22,7 @@ object HomeSpotlightMapper {
             "episode" -> HomeSpotlightKind.Episode
             "channel" -> HomeSpotlightKind.Channel
             BrowseCardTypes.MOVIE_CATEGORY, BrowseCardTypes.SERIES_CATEGORY -> HomeSpotlightKind.Category
+            BrowseCardTypes.SEARCH_TERM -> HomeSpotlightKind.SearchTerm
             else -> HomeSpotlightKind.Movie
         }
         return HomeSpotlight(
@@ -39,7 +40,7 @@ object HomeSpotlightMapper {
 
     private fun cardMetadata(card: HomeContentCard, kind: HomeSpotlightKind): List<String> {
         val personal = listOfNotNull(card.subtitle, card.remainingTimeLabel).filter { it.isNotBlank() }
-        if (kind == HomeSpotlightKind.Channel || kind == HomeSpotlightKind.Category || personal.isNotEmpty()) {
+        if (kind in TEXT_KINDS || personal.isNotEmpty()) {
             return personal
         }
         return listOfNotNull(
@@ -48,4 +49,6 @@ object HomeSpotlightMapper {
             card.runtimeOrEpisodes,
         ).filter { it.isNotBlank() }.distinct()
     }
+
+    private val TEXT_KINDS = setOf(HomeSpotlightKind.Channel, HomeSpotlightKind.Category, HomeSpotlightKind.SearchTerm)
 }

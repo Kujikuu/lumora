@@ -6,6 +6,9 @@ enum class SearchKeyboardLayout {
 }
 
 object SearchKeyboardLayouts {
+    /** Titles often have numbers ("24", "2012"); both layouts start with the digits. */
+    val digits: List<String> = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0")
+
     val english: List<List<String>> = listOf(
         listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"),
         listOf("A", "S", "D", "F", "G", "H", "J", "K", "L"),
@@ -19,7 +22,7 @@ object SearchKeyboardLayouts {
     )
 
     fun rowsFor(layout: SearchKeyboardLayout): List<List<String>> = when (layout) {
-        SearchKeyboardLayout.English -> english
-        SearchKeyboardLayout.Arabic -> arabic
+        SearchKeyboardLayout.English -> listOf(digits) + english
+        SearchKeyboardLayout.Arabic -> listOf(digits) + arabic
     }
 }

@@ -14,6 +14,12 @@
     <string name="related_more_like_this">المزيد مثل هذا</string>
     <string name="related_title">المزيد مثل %1$s</string>
     <string name="related_empty">لا يوجد شيء مشابه في قائمة التشغيل بعد.</string>
+    <string name="search_kind_recent">بحث سابق</string>
+    <string name="search_rail_movies">الأفلام</string>
+    <string name="search_rail_series">المسلسلات</string>
+    <string name="search_rail_channels">القنوات المباشرة</string>
+    <string name="search_rail_recent">عمليات البحث الأخيرة</string>
+    <string name="search_error">تعذّر البحث. حاول مرة أخرى.</string>
 
     <plurals name="browse_title_count">
         <item quantity="zero">%d عنوان</item>
