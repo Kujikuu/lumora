@@ -30,22 +30,26 @@ object SearchSectionsBuilder {
         channels: List<ChannelItem>,
         isBlocked: (categoryName: String?, rating: String?) -> Boolean,
         isFavorite: (contentId: String, type: FavoriteContentType) -> Boolean,
+        searchNumber: Int = 0,
     ): List<HomeSection> = buildList {
+        // New ids per search: a rail keeps its scroll and focused card per id, and the results
+        // of a new query must start at their best match, not where the last query was left.
+        val suffix = if (searchNumber == 0) "" else "#$searchNumber"
         movies
             .filterNot { isBlocked(it.categoryName ?: it.genres.firstOrNull(), it.rating) }
             .map { it.toCard(isFavorite(it.id, FavoriteContentType.MOVIE)) }
             .takeIf { it.isNotEmpty() }
-            ?.let { add(HomeSection.Rail(SearchSectionIds.MOVIES, HomeRailTitle(R.string.search_rail_movies), it)) }
+            ?.let { add(HomeSection.Rail(SearchSectionIds.MOVIES + suffix, HomeRailTitle(R.string.search_rail_movies), it)) }
         series
             .filterNot { isBlocked(it.categoryName ?: it.genres.firstOrNull(), it.rating) }
             .map { it.toCard(isFavorite(it.id, FavoriteContentType.SERIES)) }
             .takeIf { it.isNotEmpty() }
-            ?.let { add(HomeSection.Rail(SearchSectionIds.SERIES, HomeRailTitle(R.string.search_rail_series), it)) }
+            ?.let { add(HomeSection.Rail(SearchSectionIds.SERIES + suffix, HomeRailTitle(R.string.search_rail_series), it)) }
         channels
             .filterNot { isBlocked(it.category, null) }
             .map { it.toCard(isFavorite(it.id, FavoriteContentType.CHANNEL)) }
             .takeIf { it.isNotEmpty() }
-            ?.let { add(HomeSection.Channels(SearchSectionIds.CHANNELS, HomeRailTitle(R.string.search_rail_channels), it)) }
+            ?.let { add(HomeSection.Channels(SearchSectionIds.CHANNELS + suffix, HomeRailTitle(R.string.search_rail_channels), it)) }
     }
 
     /** Before typing: recent searches, then the best rated movies and series as ideas. */

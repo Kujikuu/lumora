@@ -37,7 +37,8 @@ object SeriesEpisodesBuilder {
         history: List<WatchHistoryItem>,
         labels: EpisodeLabels,
     ): SeriesEpisodesContent {
-        val ordered = episodes.sortedWith(compareBy({ it.seasonNumber }, { it.episodeNumber }))
+        // Some providers list an episode twice; a repeated id would crash the rail's keyed list.
+        val ordered = episodes.distinctBy { it.id }.sortedWith(compareBy({ it.seasonNumber }, { it.episodeNumber }))
         val progress = progressByEpisode(ordered, history)
         val resumeId = resumeEpisodeId(ordered, history)
         val seriesBackdrop = series?.backdropUrl?.takeIf { it.isNotBlank() } ?: series?.posterUrl?.takeIf { it.isNotBlank() }

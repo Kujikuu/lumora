@@ -69,4 +69,10 @@ class SeriesEpisodesBuilderTest {
         assertNull(content.resumeEpisodeId)
         assertTrue(content.sections.flatMap { it.items }.all { it.progress == null })
     }
+
+    @Test
+    fun `an episode listed twice shows once`() {
+        val content = SeriesEpisodesBuilder.build(series("s"), episodes + episode("s1e1", "s"), emptyList(), labels)
+        assertEquals(listOf("s1e1", "s1e2"), content.sections[0].items.map { it.contentId })
+    }
 }

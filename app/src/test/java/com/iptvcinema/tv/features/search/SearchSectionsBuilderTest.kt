@@ -78,4 +78,18 @@ class SearchSectionsBuilderTest {
         assertEquals(listOf("Dune", "Lost"), recent.map { it.title })
         assertTrue(recent.all { it.contentType == BrowseCardTypes.SEARCH_TERM })
     }
+
+    @Test
+    fun `each search gets new rail ids so rails start at the best match`() {
+        fun ids(number: Int) = SearchSectionsBuilder.results(
+            movies = listOf(movieItem("m1")),
+            series = emptyList(),
+            channels = emptyList(),
+            isBlocked = { _, _ -> false },
+            isFavorite = { _, _ -> false },
+            searchNumber = number,
+        ).map { it.id }
+        assertTrue(ids(1) != ids(2))
+        assertEquals(ids(3), ids(3))
+    }
 }

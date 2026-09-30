@@ -68,6 +68,7 @@ class SearchViewModel @Inject constructor(
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
     private var searchJob: Job? = null
     private var suggestions: List<HomeSection> = emptyList()
+    private var searchCount = 0
 
     init {
         viewModelScope.launch {
@@ -170,6 +171,7 @@ class SearchViewModel @Inject constructor(
                     channels = results.channels,
                     isBlocked = blockedBy(controls(session)),
                     isFavorite = favoriteLookup(favorites(session)),
+                    searchNumber = ++searchCount,
                 )
                 _uiState.update {
                     it.copy(

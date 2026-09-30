@@ -70,14 +70,19 @@ fun BrowseTabScreen(
     MainShellScaffold(
         navController = navController,
         selectedNavItem = navItem,
-        onRailExitRight = browse::enter,
+        // Only when the rails are shown; otherwise Right must reach the state screen's buttons.
+        onRailExitRight = if (uiState.loadState == CatalogLoadState.Ready) browse::enter else null,
     ) {
         ContinueWatchingMenuDialog(
             card = continueMenuCard,
             onDismiss = { continueMenuCard = null },
             onResume = { card -> playBrowseCard(navController, card) },
             onViewDetails = { card -> openContinueWatchingDetails(navController, card) },
-            onRemove = viewModel::removeContinueWatching,
+            onRemove = { card ->
+                viewModel.removeContinueWatching(card)
+                // The removed card had focus; put it back on the rails.
+                browse.recoverFocus()
+            },
         )
         CatalogStateContent(
             loadState = uiState.loadState,

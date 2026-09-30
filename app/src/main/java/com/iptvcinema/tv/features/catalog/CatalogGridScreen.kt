@@ -82,8 +82,13 @@ fun CatalogGridScreen(
         viewModel.selectCategory(categories.getOrNull(selectedFilter) ?: initialCategory.takeIf { it.isNotBlank() })
     }
 
+    // Per visit, not saved: coming back from details must place focus again (on the poster
+    // the viewer opened), which a saved "handled" flag would skip.
+    var focusPlaced by remember { mutableStateOf(false) }
+
     LaunchedEffect(uiState.loadState) {
-        if (uiState.loadState != CatalogLoadState.Ready || focusState.initialFocusHandled) return@LaunchedEffect
+        if (uiState.loadState != CatalogLoadState.Ready || focusPlaced) return@LaunchedEffect
+        focusPlaced = true
         val target = when {
             focusState.sectionId == CatalogBrowseSections.GRID && focusState.focusedContentId.isNotBlank() -> gridFocus
             categories.isNotEmpty() -> categoryFocus

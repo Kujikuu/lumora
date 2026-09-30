@@ -71,7 +71,7 @@ private const val TAG = "CloudAccountStatus"
 
 object ParentalControlsDefaults {
     fun restrictiveFallback(profileId: String): ParentalControls = ParentalControls(
-        id = "fallback-parental-$profileId",
+        id = "$FALLBACK_ID_PREFIX$profileId",
         userId = "",
         profileId = profileId,
         pinHash = null,
@@ -81,4 +81,13 @@ object ParentalControlsDefaults {
         maxRating = "PG",
         blockedCategories = emptyList(),
     )
+
+    /**
+     * Whether [controls] are this stand-in rather than the profile's saved controls. It has no
+     * PIN, so a screen that edits controls must never show or save it: saving would erase the
+     * real PIN and blocks once the network is back.
+     */
+    fun isFallback(controls: ParentalControls): Boolean = controls.id.startsWith(FALLBACK_ID_PREFIX)
+
+    private const val FALLBACK_ID_PREFIX = "fallback-parental-"
 }

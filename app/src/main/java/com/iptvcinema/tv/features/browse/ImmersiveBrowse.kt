@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -56,6 +57,7 @@ import kotlinx.coroutines.launch
 /** Room below the last rail so it can scroll up to the top of the rails area too. */
 private val RailsBottomPadding = 200.dp
 private const val TOP_PANEL_FADE_MS = 180
+private const val RECOVERY_SETTLE_FRAMES = 3
 
 /** What the hero buttons do. Only Home has a hero; other screens pass none. */
 class ImmersiveHeroActions(
@@ -122,6 +124,24 @@ class ImmersiveBrowseState internal constructor(
         }
     }
 
+    /**
+     * Puts focus back on the rails after the focused card or rail went away (removed from a
+     * list, or rebuilt by a sync): on the same rail, or the nearest one that is left. Waits a few
+     * frames so a closing dialog and the new rails have settled first.
+     */
+    fun recoverFocus() {
+        pendingMove?.cancel()
+        pendingMove = scope.launch {
+            repeat(RECOVERY_SETTLE_FRAMES) { withFrameNanos { } }
+            if (railsHaveFocus || sections.isEmpty()) return@launch
+            val saved = sections.indexOfFirst { it.id == focusState.sectionId }
+            val index = if (saved >= 0) saved else focusState.scrollOffset.coerceIn(0, sections.lastIndex)
+            val requester = railRequester(index) ?: return@launch
+            launch { listState.glideItemToStart(index) }
+            focusState.restoreFocus(requester)
+        }
+    }
+
     /** Keeps the focused rail at the top of the rails area. */
     internal fun alignRail(index: Int) {
         if (listState.firstVisibleItemIndex == index && listState.firstVisibleItemScrollOffset == 0) return
@@ -170,6 +190,7 @@ fun ImmersiveBrowse(
 ) {
     val focusState = state.focusState
     val hasHero = hero.isNotEmpty() && heroActions != null
+    val railsChangedUnderFocus = state.railsHaveFocus && state.sections.isNotEmpty() && sections != state.sections
     state.sections = sections
     state.hasHero = hasHero
     state.upFromFirstRail = onUpFromFirstRail
@@ -191,6 +212,11 @@ fun ImmersiveBrowse(
     var focusPlaced by remember { mutableStateOf(false) }
     // Read through state so rail lambdas stay equal across recompositions and rails can skip.
     val currentSections by rememberUpdatedState(sections)
+
+    // New rails while a card had focus: that card may be gone, taking focus with it.
+    LaunchedEffect(sections) {
+        if (focusPlaced && railsChangedUnderFocus) state.recoverFocus()
+    }
 
     LaunchedEffect(isReady, sections.isNotEmpty(), hasHero) {
         if (focusPlaced || !isReady) return@LaunchedEffect

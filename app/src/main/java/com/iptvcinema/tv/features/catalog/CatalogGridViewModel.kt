@@ -24,6 +24,7 @@ import com.iptvcinema.tv.core.parental.ParentalGate
 import com.iptvcinema.tv.core.util.safeSummary
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -76,6 +78,7 @@ abstract class CatalogGridViewModel<T : Any>(
     val uiState: StateFlow<CatalogGridUiState> = _uiState.asStateFlow()
 
     // The latest catalog items, so a poster's favorite toggle can read its title and artwork.
+    @Volatile
     private var currentItems: List<T> = emptyList()
     private val favoriteToggles = mutableSetOf<String>()
 
@@ -105,7 +108,10 @@ abstract class CatalogGridViewModel<T : Any>(
             combine(itemsFlow, selectedSort, controlsFlow, favoritesFlow, selectedCategory) {
                     state, sort, controls, favorites, category ->
                 toUiState(state, sort, controls, favorites, category)
-            }.collect { next ->
+            }
+                // Mapping, filtering and sorting up to 2,000 titles stays off the main thread.
+                .flowOn(Dispatchers.Default)
+                .collect { next ->
                 _uiState.update { current ->
                     next.copy(syncBannerText = current.syncBannerText, refreshState = current.refreshState)
                 }
