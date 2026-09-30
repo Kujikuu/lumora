@@ -39,6 +39,28 @@ Phase 10: CatalogStateContent on all browse tabs + Search, RatingPolicy, Playbac
 
 Search uses real Room catalog queries with debounced SearchViewModel and full source-health state routing.
 
+### Immersive browse screens
+
+Home, Movies, Series, My List, Search, Series episodes and More like this share one layout,
+`features/browse/ImmersiveBrowse.kt`: a fixed spotlight (title, metadata, plot) and a backdrop
+that follow the focused card, over rails with explicit Up/Down focus moves. Each screen builds its
+rails with a pure, unit-tested builder (`HomeSectionsBuilder`, `MoviesSectionsBuilder`,
+`SeriesSectionsBuilder`, `MyListSectionsBuilder`, `SeriesEpisodesBuilder`,
+`RelatedSectionsBuilder`, `SearchSectionsBuilder`) from one-shot local queries
+(`HomeContentRepository`, `BrowseContentRepository`).
+
+- Movies / Series tabs: Continue watching, New / Latest, Browse by category, Because you watched,
+  Top rated, More in {category}. Category tiles open the full grid (`movie_catalog` /
+  `series_catalog` routes).
+- My List: saved movies, series, episodes and channels, then Continue watching; long press opens
+  Play / Details / Remove.
+- Series episodes: one rail per season with watched state; focus opens on the episode to resume.
+- Search: keyboard (with digits) that trades places with the spotlight when focus moves onto the
+  results; recent searches and top rated suggestions before typing.
+
+Parental controls: the Parental Controls screen needs the profile's PIN; blocks are checked by
+provider category (not genre) everywhere, including player channel zapping.
+
 ## Core App Screens
 
 1. Splash / Launcher
