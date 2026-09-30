@@ -461,6 +461,14 @@ fun AppNavGraph(
                     type = NavType.LongType
                     defaultValue = -1L
                 },
+                navArgument("startEpochMs") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                },
+                navArgument("endEpochMs") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                },
             ),
         ) { backStackEntry ->
             SessionRouteGuard(navController = navController, requirement = SessionRequirement.Ready) {

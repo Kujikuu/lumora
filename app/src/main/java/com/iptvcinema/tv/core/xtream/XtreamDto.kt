@@ -60,6 +60,7 @@ data class XtreamLiveStreamDto(
     @SerialName("category_id") val categoryId: JsonElement? = null,
     @SerialName("category_name") val categoryName: String? = null,
     @SerialName("tv_archive") val tvArchive: JsonElement? = null,
+    @SerialName("tv_archive_duration") val tvArchiveDuration: JsonElement? = null,
     @SerialName("direct_source") val directSource: String? = null,
     @SerialName("custom_sid") val customSid: String? = null,
     @SerialName("is_adult") val isAdult: JsonElement? = null,

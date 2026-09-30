@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Catch-up (timeshift) TV. -->
+<resources>
+    <string name="catchup_title">إعادة المشاهدة</string>
+    <string name="catchup_badge">إعادة المشاهدة</string>
+    <string name="catchup_start_over">المشاهدة من البداية</string>
+    <string name="catchup_unavailable">إعادة المشاهدة غير متاحة لهذا البرنامج.</string>
+    <string name="catchup_today">اليوم</string>
+    <string name="catchup_yesterday">أمس</string>
+</resources>

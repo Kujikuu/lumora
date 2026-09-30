@@ -61,6 +61,17 @@ rails with a pure, unit-tested builder (`HomeSectionsBuilder`, `MoviesSectionsBu
 Parental controls: the Parental Controls screen needs the profile's PIN; blocks are checked by
 provider category (not genre) everywhere, including player channel zapping.
 
+### Catch-up TV (Xtream)
+
+Channels whose provider keeps an archive (`tv_archive` / `tv_archive_duration`, stored as
+`channels.archiveDays`, Room v9) show a Catch-up badge in Live TV; OK on the channel strip opens
+Channel Details, which lists past programmes by day and offers Start over for the one on air.
+Playback uses the `catchup` content type (`AppRoute.catchup`) and the Xtream
+`/timeshift/{user}/{pass}/{minutes}/{yyyy-MM-dd:HH-mm}/{streamId}.ts` URL, with the start time in
+the server's timezone. Catch-up is seekable and never written to watch history. Past guide data is
+kept for 72h (`EpgRetention.PAST_MS`), which caps how far back catch-up reaches. M3U catch-up is
+not supported yet.
+
 ## Core App Screens
 
 1. Splash / Launcher

@@ -1,5 +1,9 @@
 package com.iptvcinema.tv.features.details
 
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -56,6 +60,8 @@ fun ChannelDetailsScreen(
     val feedbackRemovedFromMyList = stringResource(R.string.feedback_removed_from_mylist)
     val watchLiveLabel = stringResource(R.string.btn_watch_live)
     val openInLiveTvLabel = stringResource(R.string.btn_open_in_live_tv)
+    val startOverLabel = stringResource(R.string.catchup_start_over)
+    val catchupTitle = stringResource(R.string.catchup_title)
 
     LaunchedEffect(channelId) {
         viewModel.loadChannelDetails(channelId)
@@ -106,6 +112,7 @@ fun ChannelDetailsScreen(
                         metadata = listOfNotNull(
                             uiState.category.takeIf { it.isNotBlank() },
                             stringResource(R.string.badge_live),
+                            stringResource(R.string.catchup_badge).takeIf { uiState.hasCatchup },
                         ),
                         synopsis = uiState.currentProgram?.description?.takeIf { it.isNotBlank() }
                             ?: uiState.currentProgram?.title.orEmpty(),
@@ -129,7 +136,19 @@ fun ChannelDetailsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = CinemaSpacing.NavRailWidth + 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
                     ) {
+                        uiState.startOverProgram?.let { program ->
+                            CinemaButton(
+                                text = startOverLabel,
+                                variant = CinemaButtonVariant.Ghost,
+                                onClick = {
+                                    navController.navigate(
+                                        AppRoute.catchup(uiState.channelId, program.startEpochMs, program.endEpochMs),
+                                    )
+                                },
+                            )
+                        }
                         CinemaButton(
                             text = openInLiveTvLabel,
                             variant = CinemaButtonVariant.Ghost,
@@ -153,6 +172,25 @@ fun ChannelDetailsScreen(
                                 isNowPlaying = program.id == uiState.currentProgram?.id,
                                 nowMs = uiState.nowMs,
                                 onClick = {},
+                            )
+                        }
+                    }
+                    uiState.catchupDays.forEach { day ->
+                        ContentRail(
+                            title = catchupTitle,
+                            subtitle = catchupDayLabel(day.date),
+                            items = day.programs,
+                            itemKey = { it.id },
+                        ) { program ->
+                            ProgramLineupCard(
+                                program = program,
+                                isNowPlaying = false,
+                                nowMs = uiState.nowMs,
+                                onClick = {
+                                    navController.navigate(
+                                        AppRoute.catchup(uiState.channelId, program.startEpochMs, program.endEpochMs),
+                                    )
+                                },
                             )
                         }
                     }
@@ -183,3 +221,13 @@ private fun ChannelItem.toChannelTileData(): ChannelTileData = ChannelTileData(
     qualityBadge = qualityBadge,
     programProgress = programProgress,
 )
+
+@Composable
+private fun catchupDayLabel(date: LocalDate): String {
+    val today = LocalDate.now()
+    return when (date) {
+        today -> stringResource(R.string.catchup_today)
+        today.minusDays(1) -> stringResource(R.string.catchup_yesterday)
+        else -> date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault()))
+    }
+}

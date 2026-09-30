@@ -7,6 +7,9 @@ import com.iptvcinema.tv.core.network.XtreamRetrofitFactory
 import com.iptvcinema.tv.core.network.ConditionalFetchResult
 import com.iptvcinema.tv.core.network.HttpValidators
 import java.io.IOException
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -26,6 +29,8 @@ class XtreamRepository @Inject constructor(
     private val retrofitFactory: XtreamRetrofitFactory,
     private val localCredentialsStore: LocalCredentialsStore,
 ) {
+    private val serverZones = ConcurrentHashMap<String, ZoneId>()
+
     fun getCredentials(sourceId: String): XtreamCredentials? =
         localCredentialsStore.getXtreamCredentials(sourceId)
 
@@ -141,6 +146,24 @@ class XtreamRepository @Inject constructor(
         return api.getXmltv(credentials.username, credentials.password).string()
     }
 
+    /**
+     * The server's timezone from server_info, needed to format timeshift start times.
+     * Cached per server; falls back to UTC when the provider does not report a valid zone.
+     */
+    suspend fun serverZone(credentials: XtreamCredentials): ZoneId {
+        val serverUrl = normalizedServer(credentials)
+        serverZones[serverUrl]?.let { return it }
+        val zone = runCatching {
+            retrofitFactory.create(serverUrl)
+                .authenticate(username = credentials.username, password = credentials.password)
+                .serverInfo?.timezone
+        }.getOrElse { error ->
+            if (error is CancellationException) throw error
+            null
+        }.let(::parseZoneOrNull)
+        return (zone ?: ZoneOffset.UTC).also { serverZones[serverUrl] = it }
+    }
+
     fun normalizedServer(credentials: XtreamCredentials): String =
         XtreamUrlNormalizer.normalize(credentials.serverUrl).getOrThrow()
 
@@ -197,3 +220,6 @@ class XtreamRepository @Inject constructor(
         is XtreamAuthResult.Error -> SourceStatus.FAILED
     }
 }
+
+internal fun parseZoneOrNull(value: String?): ZoneId? =
+    value?.trim()?.takeIf { it.isNotEmpty() }?.let { runCatching { ZoneId.of(it) }.getOrNull() }

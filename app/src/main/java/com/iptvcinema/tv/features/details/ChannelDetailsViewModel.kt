@@ -19,6 +19,9 @@ import com.iptvcinema.tv.core.model.ChannelItem
 import com.iptvcinema.tv.core.model.EpgProgram
 import com.iptvcinema.tv.core.model.FavoriteContentType
 import com.iptvcinema.tv.core.model.catalog.CatalogChannel
+import com.iptvcinema.tv.core.player.CatchupDay
+import com.iptvcinema.tv.core.player.CatchupPolicy
+import com.iptvcinema.tv.core.player.CatchupSchedule
 import com.iptvcinema.tv.core.util.AppStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -44,7 +47,18 @@ data class ChannelDetailsUiState(
     val nowMs: Long = System.currentTimeMillis(),
     val message: String? = null,
     val isDemoMode: Boolean = false,
-)
+    val archiveDays: Int = 0,
+    val catchupDays: List<CatchupDay> = emptyList(),
+) {
+    val hasCatchup: Boolean get() = archiveDays > 0
+
+    /** The programme on air now, if it can be restarted from the archive. */
+    val startOverProgram: EpgProgram?
+        get() = currentProgram?.takeIf { program ->
+            program.startEpochMs <= nowMs && program.endEpochMs > nowMs &&
+                CatchupPolicy.isAvailable(archiveDays, program.startEpochMs, program.endEpochMs, nowMs)
+        }
+}
 
 @HiltViewModel
 class ChannelDetailsViewModel @Inject constructor(
@@ -162,6 +176,12 @@ class ChannelDetailsViewModel @Inject constructor(
                 nowMs = nowMs,
             )
 
+            val catchupDays = if (catalogChannel.archiveDays > 0) {
+                loadCatchupDays(sourceId, channelId, catalogChannel.archiveDays, nowMs)
+            } else {
+                emptyList()
+            }
+
             _uiState.value = buildReadyState(
                 channelId = catalogChannel.id,
                 channelName = catalogChannel.name,
@@ -172,6 +192,9 @@ class ChannelDetailsViewModel @Inject constructor(
                 nowMs = nowMs,
                 relatedChannels = relatedChannels,
                 isDemoMode = false,
+            ).copy(
+                archiveDays = catalogChannel.archiveDays,
+                catchupDays = catchupDays,
             )
             startClock()
         }
@@ -243,6 +266,24 @@ class ChannelDetailsViewModel @Inject constructor(
             windowEndMs = windowEndMs,
             fallbackTitle = appStrings.get(R.string.msg_no_program_info),
         )
+    }
+
+    private suspend fun loadCatchupDays(
+        sourceId: String,
+        channelId: String,
+        archiveDays: Int,
+        nowMs: Long,
+    ): List<CatchupDay> = runCatching {
+        val programs = catalogRepository.getEpgForChannels(
+            sourceId = sourceId,
+            channelIds = listOf(channelId),
+            windowStartMs = CatchupPolicy.earliestStartMs(archiveDays, nowMs),
+            windowEndMs = nowMs,
+        ).filter { it.channelId == channelId }
+        CatchupSchedule.days(programs, archiveDays, nowMs)
+    }.getOrElse { error ->
+        if (error is CancellationException) throw error
+        emptyList()
     }
 
     private suspend fun loadRelatedChannels(

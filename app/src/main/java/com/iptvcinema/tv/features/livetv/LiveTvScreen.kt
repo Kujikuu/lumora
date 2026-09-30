@@ -81,6 +81,8 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.data.repository.CatalogLoadState
+import com.iptvcinema.tv.core.design.components.BadgeChip
+import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
@@ -407,6 +409,9 @@ fun LiveTvScreen(
                                     )
                                 },
                                 onInteraction = { revealOverlays() },
+                                onOpenCatchup = {
+                                    navController.navigate(AppRoute.channelDetails(previewChannel.id))
+                                },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 120.dp)
@@ -476,6 +481,7 @@ private fun LiveChannelStrip(
     onNextChannel: () -> Unit,
     onToggleFavorite: () -> Unit,
     onInteraction: () -> Unit,
+    onOpenCatchup: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     FocusableCinemaCard(
@@ -504,7 +510,8 @@ private fun LiveChannelStrip(
                     else -> false
                 }
             },
-        onClick = onInteraction,
+        // Channels with an archive open their details page, where past programmes can be replayed.
+        onClick = if (channel.hasCatchup) onOpenCatchup else onInteraction,
         onLongClick = onToggleFavorite,
         shape = CinemaShapes.Card,
         focusScale = 1.01f,
@@ -559,12 +566,24 @@ private fun LiveChannelStrip(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Text(
-                        text = channel.name,
-                        style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextSecondary),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = channel.name,
+                            style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextSecondary),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        if (channel.hasCatchup) {
+                            BadgeChip(
+                                text = stringResource(R.string.catchup_badge),
+                                backgroundColor = CinemaColors.Surface,
+                            )
+                        }
+                    }
                     Text(
                         text = channel.currentProgram.ifBlank { channel.name },
                         style = MaterialTheme.typography.headlineSmall.copy(

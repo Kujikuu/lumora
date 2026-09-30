@@ -72,8 +72,17 @@ object XtreamNormalizer {
             channelNumber = dto.num.asIntOrNull(),
             isAdult = dto.isAdult.asBooleanOrFalse(),
             sortOrder = index,
+            archiveDays = archiveDays(dto),
         )
     }
+
+    /** Days of catch-up the provider keeps for a channel; 0 when it has no archive. */
+    internal fun archiveDays(dto: XtreamLiveStreamDto): Int =
+        if (dto.tvArchive.asBooleanOrFalse()) {
+            dto.tvArchiveDuration.asIntOrNull()?.coerceAtLeast(0) ?: 0
+        } else {
+            0
+        }
 
     fun normalizeVodCategories(
         sourceId: String,

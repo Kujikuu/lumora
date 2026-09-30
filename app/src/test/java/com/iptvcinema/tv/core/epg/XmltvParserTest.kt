@@ -35,7 +35,7 @@ class XmltvParserTest {
     @Test
     fun isProgramInIngestWindow_filtersOutsidePastAndFutureBounds() {
         val nowMs = 1_000_000L
-        val pastCutoff = nowMs - 24L * 60 * 60 * 1000
+        val pastCutoff = nowMs - EpgRetention.PAST_MS
         val futureCutoff = nowMs + 48L * 60 * 60 * 1000
 
         assertTrue(

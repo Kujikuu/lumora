@@ -26,6 +26,7 @@ data class CatalogChannel(
     val channelNumber: Int?,
     val isAdult: Boolean = false,
     val sortOrder: Int = 0,
+    val archiveDays: Int = 0,
 )
 
 data class CatalogMovie(

@@ -87,7 +87,7 @@ class XmltvParser @Inject constructor() {
     }
 
     companion object {
-        private const val WINDOW_PAST_MS = 24L * 60 * 60 * 1000
+        private const val WINDOW_PAST_MS = EpgRetention.PAST_MS
         private const val WINDOW_FUTURE_MS = 48L * 60 * 60 * 1000
 
         internal fun isProgramInIngestWindow(startMs: Long, endMs: Long, nowMs: Long): Boolean {

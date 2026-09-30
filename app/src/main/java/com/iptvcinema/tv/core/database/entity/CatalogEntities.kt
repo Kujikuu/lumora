@@ -25,6 +25,7 @@ data class LocalChannelEntity(
     val channelNumber: Int?,
     val isAdult: Boolean = false,
     val sortOrder: Int = 0,
+    val archiveDays: Int = 0,
 )
 
 @Entity(tableName = "movies", primaryKeys = ["id", "sourceId"])

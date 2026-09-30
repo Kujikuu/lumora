@@ -31,7 +31,8 @@ object AppRoute {
     const val SERIES_EPISODES = "series_episodes/{seriesId}"
     const val SERIES_RELATED = "series_related/{seriesId}"
     const val CHANNEL_DETAILS = "channel_details/{channelId}"
-    const val PLAYER = "player/{contentId}/{contentType}?seriesId={seriesId}&resumePositionMs={resumePositionMs}"
+    const val PLAYER = "player/{contentId}/{contentType}?seriesId={seriesId}&resumePositionMs={resumePositionMs}" +
+        "&startEpochMs={startEpochMs}&endEpochMs={endEpochMs}"
     const val SEARCH = "search"
     const val MY_LIST = "my_list"
     const val SETTINGS = "settings"
@@ -57,11 +58,17 @@ object AppRoute {
         contentType: String,
         seriesId: String? = null,
         resumePositionMs: Long? = null,
+        startEpochMs: Long? = null,
+        endEpochMs: Long? = null,
     ): String {
         val params = buildList {
             if (!seriesId.isNullOrBlank()) add("seriesId=$seriesId")
             if (resumePositionMs != null && resumePositionMs >= 0L) {
                 add("resumePositionMs=$resumePositionMs")
+            }
+            if (startEpochMs != null && endEpochMs != null && endEpochMs > startEpochMs) {
+                add("startEpochMs=$startEpochMs")
+                add("endEpochMs=$endEpochMs")
             }
         }
         return if (params.isEmpty()) {
@@ -70,6 +77,11 @@ object AppRoute {
             "player/$contentId/$contentType?${params.joinToString("&")}"
         }
     }
+    fun catchup(channelId: String, startEpochMs: Long, endEpochMs: Long): String =
+        player(channelId, CATCHUP_CONTENT_TYPE, startEpochMs = startEpochMs, endEpochMs = endEpochMs)
+
+    const val CATCHUP_CONTENT_TYPE = "catchup"
+
     fun movies(filter: String = "") = "movies?filter=$filter"
     fun series(filter: String = "") = "series?filter=$filter"
     fun movieCatalog(category: String = "") = "movie_catalog?category=${Uri.encode(category)}"

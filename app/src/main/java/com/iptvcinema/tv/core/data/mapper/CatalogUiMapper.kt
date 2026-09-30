@@ -49,6 +49,7 @@ object CatalogEntityMapper {
         channelNumber = channelNumber,
         isAdult = isAdult,
         sortOrder = sortOrder,
+        archiveDays = archiveDays,
     )
 
     fun LocalMovieEntity.toDomain(): CatalogMovie = CatalogMovie(
@@ -143,6 +144,7 @@ object CatalogUiMapper {
             programStart = formatTime(program.startEpochMs),
             programEnd = formatTime(program.endEpochMs),
             programProgress = elapsedMs.toFloat() / durationMs.toFloat(),
+            hasCatchup = archiveDays > 0,
         )
     }
 

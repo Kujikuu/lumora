@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Catch-up (timeshift) TV. -->
+<resources>
+    <string name="catchup_title">Catch-up</string>
+    <string name="catchup_badge">Catch-up</string>
+    <string name="catchup_start_over">Start over</string>
+    <string name="catchup_unavailable">Catch-up isn\'t available for this programme.</string>
+    <string name="catchup_today">Today</string>
+    <string name="catchup_yesterday">Yesterday</string>
+</resources>

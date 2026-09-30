@@ -103,6 +103,8 @@ class PlayerViewModel @Inject constructor(
     private val contentType: String = savedStateHandle.get<String>("contentType").orEmpty()
     private val seriesIdArg: String? = savedStateHandle.get<String>("seriesId")
     private val resumePositionArg: Long? = savedStateHandle.get<Long>("resumePositionMs")?.takeIf { it >= 0L }
+    private val catchupStartArg: Long? = savedStateHandle.get<Long>("startEpochMs")?.takeIf { it >= 0L }
+    private val catchupEndArg: Long? = savedStateHandle.get<Long>("endEpochMs")?.takeIf { it >= 0L }
 
     private val _screenState = MutableStateFlow(PlayerScreenState(seriesId = seriesIdArg))
     val screenState: StateFlow<PlayerScreenState> = _screenState.asStateFlow()
@@ -425,7 +427,7 @@ class PlayerViewModel @Inject constructor(
 
     private suspend fun loadPlayback() {
         val result = runCatching {
-            playbackRepository.resolve(contentId, contentType, seriesIdArg)
+            playbackRepository.resolve(contentId, contentType, seriesIdArg, catchupStartArg, catchupEndArg)
         }.getOrElse {
             _screenState.value = PlayerScreenState(
                 isLoading = false,
@@ -962,6 +964,7 @@ class PlayerViewModel @Inject constructor(
 
     private fun scheduleProgressSave() {
         if (!continueWatchingEnabled) return
+        if (_screenState.value.playbackRequest?.isCatchup == true) return
         progressSaveJob?.cancel()
         progressSaveJob = viewModelScope.launch {
             delay(PROGRESS_SAVE_DEBOUNCE_MS)
@@ -970,7 +973,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     private suspend fun loadResumePosition(request: PlaybackRequest): Long {
-        if (request.isLive) return 0L
+        if (request.isLive || request.isCatchup) return 0L
         return runCatching {
             val session = appSessionRepository.sessionState.first()
             val profileId = session.currentProfileId ?: return 0L
@@ -989,6 +992,7 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching {
                 val request = _screenState.value.playbackRequest ?: return@runCatching
+                if (request.isCatchup) return@runCatching
                 if (request.isLive) {
                     saveLiveWatchEntry(request)
                     return@runCatching
@@ -1099,7 +1103,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     private suspend fun saveProgressSnapshot(request: PlaybackRequest, state: PlayerUiState) {
-        if (!continueWatchingEnabled) return
+        if (!continueWatchingEnabled || request.isCatchup) return
         runCatching {
             if (request.isLive) {
                 saveLiveWatchEntry(request)

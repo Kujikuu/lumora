@@ -80,6 +80,7 @@ data class ChannelItem(
     val programEnd: String,
     val programProgress: Float,
     val qualityBadge: String? = null,
+    val hasCatchup: Boolean = false,
 )
 
 data class EpgProgram(

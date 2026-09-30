@@ -22,6 +22,8 @@ data class PlaybackRequest(
     val seriesId: String? = null,
     val seasonNumber: Int? = null,
     val episodeNumber: Int? = null,
+    /** A past programme replayed from the provider's archive: seekable, never saved to history. */
+    val isCatchup: Boolean = false,
 )
 
 sealed class PlaybackResolveResult {

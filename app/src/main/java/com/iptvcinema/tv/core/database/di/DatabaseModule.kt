@@ -32,6 +32,7 @@ object DatabaseModule {
         MIGRATION_5_6,
         MIGRATION_6_7,
         MIGRATION_7_8,
+        MIGRATION_8_9,
     ).build()
 
     private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -183,6 +184,15 @@ object DatabaseModule {
                 )
                 """.trimIndent(),
             )
+        }
+    }
+
+    internal val MIGRATION_8_9 = object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE channels ADD COLUMN archiveDays INTEGER NOT NULL DEFAULT 0")
+            // Force the next sync to refetch live streams so catch-up info is filled in
+            // even when the provider would otherwise answer 304 Not Modified.
+            db.execSQL("DELETE FROM catalog_sync_metadata WHERE resourceKey = 'xtream_live_streams'")
         }
     }
 

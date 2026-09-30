@@ -11,6 +11,9 @@ import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.model.catalog.CatalogChannel
 import com.iptvcinema.tv.core.model.catalog.CatalogEpisode
 import com.iptvcinema.tv.core.model.catalog.CatalogMovie
+import com.iptvcinema.tv.core.navigation.AppRoute
+import com.iptvcinema.tv.core.xtream.XtreamRepository
+import com.iptvcinema.tv.core.xtream.XtreamStreamUrlBuilder
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.first
@@ -22,11 +25,14 @@ class PlaybackRepository @Inject constructor(
     private val localCredentialsStore: LocalCredentialsStore,
     private val episodeCatalogRepository: EpisodeCatalogRepository,
     private val appStrings: AppStrings,
+    private val xtreamRepository: XtreamRepository,
 ) {
     suspend fun resolve(
         contentId: String,
         contentType: String,
         seriesId: String? = null,
+        catchupStartMs: Long? = null,
+        catchupEndMs: Long? = null,
     ): PlaybackResolveResult {
         val session = appSessionRepository.sessionState.first()
         if (session.isDemoMode) {
@@ -42,6 +48,7 @@ class PlaybackRepository @Inject constructor(
             "live" -> resolveLive(sourceId, contentId, headers)
             "movie" -> resolveMovie(sourceId, contentId, headers)
             "episode" -> resolveEpisode(sourceId, contentId, headers, seriesId)
+            AppRoute.CATCHUP_CONTENT_TYPE -> resolveCatchup(sourceId, contentId, catchupStartMs, catchupEndMs)
             else -> PlaybackResolveResult.Error(appStrings.get(R.string.playback_error_unknown_type), "INVALID_TYPE")
         }
     }
@@ -72,6 +79,47 @@ class PlaybackRepository @Inject constructor(
             ?: return PlaybackResolveResult.Error(appStrings.get(R.string.playback_error_channel_not_found), "NOT_FOUND")
         val programTitle = catalogRepository.getCurrentProgram(sourceId, contentId)?.title
         return channel.toPlaybackRequest(headers, programTitle)
+    }
+
+    private suspend fun resolveCatchup(
+        sourceId: String,
+        channelId: String,
+        startMs: Long?,
+        endMs: Long?,
+    ): PlaybackResolveResult {
+        val unavailable = PlaybackResolveResult.Error(appStrings.get(R.string.catchup_unavailable), "NO_CATCHUP")
+        if (startMs == null || endMs == null || endMs <= startMs) return unavailable
+        val channel = catalogRepository.getChannel(sourceId, channelId)
+            ?: return PlaybackResolveResult.Error(appStrings.get(R.string.playback_error_channel_not_found), "NOT_FOUND")
+        if (!CatchupPolicy.isAvailable(channel.archiveDays, startMs, endMs, System.currentTimeMillis())) {
+            return unavailable
+        }
+        val credentials = xtreamRepository.getCredentials(sourceId) ?: return unavailable
+        val url = XtreamStreamUrlBuilder.timeshiftUrl(
+            serverUrl = runCatching { xtreamRepository.normalizedServer(credentials) }.getOrElse { return unavailable },
+            username = credentials.username,
+            password = credentials.password,
+            streamId = channel.id,
+            startEpochMs = startMs,
+            durationMinutes = CatchupPolicy.durationMinutes(startMs, endMs),
+            serverZone = xtreamRepository.serverZone(credentials),
+        )
+        val program = catalogRepository.getEpgForChannels(sourceId, listOf(channelId), startMs, endMs)
+            .firstOrNull { it.channelId == channelId && it.startEpochMs == startMs }
+        return PlaybackResolveResult.Success(
+            PlaybackRequest(
+                contentId = channel.id,
+                contentType = WatchHistoryContentType.CHANNEL,
+                sourceId = sourceId,
+                title = program?.title?.takeIf { it.isNotBlank() } ?: channel.name,
+                posterUrl = channel.logoUrl,
+                streamUrl = url,
+                durationMs = endMs - startMs,
+                isLive = false,
+                metadata = listOf(appStrings.get(R.string.catchup_badge), channel.name),
+                isCatchup = true,
+            ),
+        )
     }
 
     private suspend fun resolveMovie(

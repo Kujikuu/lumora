@@ -27,7 +27,7 @@ class EpgWindowMathTest {
     }
 
     @Test
-    fun trimPastConstant_isTwentyFourHours() {
-        assertEquals(24L * 60 * 60 * 1000, EpgSyncRepository.TRIM_PAST_MS)
+    fun trimPastConstant_keepsThreeDaysForCatchup() {
+        assertEquals(72L * 60 * 60 * 1000, EpgSyncRepository.TRIM_PAST_MS)
     }
 }

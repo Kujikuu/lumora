@@ -157,4 +157,23 @@ class XtreamNormalizerTest {
 
         assertEquals(listOf(1, 2, 3), XtreamNormalizer.seasonNumbersFromSeriesInfo(response))
     }
+
+    @Test
+    fun archiveDays_readsTvArchiveDurationOnlyWhenArchiveIsEnabled() {
+        fun dto(archive: String?, duration: String?) = XtreamLiveStreamDto(
+            streamId = JsonPrimitive("1"),
+            tvArchive = archive?.let(::JsonPrimitive),
+            tvArchiveDuration = duration?.let(::JsonPrimitive),
+        )
+
+        assertEquals(3, XtreamNormalizer.archiveDays(dto(archive = "1", duration = "3")))
+        assertEquals(7, XtreamNormalizer.archiveDays(XtreamLiveStreamDto(
+            streamId = JsonPrimitive("1"),
+            tvArchive = JsonPrimitive(1),
+            tvArchiveDuration = JsonPrimitive(7),
+        )))
+        assertEquals(0, XtreamNormalizer.archiveDays(dto(archive = "0", duration = "3")))
+        assertEquals(0, XtreamNormalizer.archiveDays(dto(archive = "1", duration = null)))
+        assertEquals(0, XtreamNormalizer.archiveDays(dto(archive = null, duration = null)))
+    }
 }

@@ -134,6 +134,6 @@ class EpgSyncRepository @Inject constructor(
     }
 
     companion object {
-        const val TRIM_PAST_MS = 24L * 60 * 60 * 1000
+        const val TRIM_PAST_MS = EpgRetention.PAST_MS
     }
 }
