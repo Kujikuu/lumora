@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.features.parental
 
+import com.iptvcinema.tv.core.navigation.requestFocusWhenReady
 import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -56,7 +57,7 @@ fun PinEntryDialog(
 
     LaunchedEffect(mode) {
         digits = ""
-        firstKeyFocus.requestFocus()
+        firstKeyFocus.requestFocusWhenReady()
     }
 
     fun addDigit(digit: String) {

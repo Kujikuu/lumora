@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.core.design.components
 
+import com.iptvcinema.tv.core.navigation.requestFocusWhenReady
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -45,7 +46,7 @@ fun CinemaContextMenuDialog(
 
     LaunchedEffect(options, title) {
         if (options.isNotEmpty()) {
-            firstOptionFocus.requestFocus()
+            firstOptionFocus.requestFocusWhenReady()
         }
     }
 

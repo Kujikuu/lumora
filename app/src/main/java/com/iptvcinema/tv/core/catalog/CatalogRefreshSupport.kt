@@ -40,6 +40,8 @@ object CatalogRefreshSupport {
         appSessionRepository: AppSessionRepository,
     ) = scope.launch {
         if (getRefreshState() is CatalogRefreshState.Refreshing) return@launch
+        // Mark it refreshing before suspending, so a second press in the meantime is ignored.
+        setRefreshState(CatalogRefreshState.Refreshing())
         val sourceType = appSessionRepository.sessionState.first().sourceType
         val initial = catalogSyncProgressTracker.initialProgress(sourceType)
         setRefreshState(

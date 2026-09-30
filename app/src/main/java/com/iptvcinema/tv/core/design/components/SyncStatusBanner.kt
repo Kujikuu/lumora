@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.core.design.components
 
+import com.iptvcinema.tv.core.navigation.requestFocusWhenReady
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -49,7 +50,7 @@ fun SyncStatusBanner(
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(isRefreshing, requestFocusOnRefresh) {
         if (isRefreshing && requestFocusOnRefresh) {
-            focusRequester.requestFocus()
+            focusRequester.requestFocusWhenReady()
         }
     }
 

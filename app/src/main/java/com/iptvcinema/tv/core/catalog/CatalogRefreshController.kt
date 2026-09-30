@@ -4,6 +4,7 @@ import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.util.AppStrings
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 
 sealed interface CatalogRefreshResult {
     val message: String
@@ -25,12 +26,15 @@ class CatalogRefreshController @Inject constructor(
     private val appStrings: AppStrings,
     private val messageFormatter: CatalogSyncMessageFormatter,
 ) {
-    suspend fun refreshCurrentSource(): CatalogRefreshResult = runCatching {
+    suspend fun refreshCurrentSource(): CatalogRefreshResult = try {
         when (val result = catalogSyncCoordinator.syncCurrent(CatalogSyncTrigger.MANUAL)) {
             is CatalogSyncCoordinatorResult.Success -> CatalogRefreshResult.Success(successMessage(result))
             is CatalogSyncCoordinatorResult.Failed -> CatalogRefreshResult.Failed(messageFormatter.failure(result))
         }
-    }.getOrElse {
+    } catch (error: CancellationException) {
+        // Leaving the screen cancels the wait, not the sync; it is not a failed refresh.
+        throw error
+    } catch (error: Exception) {
         CatalogRefreshResult.Failed(appStrings.get(R.string.refresh_failed))
     }
 

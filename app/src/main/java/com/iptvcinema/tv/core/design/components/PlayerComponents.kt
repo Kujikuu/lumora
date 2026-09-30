@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.core.design.components
 
+import com.iptvcinema.tv.core.navigation.requestFocusWhenReady
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.border
@@ -461,7 +462,7 @@ fun PlayerEpisodeSidebar(
     LaunchedEffect(seasons, currentEpisodeId, selectedSeason, episodes.size) {
         if (currentEpisodeId == null || currentEpisodeIndex < 0) return@LaunchedEffect
         listState.scrollToItem(currentEpisodeIndex)
-        currentEpisodeFocus.requestFocus()
+        currentEpisodeFocus.requestFocusWhenReady()
     }
 
     PlayerSidePanel(

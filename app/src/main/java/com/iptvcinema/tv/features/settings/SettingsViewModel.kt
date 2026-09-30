@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.features.settings
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.iptvcinema.tv.core.catalog.CatalogRefreshController
@@ -20,8 +21,10 @@ import com.iptvcinema.tv.core.device.DeviceIdentity
 import com.iptvcinema.tv.core.parental.PinCheck
 import com.iptvcinema.tv.core.model.UserSettings
 import com.iptvcinema.tv.core.player.StreamingQualityOption
+import com.iptvcinema.tv.core.util.safeSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -92,7 +95,13 @@ class SettingsViewModel @Inject constructor(
                 .collect { session ->
                     _parentalControls.value = null
                     _parentalControlsLoaded.value = false
-                    if (session.isAuthenticated) loadAccountAndParentalControls() else clearAccount()
+                    if (session.isAuthenticated) {
+                        loadAccountAndParentalControls()
+                    } else {
+                        // Guest profiles keep parental controls on the device; they apply too.
+                        clearAccount()
+                        viewModelScope.launch { loadParentalControls() }
+                    }
                 }
         }
     }
@@ -104,12 +113,26 @@ class SettingsViewModel @Inject constructor(
                 email = authRepository.currentUserEmail(),
                 isCloudAccount = authRepository.isConfigured(),
             )
-            val profileId = appSessionRepository.sessionState.first().currentProfileId ?: return@launch
-            runCatching { parentalControlsRepository.getControls(profileId) }
-                .onSuccess { controls ->
-                    _parentalControls.value = controls
-                    _parentalControlsLoaded.value = true
-                }
+            loadParentalControls()
+        }
+    }
+
+    private suspend fun loadParentalControls() {
+        val profileId = appSessionRepository.sessionState.first().currentProfileId
+        if (profileId == null) {
+            // No profile, nothing to protect.
+            _parentalControls.value = null
+            _parentalControlsLoaded.value = true
+            return
+        }
+        try {
+            _parentalControls.value = parentalControlsRepository.getControls(profileId)
+            _parentalControlsLoaded.value = true
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            // Left unloaded: protected settings keep asking for the PIN until a reload works.
+            Log.w(TAG, "Parental controls failed to load: ${error.safeSummary()}")
         }
     }
 
@@ -127,6 +150,9 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun requiresPlaylistPin(): Boolean {
+        // Until the profile's controls load (they reset on every profile or account change),
+        // ask for the PIN rather than let protected settings open unchecked.
+        if (!_parentalControlsLoaded.value) return true
         val controls = _parentalControls.value ?: return false
         return parentalGate.requiresPinForSettings(controls) &&
             !parentalGate.isPinVerified(controls.profileId)
@@ -212,5 +238,9 @@ class SettingsViewModel @Inject constructor(
             catalogSyncProgressTracker = catalogSyncProgressTracker,
             appSessionRepository = appSessionRepository,
         )
+    }
+
+    private companion object {
+        const val TAG = "SettingsViewModel"
     }
 }

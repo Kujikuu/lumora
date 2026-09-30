@@ -30,6 +30,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -334,6 +335,8 @@ class SourceViewModel @Inject constructor(
         }
     }
 
+    private val deletingSources = mutableSetOf<String>()
+
     fun setActiveSource(sourceId: String, onComplete: () -> Unit = {}) {
         viewModelScope.launch {
             runCatching {
@@ -353,15 +356,38 @@ class SourceViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Deletes a playlist. When it was the active one, the next playlist becomes active (or none
+     * is), so the app never keeps browsing and refreshing a playlist that no longer exists.
+     * A second press while the first delete runs is ignored.
+     */
     fun deleteSource(sourceId: String) {
+        if (!deletingSources.add(sourceId)) return
         viewModelScope.launch {
-            runCatching {
+            try {
                 playlistSourcesRepository.deleteSource(sourceId)
-            }.onSuccess {
                 catalogRepository.purgeSource(sourceId)
+                if (appSessionRepository.sessionState.first().currentSourceId == sourceId) {
+                    val next = playlistSourcesRepository.getSources().firstOrNull { it.id != sourceId }
+                    if (next == null) {
+                        appSessionRepository.clearSource()
+                    } else {
+                        playlistSourcesRepository.setActiveSource(next.id)
+                        appSessionRepository.setSource(
+                            sourceId = next.id,
+                            sourceType = next.type,
+                            isDemoMode = next.type == SourceType.DEMO,
+                        )
+                        if (next.type != SourceType.DEMO) catalogSyncScheduler.enqueueStartupCheck()
+                    }
+                }
                 loadSources()
-            }.onFailure { error ->
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
                 _uiState.value = SourcesUiState.Error(appStrings.get(R.string.source_error_save))
+            } finally {
+                deletingSources.remove(sourceId)
             }
         }
     }
@@ -408,7 +434,7 @@ class SourceViewModel @Inject constructor(
             DateTimeFormatter.ofPattern("MMM d, yyyy HH:mm")
                 .withZone(ZoneId.systemDefault())
                 .format(it)
-        } ?: "Never synced"
+        } ?: appStrings.get(R.string.source_never_synced)
     }
 
     private fun updateChecklistFromAuth(result: XtreamAuthResult) {

@@ -1,5 +1,11 @@
 package com.iptvcinema.tv.features.details
 
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.CancellationException
+import com.iptvcinema.tv.core.util.safeSummary
+import com.iptvcinema.tv.core.parental.ParentalGate
+import com.iptvcinema.tv.core.data.repository.ParentalControlsRepository
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.iptvcinema.tv.R
@@ -45,12 +51,15 @@ class ChannelDetailsViewModel @Inject constructor(
     private val appSessionRepository: AppSessionRepository,
     private val catalogRepository: CatalogRepository,
     private val favoritesRepository: FavoritesRepository,
+    private val parentalControlsRepository: ParentalControlsRepository,
+    private val parentalGate: ParentalGate,
     private val appStrings: AppStrings,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ChannelDetailsUiState())
     val uiState: StateFlow<ChannelDetailsUiState> = _uiState.asStateFlow()
 
     private var clockJob: Job? = null
+    private var favoriteToggleJob: Job? = null
 
     fun loadChannelDetails(channelId: String) {
         viewModelScope.launch {
@@ -124,6 +133,17 @@ class ChannelDetailsViewModel @Inject constructor(
                 return@launch
             }
 
+            // Its related channels share its category, so checking this one covers them too.
+            val controls = profileId?.let { parentalControlsRepository.getControls(it) }
+            if (controls != null && parentalGate.isContentBlocked(catalogChannel.categoryName, null, controls)) {
+                _uiState.value = ChannelDetailsUiState(
+                    loadState = DetailsLoadState.Error,
+                    channelId = channelId,
+                    message = appStrings.get(R.string.parental_playback_blocked),
+                )
+                return@launch
+            }
+
             val nowMs = System.currentTimeMillis()
             val windowStart = GuideLayoutHelper.defaultWindowStart(nowMs)
             val windowEnd = GuideLayoutHelper.windowEndFromStart(windowStart)
@@ -158,12 +178,14 @@ class ChannelDetailsViewModel @Inject constructor(
     }
 
     fun toggleFavorite(onResult: (Boolean) -> Unit = {}) {
-        viewModelScope.launch {
+        // A second press while the first is saving would toggle it straight back.
+        if (favoriteToggleJob?.isActive == true) return
+        favoriteToggleJob = viewModelScope.launch {
             val state = _uiState.value
             if (state.loadState != DetailsLoadState.Ready) return@launch
-            val profileId = appSessionRepository.sessionState.first().currentProfileId ?: return@launch
             val session = appSessionRepository.sessionState.first()
-            runCatching {
+            val profileId = session.currentProfileId ?: return@launch
+            try {
                 val isFavorite = favoritesRepository.toggleFavorite(
                     profileId = profileId,
                     contentId = state.channelId,
@@ -171,9 +193,15 @@ class ChannelDetailsViewModel @Inject constructor(
                     title = state.channelName,
                     posterUrl = state.logoUrl,
                     sourceId = session.currentSourceId,
+                    currentlyFavorite = state.isFavorite,
                 )
-                _uiState.value = state.copy(isFavorite = isFavorite)
+                // Only the flag changes: the clock may have updated the rest meanwhile.
+                _uiState.update { it.copy(isFavorite = isFavorite) }
                 onResult(isFavorite)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.w("ChannelDetails", "Favorite toggle failed: ${error.safeSummary()}")
             }
         }
     }
@@ -223,20 +251,10 @@ class ChannelDetailsViewModel @Inject constructor(
         excludeChannelId: String,
         nowMs: Long,
     ): List<ChannelItem> {
-        val categoryId = catalogChannel.categoryId
-        val categoryName = catalogChannel.categoryName
-        val related = catalogRepository.getOrderedChannels(sourceId)
-            .filter { channel ->
-                channel.id != excludeChannelId &&
-                    (
-                        (!categoryId.isNullOrBlank() && channel.categoryId == categoryId) ||
-                            (
-                                categoryId.isNullOrBlank() &&
-                                    !categoryName.isNullOrBlank() &&
-                                    channel.categoryName.equals(categoryName, ignoreCase = true)
-                                )
-                        )
-            }
+        // Only this category is read: the whole list can be 10,000+ channels on a slow TV.
+        val related = catalogRepository
+            .getOrderedChannelsInCategory(sourceId, catalogChannel.categoryId, catalogChannel.categoryName)
+            .filter { it.id != excludeChannelId }
             .take(12)
         if (related.isEmpty()) return emptyList()
         val currentPrograms = catalogRepository.getCurrentProgramsForChannels(

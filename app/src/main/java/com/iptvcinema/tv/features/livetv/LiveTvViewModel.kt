@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.features.livetv
 
+import com.iptvcinema.tv.core.util.safeSummary
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.iptvcinema.tv.core.catalog.CatalogRefreshController
@@ -31,6 +32,7 @@ import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.util.AppStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -299,8 +301,9 @@ class LiveTvViewModel @Inject constructor(
             !parentalGate.isPinVerified(controls.profileId)
     }
 
+    /** Fails closed: without the profile's controls no PIN can be checked, so none passes. */
     fun verifyCategoryPin(pin: String): Boolean {
-        val controls = currentParentalControls ?: return true
+        val controls = currentParentalControls ?: return false
         return parentalGate.verifyPin(controls, pin)
     }
 
@@ -356,9 +359,12 @@ class LiveTvViewModel @Inject constructor(
         playbackJob?.cancel()
         playbackJob = viewModelScope.launch {
             if (delayMs > 0L) delay(delayMs)
-            val result = runCatching {
+            val result = try {
                 playbackRepository.resolve(channelId, "live")
-            }.getOrElse {
+            } catch (error: CancellationException) {
+                // A newer channel pick or leaving the screen cancelled this one; nothing failed.
+                throw error
+            } catch (error: Exception) {
                 _uiState.value = _uiState.value.copy(
                     playbackNotice = appStrings.get(R.string.error_unable_load_content),
                 )
@@ -428,9 +434,9 @@ class LiveTvViewModel @Inject constructor(
 
     fun toggleChannelFavorite(channel: ChannelItem) {
         viewModelScope.launch {
-            val profileId = appSessionRepository.sessionState.first().currentProfileId ?: return@launch
             val session = appSessionRepository.sessionState.first()
-            runCatching {
+            val profileId = session.currentProfileId ?: return@launch
+            try {
                 favoritesRepository.toggleFavorite(
                     profileId = profileId,
                     contentId = channel.id,
@@ -438,7 +444,12 @@ class LiveTvViewModel @Inject constructor(
                     title = channel.name,
                     posterUrl = channel.logoUrl,
                     sourceId = session.currentSourceId,
+                    currentlyFavorite = channel.id in favoriteChannelIds.value,
                 )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                android.util.Log.w("LiveTvViewModel", "Favorite toggle failed: ${error.safeSummary()}")
             }
         }
     }

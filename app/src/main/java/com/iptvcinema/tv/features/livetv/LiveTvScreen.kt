@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.features.livetv
 
+import com.iptvcinema.tv.core.navigation.requestFocusWhenReady
 import android.view.ViewGroup
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -247,7 +248,7 @@ fun LiveTvScreen(
         if (!overlaysVisible || uiState.loadState != CatalogLoadState.Ready) return@LaunchedEffect
         delay(OVERLAY_HIDE_DELAY_MS)
         overlaysVisible = false
-        videoSurfaceFocus.requestFocus()
+        videoSurfaceFocus.requestFocusWhenReady()
     }
 
     DisposableEffect(Unit) {

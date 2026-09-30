@@ -1,5 +1,7 @@
 package com.iptvcinema.tv.core.player
 
+import com.iptvcinema.tv.core.util.AppStrings
+import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.data.fake.FakeDataProvider
 import com.iptvcinema.tv.core.data.local.LocalCredentialsStore
 import com.iptvcinema.tv.core.data.repository.CatalogRepository
@@ -19,6 +21,7 @@ class PlaybackRepository @Inject constructor(
     private val appSessionRepository: AppSessionRepository,
     private val localCredentialsStore: LocalCredentialsStore,
     private val episodeCatalogRepository: EpisodeCatalogRepository,
+    private val appStrings: AppStrings,
 ) {
     suspend fun resolve(
         contentId: String,
@@ -31,7 +34,7 @@ class PlaybackRepository @Inject constructor(
         }
 
         val sourceId = session.currentSourceId
-            ?: return PlaybackResolveResult.Error("No source connected", "NO_SOURCE")
+            ?: return PlaybackResolveResult.Error(appStrings.get(R.string.playback_error_no_source), "NO_SOURCE")
 
         val headers = buildHeaders(sourceId, session.sourceType)
 
@@ -39,7 +42,7 @@ class PlaybackRepository @Inject constructor(
             "live" -> resolveLive(sourceId, contentId, headers)
             "movie" -> resolveMovie(sourceId, contentId, headers)
             "episode" -> resolveEpisode(sourceId, contentId, headers, seriesId)
-            else -> PlaybackResolveResult.Error("Unknown content type", "INVALID_TYPE")
+            else -> PlaybackResolveResult.Error(appStrings.get(R.string.playback_error_unknown_type), "INVALID_TYPE")
         }
     }
 
@@ -66,7 +69,7 @@ class PlaybackRepository @Inject constructor(
         headers: PlaybackHeaders,
     ): PlaybackResolveResult {
         val channel = catalogRepository.getChannel(sourceId, contentId)
-            ?: return PlaybackResolveResult.Error("Channel not found", "NOT_FOUND")
+            ?: return PlaybackResolveResult.Error(appStrings.get(R.string.playback_error_channel_not_found), "NOT_FOUND")
         val programTitle = catalogRepository.getCurrentProgram(sourceId, contentId)?.title
         return channel.toPlaybackRequest(headers, programTitle)
     }
@@ -77,7 +80,7 @@ class PlaybackRepository @Inject constructor(
         headers: PlaybackHeaders,
     ): PlaybackResolveResult {
         val movie = catalogRepository.getMovie(sourceId, contentId)
-            ?: return PlaybackResolveResult.Error("Movie not found", "NOT_FOUND")
+            ?: return PlaybackResolveResult.Error(appStrings.get(R.string.playback_error_movie_not_found), "NOT_FOUND")
         return movie.toPlaybackRequest(headers)
     }
 
@@ -88,7 +91,7 @@ class PlaybackRepository @Inject constructor(
         seriesId: String?,
     ): PlaybackResolveResult {
         val episode = episodeCatalogRepository.getEpisode(sourceId, contentId, seriesId)
-            ?: return PlaybackResolveResult.Error("Episode not found", "NOT_FOUND")
+            ?: return PlaybackResolveResult.Error(appStrings.get(R.string.playback_error_episode_not_found), "NOT_FOUND")
         val posterUrl = episode.thumbnailUrl?.takeIf { it.isNotBlank() }
             ?: catalogRepository.getSeries(sourceId, episode.seriesId)?.posterUrl
         return episode.toPlaybackRequest(headers, posterUrl)
@@ -150,7 +153,7 @@ class PlaybackRepository @Inject constructor(
         programTitle: String? = null,
     ): PlaybackResolveResult {
         if (streamUrl.isBlank()) {
-            return PlaybackResolveResult.Error("Stream unavailable", "EMPTY_URL")
+            return PlaybackResolveResult.Error(appStrings.get(R.string.playback_error_stream_unavailable), "EMPTY_URL")
         }
         val meta = buildList {
             add("LIVE")
@@ -175,7 +178,7 @@ class PlaybackRepository @Inject constructor(
 
     private fun CatalogMovie.toPlaybackRequest(headers: PlaybackHeaders): PlaybackResolveResult {
         if (streamUrl.isBlank()) {
-            return PlaybackResolveResult.Error("Stream unavailable", "EMPTY_URL")
+            return PlaybackResolveResult.Error(appStrings.get(R.string.playback_error_stream_unavailable), "EMPTY_URL")
         }
         val meta = buildList {
             year?.let { add(it.toString()) }
@@ -203,7 +206,7 @@ class PlaybackRepository @Inject constructor(
         posterUrl: String? = thumbnailUrl,
     ): PlaybackResolveResult {
         if (streamUrl.isBlank()) {
-            return PlaybackResolveResult.Error("Stream unavailable", "EMPTY_URL")
+            return PlaybackResolveResult.Error(appStrings.get(R.string.playback_error_stream_unavailable), "EMPTY_URL")
         }
         val meta = buildList {
             add("S${seasonNumber}E$episodeNumber")

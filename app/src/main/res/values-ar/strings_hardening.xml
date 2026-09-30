@@ -10,4 +10,11 @@
     <string name="pin_confirm_new">أكّد رمز PIN</string>
     <string name="pin_mismatch">رمزا PIN غير متطابقين. حاول مرة أخرى.</string>
     <string name="parental_no_profiles">لا توجد ملفات شخصية بعد. أضف ملفًا شخصيًا أولًا.</string>
+    <string name="playback_error_no_source">لا توجد قائمة تشغيل متصلة.</string>
+    <string name="playback_error_unknown_type">لا يمكن تشغيل هذا العنصر.</string>
+    <string name="playback_error_channel_not_found">لم تعد هذه القناة في قائمة التشغيل.</string>
+    <string name="playback_error_movie_not_found">لم يعد هذا الفيلم في قائمة التشغيل.</string>
+    <string name="playback_error_episode_not_found">لم تعد هذه الحلقة في قائمة التشغيل.</string>
+    <string name="playback_error_stream_unavailable">هذا البث غير متاح.</string>
+    <string name="source_never_synced">لم تتم المزامنة بعد</string>
 </resources>

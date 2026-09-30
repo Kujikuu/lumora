@@ -125,6 +125,16 @@ class CatalogDaoFacade @Inject constructor(
         }
     }
 
+    /** Swaps one series' episodes in a single transaction, so a cancel never leaves it empty. */
+    suspend fun replaceSeriesEpisodes(
+        sourceId: String,
+        seriesId: String,
+        episodes: List<LocalEpisodeEntity>,
+    ) = database.withTransaction {
+        database.episodeDao().deleteBySeries(sourceId, seriesId)
+        if (episodes.isNotEmpty()) database.episodeDao().upsertAll(episodes)
+    }
+
     suspend fun purgeSource(sourceId: String) = database.withTransaction {
         database.categoryDao().deleteBySource(sourceId)
         database.channelDao().deleteBySource(sourceId)

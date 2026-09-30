@@ -540,7 +540,7 @@ fun PlaylistManagementScreen(
                         movies = activeSource?.movieCount ?: 0,
                         series = activeSource?.seriesCount ?: 0,
                         epgAvailable = activeSource?.epgAvailable ?: false,
-                        lastUpdate = activeSource?.lastSynced ?: "Never synced",
+                        lastUpdate = activeSource?.lastSynced ?: stringResource(R.string.source_never_synced),
                     )
                 }
             }

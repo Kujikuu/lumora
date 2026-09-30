@@ -10,4 +10,11 @@
     <string name="pin_confirm_new">Confirm the PIN</string>
     <string name="pin_mismatch">The PINs don\'t match. Try again.</string>
     <string name="parental_no_profiles">No profiles yet. Add a profile first.</string>
+    <string name="playback_error_no_source">No playlist is connected.</string>
+    <string name="playback_error_unknown_type">This item can\'t be played.</string>
+    <string name="playback_error_channel_not_found">This channel is no longer in your playlist.</string>
+    <string name="playback_error_movie_not_found">This movie is no longer in your playlist.</string>
+    <string name="playback_error_episode_not_found">This episode is no longer in your playlist.</string>
+    <string name="playback_error_stream_unavailable">This stream is unavailable.</string>
+    <string name="source_never_synced">Never synced</string>
 </resources>

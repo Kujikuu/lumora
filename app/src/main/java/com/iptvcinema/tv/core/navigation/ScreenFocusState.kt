@@ -84,13 +84,8 @@ class ScreenFocusState(
     // Slow TVs can take many frames to compose and attach the target after data loads.
     // Trying once per frame for a short window lands focus as soon as it is possible,
     // instead of two fixed attempts that miss on slow devices and leave focus in the nav rail.
-    private suspend fun requestFocusAfterComposition(focusRequester: FocusRequester): Boolean {
-        repeat(FOCUS_MAX_FRAME_ATTEMPTS) {
-            withFrameNanos { }
-            if (runCatching { focusRequester.requestFocus() }.getOrDefault(false)) return true
-        }
-        return false
-    }
+    private suspend fun requestFocusAfterComposition(focusRequester: FocusRequester): Boolean =
+        focusRequester.requestFocusWhenReady(FOCUS_MAX_FRAME_ATTEMPTS)
 
     companion object {
         const val NO_SAVED_FOCUS = -1

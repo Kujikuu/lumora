@@ -27,7 +27,8 @@ fun showDeviceKeyboard(
     focusRequester: FocusRequester,
     keyboardController: androidx.compose.ui.platform.SoftwareKeyboardController?,
 ) {
-    focusRequester.requestFocus()
+    // Not attached yet (for example the field is still composing): just skip.
+    runCatching { focusRequester.requestFocus() }
     keyboardController?.show()
 }
 

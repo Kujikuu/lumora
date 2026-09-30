@@ -496,10 +496,7 @@ class CatalogRepository @Inject constructor(
         seriesId: String,
         episodes: List<com.iptvcinema.tv.core.database.entity.LocalEpisodeEntity>,
     ) {
-        catalogDaoFacade.episodes.deleteBySeries(sourceId, seriesId)
-        if (episodes.isNotEmpty()) {
-            catalogDaoFacade.episodes.upsertAll(episodes)
-        }
+        catalogDaoFacade.replaceSeriesEpisodes(sourceId, seriesId, episodes)
     }
 
     suspend fun resolveWatchHistoryPosterUrl(

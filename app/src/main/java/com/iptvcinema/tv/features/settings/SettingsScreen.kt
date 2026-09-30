@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.features.settings
 
+import com.iptvcinema.tv.core.navigation.requestFocusWhenReady
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -221,7 +222,7 @@ fun SettingsScreen(
 
     LaunchedEffect(focusState.hasSavedFocus, playbackSubPanel) {
         if (playbackSubPanel != PlaybackSubPanel.None) {
-            detailFocus.requestFocus()
+            detailFocus.requestFocusWhenReady()
             return@LaunchedEffect
         }
         if (focusState.hasSavedFocus) {

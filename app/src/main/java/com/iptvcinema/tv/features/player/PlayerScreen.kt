@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.features.player
 
+import com.iptvcinema.tv.core.navigation.requestFocusWhenReady
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -164,9 +165,9 @@ fun PlayerScreen(
 
     LaunchedEffect(isOverlayVisible, trackPickerOpen, pickerOpen) {
         if (trackPickerOpen || pickerOpen || !isOverlayVisible) {
-            videoSurfaceFocus.requestFocus()
+            videoSurfaceFocus.requestFocusWhenReady()
         } else {
-            playPauseFocus.requestFocus()
+            playPauseFocus.requestFocusWhenReady()
         }
     }
 

@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.features.details
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.iptvcinema.tv.R
@@ -25,8 +26,11 @@ import com.iptvcinema.tv.core.player.WatchHistoryResumePolicy
 import com.iptvcinema.tv.core.util.AppStrings
 import com.iptvcinema.tv.core.util.CastParser
 import com.iptvcinema.tv.core.util.RatingFormatter
+import com.iptvcinema.tv.core.util.safeSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -85,6 +89,7 @@ class DetailsViewModel @Inject constructor(
     private val appStrings: AppStrings,
 ) : ViewModel() {
     private val _isFavorite = MutableStateFlow(false)
+    private var favoriteToggleJob: Job? = null
     val isFavorite: StateFlow<Boolean> = _isFavorite.asStateFlow()
 
     private val _movieUiState = MutableStateFlow(MovieDetailsUiState())
@@ -135,7 +140,7 @@ class DetailsViewModel @Inject constructor(
             val movieItem = catalogMovie.toMovieItem()
             val filteredRelated = if (controls != null) {
                 related.filter { movie ->
-                    !parentalGate.isContentBlocked(movie.genres.firstOrNull(), movie.rating, controls)
+                    !parentalGate.isContentBlocked(movie.categoryName ?: movie.genres.firstOrNull(), movie.rating, controls)
                 }
             } else {
                 related
@@ -150,9 +155,10 @@ class DetailsViewModel @Inject constructor(
                 cast = CastParser.parseCastMembers(catalogMovie.cast),
                 relatedMovies = filteredRelated,
                 continueWatching = continueWatching,
+                // Blocks are per provider category; the genre is only a fallback.
                 playbackBlocked = controls != null &&
                     parentalGate.isContentBlocked(
-                        movieItem.genres.firstOrNull(),
+                        catalogMovie.categoryName ?: movieItem.genres.firstOrNull(),
                         movieItem.rating,
                         controls,
                     ),
@@ -230,7 +236,7 @@ class DetailsViewModel @Inject constructor(
             ).map { with(CatalogUiMapper) { it.toSeriesItem() } }
             val filteredRelatedSeries = if (controls != null) {
                 relatedSeries.filter { item ->
-                    !parentalGate.isContentBlocked(item.genres.firstOrNull(), item.rating, controls)
+                    !parentalGate.isContentBlocked(item.categoryName ?: item.genres.firstOrNull(), item.rating, controls)
                 }
             } else {
                 relatedSeries
@@ -247,9 +253,10 @@ class DetailsViewModel @Inject constructor(
                 relatedSeries = filteredRelatedSeries,
                 continueWatching = continueWatching,
                 episodesLoading = false,
+                // The Xtream genres come first in seriesItem.genres; blocks are per category.
                 playbackBlocked = controls != null &&
                     parentalGate.isContentBlocked(
-                        seriesItem.genres.firstOrNull(),
+                        catalogSeries.categoryName ?: seriesItem.genres.firstOrNull(),
                         seriesItem.rating,
                         controls,
                     ),
@@ -271,10 +278,12 @@ class DetailsViewModel @Inject constructor(
         posterUrl: String?,
         onResult: (Boolean) -> Unit = {},
     ) {
-        viewModelScope.launch {
-            val profileId = appSessionRepository.sessionState.first().currentProfileId ?: return@launch
+        // A second press while the first is saving would toggle it straight back.
+        if (favoriteToggleJob?.isActive == true) return
+        favoriteToggleJob = viewModelScope.launch {
             val session = appSessionRepository.sessionState.first()
-            runCatching {
+            val profileId = session.currentProfileId ?: return@launch
+            try {
                 val isFavorite = favoritesRepository.toggleFavorite(
                     profileId = profileId,
                     contentId = contentId,
@@ -282,9 +291,14 @@ class DetailsViewModel @Inject constructor(
                     title = title,
                     posterUrl = posterUrl,
                     sourceId = session.currentSourceId,
+                    currentlyFavorite = _isFavorite.value,
                 )
                 _isFavorite.value = isFavorite
                 onResult(isFavorite)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.w(TAG, "Favorite toggle failed: ${error.safeSummary()}")
             }
         }
     }
@@ -350,6 +364,8 @@ class DetailsViewModel @Inject constructor(
         )
     }
 }
+
+private const val TAG = "DetailsViewModel"
 
 private fun CatalogMovie.toMovieItem(): MovieItem = MovieItem(
     id = id,
