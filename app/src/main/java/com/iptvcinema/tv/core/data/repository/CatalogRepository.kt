@@ -426,22 +426,16 @@ class CatalogRepository @Inject constructor(
         return entities.map { it.toDomain() }
     }
 
+    /**
+     * The next or previous channel [isAllowed] lets through (parental controls), from one read of
+     * the channel list. Null at either end of the list.
+     */
     suspend fun getAdjacentChannel(
         sourceId: String,
         currentChannelId: String,
         direction: ChannelDirection,
-    ): CatalogChannel? {
-        val channels = getOrderedChannels(sourceId)
-        if (channels.isEmpty()) return null
-        val index = channels.indexOfFirst { it.id == currentChannelId }
-        val currentIndex = if (index >= 0) index else 0
-        val nextIndex = when (direction) {
-            ChannelDirection.PREVIOUS -> (currentIndex - 1).coerceAtLeast(0)
-            ChannelDirection.NEXT -> (currentIndex + 1).coerceAtMost(channels.lastIndex)
-        }
-        if (nextIndex == currentIndex && index >= 0) return null
-        return channels.getOrNull(nextIndex)
-    }
+        isAllowed: (CatalogChannel) -> Boolean = { true },
+    ): CatalogChannel? = adjacentChannel(getOrderedChannels(sourceId), currentChannelId, direction, isAllowed)
 
     suspend fun getMovie(sourceId: String, movieId: String): CatalogMovie? =
         catalogDaoFacade.movies.getById(sourceId, movieId)?.toDomain()
@@ -926,4 +920,25 @@ class CatalogRepository @Inject constructor(
         const val LAST_ADDED_BROWSE_LIMIT = 20
         const val CURRENT_PROGRAMS_BATCH_SIZE = 400
     }
+}
+
+/**
+ * The first channel after (or before) [currentChannelId] in [channels] that [isAllowed] lets
+ * through; null at either end. When the current channel is missing, the first allowed channel.
+ */
+internal fun adjacentChannel(
+    channels: List<CatalogChannel>,
+    currentChannelId: String,
+    direction: ChannelDirection,
+    isAllowed: (CatalogChannel) -> Boolean,
+): CatalogChannel? {
+    val index = channels.indexOfFirst { it.id == currentChannelId }
+    if (index < 0) return channels.firstOrNull(isAllowed)
+    val step = if (direction == ChannelDirection.PREVIOUS) -1 else 1
+    var next = index + step
+    while (next in channels.indices) {
+        if (isAllowed(channels[next])) return channels[next]
+        next += step
+    }
+    return null
 }

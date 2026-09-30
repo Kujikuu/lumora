@@ -2,6 +2,7 @@ package com.iptvcinema.tv.core.parental
 
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toMovieItem
 import com.iptvcinema.tv.core.data.repository.CatalogRepository
+import com.iptvcinema.tv.core.model.catalog.CatalogChannel
 import com.iptvcinema.tv.core.data.repository.ParentalControlsRepository
 import com.iptvcinema.tv.core.datastore.AppSessionState
 import com.iptvcinema.tv.core.model.WatchHistoryContentType
@@ -25,7 +26,8 @@ class ParentalPlaybackGuard @Inject constructor(
                 val movie = catalogRepository.getMovie(sourceId, request.contentId)?.toMovieItem()
                     ?: return false
                 parentalGate.isContentBlocked(
-                    categoryName = movie.genres.firstOrNull(),
+                    // Blocks are set per provider category; the genre is only a fallback.
+                    categoryName = movie.categoryName ?: movie.genres.firstOrNull(),
                     contentRating = movie.rating,
                     controls = controls,
                 )
@@ -48,5 +50,13 @@ class ParentalPlaybackGuard @Inject constructor(
                 )
             }
         }
+    }
+
+    /** Which channels may play for the current profile, read once so zapping can skip the rest. */
+    suspend fun channelFilter(session: AppSessionState): (CatalogChannel) -> Boolean {
+        if (session.isDemoMode) return { true }
+        val profileId = session.currentProfileId ?: return { true }
+        val controls = parentalControlsRepository.getControls(profileId) ?: return { true }
+        return { channel -> !parentalGate.isContentBlocked(channel.categoryName, null, controls) }
     }
 }

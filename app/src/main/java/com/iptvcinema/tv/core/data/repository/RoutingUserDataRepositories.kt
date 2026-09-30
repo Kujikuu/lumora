@@ -19,6 +19,7 @@ import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.model.WatchHistoryItem
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
@@ -66,11 +67,7 @@ class RoutingFavoritesRepository @Inject constructor(
         contentType: FavoriteContentType,
     ): Boolean {
         val backend = resolveBackend()
-        return runCatching {
-            backend.isFavorite(profileId, contentId, contentType)
-        }.onFailure { cloudAccountStatus.reportCloudReadFailure(it) }
-            .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
-            .getOrDefault(false)
+        return cloudAccountStatus.cloudRead({ false }) { backend.isFavorite(profileId, contentId, contentType) }
     }
 
     override suspend fun toggleFavorite(
@@ -83,27 +80,16 @@ class RoutingFavoritesRepository @Inject constructor(
         currentlyFavorite: Boolean?,
     ): Boolean {
         val backend = resolveBackend()
-        return runCatching {
-            backend.toggleFavorite(
-                profileId,
-                contentId,
-                contentType,
-                title,
-                posterUrl,
-                sourceId,
-                currentlyFavorite,
-            )
-        }.onFailure { cloudAccountStatus.reportCloudWriteFailure(it) }
-            .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
-            .getOrDefault(currentlyFavorite ?: false)
+        // Rethrows: returning a guess would tell the caller the title was removed when the save
+        // simply failed (offline), and the screen would show the wrong state.
+        return cloudAccountStatus.cloudWrite {
+            backend.toggleFavorite(profileId, contentId, contentType, title, posterUrl, sourceId, currentlyFavorite)
+        }
     }
 
     override suspend fun removeFavorite(profileId: String, favorite: FavoriteItem) {
         val backend = resolveBackend()
-        runCatching {
-            backend.removeFavorite(profileId, favorite)
-        }.onFailure { cloudAccountStatus.reportCloudWriteFailure(it) }
-            .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
+        cloudAccountStatus.cloudWrite { backend.removeFavorite(profileId, favorite) }
     }
 }
 
@@ -131,11 +117,7 @@ class RoutingWatchHistoryRepository @Inject constructor(
         contentType: WatchHistoryContentType,
     ): WatchHistoryItem? {
         val backend = resolveBackend()
-        return runCatching {
-            backend.getProgress(profileId, contentId, contentType)
-        }.onFailure { cloudAccountStatus.reportCloudReadFailure(it) }
-            .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
-            .getOrNull()
+        return cloudAccountStatus.cloudRead({ null }) { backend.getProgress(profileId, contentId, contentType) }
     }
 
     override suspend fun upsertProgress(
@@ -150,7 +132,8 @@ class RoutingWatchHistoryRepository @Inject constructor(
         seriesId: String?,
     ) {
         val backend = resolveBackend()
-        runCatching {
+        // Progress saves are best effort: a failed one is reported, not thrown.
+        cloudAccountStatus.cloudWriteBestEffort {
             backend.upsertProgress(
                 profileId,
                 contentId,
@@ -162,16 +145,12 @@ class RoutingWatchHistoryRepository @Inject constructor(
                 sourceId,
                 seriesId,
             )
-        }.onFailure { cloudAccountStatus.reportCloudWriteFailure(it) }
-            .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
+        }
     }
 
     override suspend fun getDistinctSeriesIds(profileId: String): List<String> {
         val backend = resolveBackend()
-        return runCatching { backend.getDistinctSeriesIds(profileId) }
-            .onFailure { cloudAccountStatus.reportCloudReadFailure(it) }
-            .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
-            .getOrDefault(emptyList())
+        return cloudAccountStatus.cloudRead({ emptyList() }) { backend.getDistinctSeriesIds(profileId) }
     }
 
     override suspend fun getEpisodeHistoryForSeries(
@@ -180,11 +159,9 @@ class RoutingWatchHistoryRepository @Inject constructor(
         seriesId: String,
     ): List<WatchHistoryItem> {
         val backend = resolveBackend()
-        return runCatching {
+        return cloudAccountStatus.cloudRead({ emptyList() }) {
             backend.getEpisodeHistoryForSeries(profileId, sourceId, seriesId)
-        }.onFailure { cloudAccountStatus.reportCloudReadFailure(it) }
-            .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
-            .getOrDefault(emptyList())
+        }
     }
 
     override suspend fun remove(
@@ -193,16 +170,12 @@ class RoutingWatchHistoryRepository @Inject constructor(
         contentType: WatchHistoryContentType,
     ) {
         val backend = resolveBackend()
-        runCatching { backend.remove(profileId, contentId, contentType) }
-            .onFailure { cloudAccountStatus.reportCloudWriteFailure(it) }
-            .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
+        cloudAccountStatus.cloudWriteBestEffort { backend.remove(profileId, contentId, contentType) }
     }
 
     override suspend fun removeSeries(profileId: String, seriesId: String) {
         val backend = resolveBackend()
-        runCatching { backend.removeSeries(profileId, seriesId) }
-            .onFailure { cloudAccountStatus.reportCloudWriteFailure(it) }
-            .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
+        cloudAccountStatus.cloudWriteBestEffort { backend.removeSeries(profileId, seriesId) }
     }
 
     override fun invalidate() {
@@ -227,17 +200,12 @@ class RoutingUserSettingsRepository @Inject constructor(
 
     override suspend fun getSettings(): UserSettings? {
         val backend = resolveBackend()
-        return runCatching { backend.getSettings() }
-            .onFailure { cloudAccountStatus.reportCloudReadFailure(it) }
-            .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
-            .getOrNull()
+        return cloudAccountStatus.cloudRead({ null }) { backend.getSettings() }
     }
 
     override suspend fun updateSettings(settings: UserSettings) {
         val backend = resolveBackend()
-        runCatching { backend.updateSettings(settings) }
-            .onFailure { cloudAccountStatus.reportCloudWriteFailure(it) }
-            .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
+        cloudAccountStatus.cloudWriteBestEffort { backend.updateSettings(settings) }
     }
 }
 
@@ -273,24 +241,60 @@ class RoutingParentalControlsRepository @Inject constructor(
 
     override suspend fun getControls(profileId: String): ParentalControls? {
         val backend = resolveBackend()
-        return runCatching { backend.getControls(profileId) }
-            .onFailure { cloudAccountStatus.reportCloudReadFailure(it) }
-            .onSuccess { cloudAccountStatus.reportCloudReadSuccess() }
-            .getOrElse { ParentalControlsDefaults.restrictiveFallback(profileId) }
+        return cloudAccountStatus.cloudRead({ ParentalControlsDefaults.restrictiveFallback(profileId) }) {
+            backend.getControls(profileId)
+        }
     }
 
     override suspend fun updateControls(controls: ParentalControls) {
         val backend = resolveBackend()
-        runCatching { backend.updateControls(controls) }
-            .onFailure { cloudAccountStatus.reportCloudWriteFailure(it) }
-            .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
+        // Rethrows so the screen can roll back and say the save failed; a PIN that only looked
+        // saved would be gone on the next load.
+        cloudAccountStatus.cloudWrite { backend.updateControls(controls) }
     }
 
     override suspend fun ensureControls(profileId: String): ParentalControls {
         val backend = resolveBackend()
-        return runCatching { backend.ensureControls(profileId) }
-            .onFailure { cloudAccountStatus.reportCloudWriteFailure(it) }
-            .onSuccess { cloudAccountStatus.reportCloudWriteSuccess() }
-            .getOrElse { ParentalControlsDefaults.restrictiveFallback(profileId) }
+        return try {
+            cloudAccountStatus.cloudWrite { backend.ensureControls(profileId) }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            ParentalControlsDefaults.restrictiveFallback(profileId)
+        }
+    }
+}
+
+/** A cloud read: success and failure are reported; cancellation is neither and propagates. */
+private suspend inline fun <T> CloudAccountStatus.cloudRead(fallback: (Exception) -> T, block: () -> T): T =
+    try {
+        block().also { reportCloudReadSuccess() }
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Exception) {
+        reportCloudReadFailure(error)
+        fallback(error)
+    }
+
+/** A cloud write whose failure the caller must handle: it is reported, then rethrown. */
+private suspend inline fun <T> CloudAccountStatus.cloudWrite(block: () -> T): T =
+    try {
+        block().also { reportCloudWriteSuccess() }
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Exception) {
+        reportCloudWriteFailure(error)
+        throw error
+    }
+
+/** A cloud write nobody waits on (progress, settings): a failure is reported and dropped. */
+private suspend inline fun CloudAccountStatus.cloudWriteBestEffort(block: () -> Unit) {
+    try {
+        block()
+        reportCloudWriteSuccess()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Exception) {
+        reportCloudWriteFailure(error)
     }
 }

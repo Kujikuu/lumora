@@ -14,10 +14,13 @@ import com.iptvcinema.tv.core.parental.PinHasher
 import com.iptvcinema.tv.core.util.AppStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 sealed interface ParentalUiState {
     data object Loading : ParentalUiState
@@ -25,6 +28,8 @@ sealed interface ParentalUiState {
         val profiles: List<UserProfile>,
         val controls: ParentalControls,
         val availableCategories: List<String>,
+        /** The profile has a PIN that was not entered in this session: nothing can change yet. */
+        val locked: Boolean = false,
     ) : ParentalUiState
     data class Error(val message: String) : ParentalUiState
 }
@@ -43,6 +48,7 @@ class ParentalControlsViewModel @Inject constructor(
 
     private var selectedProfileId: String? = null
     private var pendingNewPin: String? = null
+    private val saveMutex = Mutex()
 
     init {
         loadProfiles()
@@ -51,36 +57,46 @@ class ParentalControlsViewModel @Inject constructor(
     fun loadProfiles() {
         viewModelScope.launch {
             _uiState.value = ParentalUiState.Loading
-            runCatching {
-                loadReadyState()
-            }.onFailure { error ->
-                _uiState.value = ParentalUiState.Error(appStrings.get(R.string.parental_error_load))
-            }
+            loadSafely()
         }
     }
 
     fun selectProfile(profileId: String) {
         selectedProfileId = profileId
-        viewModelScope.launch {
-            runCatching {
-                loadReadyState()
-            }.onFailure { error ->
-                _uiState.value = ParentalUiState.Error(appStrings.get(R.string.parental_error_load))
-            }
+        viewModelScope.launch { loadSafely() }
+    }
+
+    private suspend fun loadSafely() {
+        try {
+            loadReadyState()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            _uiState.value = ParentalUiState.Error(appStrings.get(R.string.parental_error_load))
         }
     }
 
+    /**
+     * Applies a change at once and saves it. Saves run one at a time and each writes the latest
+     * controls, so two quick toggles can never land out of order and undo each other.
+     */
     fun updateControls(transform: (ParentalControls) -> ParentalControls) {
-        val current = (_uiState.value as? ParentalUiState.Ready)?.controls ?: return
-        val updated = transform(current)
-        val ready = _uiState.value as ParentalUiState.Ready
+        val ready = _uiState.value as? ParentalUiState.Ready ?: return
+        if (ready.locked) return
+        val updated = transform(ready.controls)
         _uiState.value = ready.copy(controls = updated)
         viewModelScope.launch {
-            runCatching {
-                parentalControlsRepository.updateControls(updated)
-            }.onFailure { error ->
-                _uiState.value = ready.copy(controls = current)
-                _uiState.value = ParentalUiState.Error(appStrings.get(R.string.parental_error_save))
+            saveMutex.withLock {
+                val latest = (_uiState.value as? ParentalUiState.Ready)?.controls
+                    ?.takeIf { it.profileId == updated.profileId }
+                    ?: return@withLock
+                try {
+                    parentalControlsRepository.updateControls(latest)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    _uiState.value = ParentalUiState.Error(appStrings.get(R.string.parental_error_save))
+                }
             }
         }
     }
@@ -93,10 +109,13 @@ class ParentalControlsViewModel @Inject constructor(
         val ready = _uiState.value as? ParentalUiState.Ready ?: return
         when (mode) {
             PinEntryMode.Verify -> {
-                if (parentalGate.verifyPin(ready.controls, pin)) {
+                val check = parentalGate.checkPin(ready.controls, pin)
+                val message = check.messageOrNull(appStrings)
+                if (message == null) {
+                    if (ready.locked) _uiState.value = ready.copy(locked = false)
                     onSuccess()
                 } else {
-                    onError("Incorrect PIN")
+                    onError(message)
                 }
             }
             PinEntryMode.SetNew -> {
@@ -107,11 +126,13 @@ class ParentalControlsViewModel @Inject constructor(
                 val pending = pendingNewPin
                 if (pending == null || pending != pin) {
                     pendingNewPin = null
-                    onError("PINs do not match")
+                    onError(appStrings.get(R.string.pin_mismatch))
                     return
                 }
+                if (ready.locked) return
                 val hash = pinHasher.hashPin(pin)
                 updateControls { current -> current.copy(pinHash = hash) }
+                parentalGate.markPinVerified(ready.controls.profileId)
                 pendingNewPin = null
                 onSuccess()
             }
@@ -119,6 +140,7 @@ class ParentalControlsViewModel @Inject constructor(
     }
 
     fun clearPin() {
+        if ((_uiState.value as? ParentalUiState.Ready)?.locked != false) return
         updateControls { current -> current.copy(pinHash = null) }
         parentalGate.clearSession()
     }
@@ -127,7 +149,7 @@ class ParentalControlsViewModel @Inject constructor(
         val profiles = profilesRepository.getProfiles()
         val profileId = selectedProfileId ?: profiles.firstOrNull()?.id
         if (profileId == null) {
-            _uiState.value = ParentalUiState.Error("No profiles available")
+            _uiState.value = ParentalUiState.Error(appStrings.get(R.string.parental_no_profiles))
             return
         }
         selectedProfileId = profileId
@@ -140,6 +162,7 @@ class ParentalControlsViewModel @Inject constructor(
             profiles = profiles,
             controls = controls,
             availableCategories = availableCategories,
+            locked = parentalGate.pinEnabled(controls) && !parentalGate.isPinVerified(profileId),
         )
     }
 }

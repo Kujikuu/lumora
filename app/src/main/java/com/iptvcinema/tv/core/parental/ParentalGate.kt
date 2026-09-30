@@ -87,15 +87,14 @@ class ParentalGate @Inject constructor(
 
     fun isPinVerified(profileId: String): Boolean = parentalSession.isVerified(profileId)
 
+    /** Whoever just set a profile's PIN knows it; they need not type it again right away. */
+    fun markPinVerified(profileId: String) = parentalSession.markVerified(profileId)
+
     fun clearSession() = parentalSession.clear()
 
-    fun filterCategoryNames(categories: List<String>, controls: ParentalControls): List<String> {
-        val blocked = blockedCategorySet(controls)
-        return categories.filter { name ->
-            val normalized = name.trim()
-            !blocked.any { blockedName -> normalized.equals(blockedName, ignoreCase = true) }
-        }
-    }
+    /** Category names to show: the same rule as [isCategoryBlocked], so a chip never leads to blocked content. */
+    fun filterCategoryNames(categories: List<String>, controls: ParentalControls): List<String> =
+        categories.filterNot { isCategoryBlocked(it, controls) }
 
     fun isCategoryBlocked(categoryName: String, controls: ParentalControls): Boolean {
         val normalized = categoryName.trim()

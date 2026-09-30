@@ -28,6 +28,12 @@ class ParentalGateTest {
     )
 
     @Test
+    fun filterCategoryNames_hidesCategoriesThatOnlyContainAnAdultKeyword() {
+        val filtered = gate.filterCategoryNames(listOf("XXX Movies", "EN| Adult 18+", "Documentaries"), controls())
+        assertTrue(filtered == listOf("Documentaries"))
+    }
+
+    @Test
     fun filterCategoryNames_hidesAdultAndBlocked() {
         val filtered = gate.filterCategoryNames(
             listOf("Movies", "Adult", "Sports", "Kids"),

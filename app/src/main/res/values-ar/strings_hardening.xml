@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings added while hardening parental controls, sources and playback. -->
+<resources>
+    <string name="parental_locked">أدخل رمز PIN لإدارة الرقابة الأبوية.</string>
+    <string name="parental_pin_status_on">حالة رمز PIN: مفعّل</string>
+    <string name="parental_pin_status_off">حالة رمز PIN: غير مفعّل</string>
+    <string name="parental_set_pin">تعيين رمز PIN</string>
+    <string name="parental_change_pin">تغيير رمز PIN</string>
+    <string name="pin_set_new">عيّن رمز PIN جديدًا</string>
+    <string name="pin_confirm_new">أكّد رمز PIN</string>
+    <string name="pin_mismatch">رمزا PIN غير متطابقين. حاول مرة أخرى.</string>
+    <string name="parental_no_profiles">لا توجد ملفات شخصية بعد. أضف ملفًا شخصيًا أولًا.</string>
+</resources>

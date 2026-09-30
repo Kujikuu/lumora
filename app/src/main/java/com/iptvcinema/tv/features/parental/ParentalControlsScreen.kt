@@ -64,7 +64,8 @@ fun ParentalControlsScreen(
     val sections = SettingsSection.entries
     val sectionLabels = sections.map { stringResource(it.labelRes) }
 
-    LaunchedEffect(focusState.hasSavedFocus) {
+    // Re-runs when the PIN unlocks the screen: until then the profile chips are not shown.
+    LaunchedEffect(focusState.hasSavedFocus, (uiState as? ParentalUiState.Ready)?.locked) {
         if (focusState.hasSavedFocus) {
             focusState.restoreFocus(profileFocus)
         } else {
@@ -78,8 +79,8 @@ fun ParentalControlsScreen(
             mode = pinDialogMode!!,
             title = when (pinDialogMode) {
                 PinEntryMode.Verify -> stringResource(R.string.pin_enter)
-                PinEntryMode.SetNew -> "Set New PIN"
-                PinEntryMode.ConfirmNew -> "Confirm PIN"
+                PinEntryMode.SetNew -> stringResource(R.string.pin_set_new)
+                PinEntryMode.ConfirmNew -> stringResource(R.string.pin_confirm_new)
                 else -> stringResource(R.string.pin_enter)
             },
             errorMessage = pinError,
@@ -159,7 +160,13 @@ fun ParentalControlsScreen(
                             onClick = onRetry,
                         )
                     }
-                    is ParentalUiState.Ready -> {
+                    is ParentalUiState.Ready -> if (uiState.locked) {
+                        ParentalLockedPanel(
+                            profileId = uiState.controls.profileId,
+                            onPinEntered = onPinEntered,
+                            onCancel = { navController.popBackStack() },
+                        )
+                    } else {
                         ParentalControlsContent(
                             uiState = uiState,
                             profileFocus = profileFocus,
@@ -182,6 +189,49 @@ fun ParentalControlsScreen(
                 CinemaButton(text = stringResource(R.string.btn_back), variant = CinemaButtonVariant.Ghost, onClick = { navController.popBackStack() })
             }
         }
+    }
+}
+
+/**
+ * Shown instead of the controls until the profile's PIN is entered: every way into this screen
+ * lands here, so a child cannot remove the PIN or unblock categories. Cancelling leaves.
+ */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun ParentalLockedPanel(
+    profileId: String,
+    onPinEntered: (PinEntryMode, String, onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit,
+    onCancel: () -> Unit,
+) {
+    var showDialog by remember(profileId) { mutableStateOf(true) }
+    var error by remember(profileId) { mutableStateOf<String?>(null) }
+    Text(
+        text = stringResource(R.string.parental_locked),
+        style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
+    )
+    CinemaButton(
+        text = stringResource(R.string.pin_enter),
+        variant = CinemaButtonVariant.PrimaryAccent,
+        onClick = { showDialog = true },
+    )
+    if (showDialog) {
+        PinEntryDialog(
+            mode = PinEntryMode.Verify,
+            title = stringResource(R.string.pin_enter),
+            errorMessage = error,
+            onDismiss = onCancel,
+            onPinComplete = { pin ->
+                onPinEntered(
+                    PinEntryMode.Verify,
+                    pin,
+                    {
+                        error = null
+                        showDialog = false
+                    },
+                    { message -> error = message },
+                )
+            },
+        )
     }
 }
 
@@ -218,12 +268,12 @@ private fun ParentalControlsContent(
         }
     }
     Text(
-        text = if (controls.pinEnabled) "PIN status: Enabled" else "PIN status: Disabled",
+        text = stringResource(if (controls.pinEnabled) R.string.parental_pin_status_on else R.string.parental_pin_status_off),
         style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
     )
     Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
         CinemaButton(
-            text = if (controls.pinEnabled) "Change PIN" else "Set PIN",
+            text = stringResource(if (controls.pinEnabled) R.string.parental_change_pin else R.string.parental_set_pin),
             variant = CinemaButtonVariant.SecondaryDark,
             onClick = onChangePin,
         )

@@ -37,6 +37,7 @@ import com.iptvcinema.tv.core.util.AppStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -660,9 +661,14 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             val target = channelZapMutex.withLock {
                 val fromId = pendingZapChannelId ?: request.contentId
-                val adjacent = runCatching {
-                    catalogRepository.getAdjacentChannel(sourceId, fromId, direction)
-                }.getOrNull() ?: return@withLock null
+                val adjacent = try {
+                    val allowed = parentalPlaybackGuard.channelFilter(appSessionRepository.sessionState.first())
+                    catalogRepository.getAdjacentChannel(sourceId, fromId, direction, allowed)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    null
+                } ?: return@withLock null
                 if (adjacent.id == fromId) return@withLock null
                 pendingZapChannelId = adjacent.id
                 adjacent
@@ -679,9 +685,12 @@ class PlayerViewModel @Inject constructor(
     }
 
     private suspend fun switchToResolvedChannel(sourceId: String, channelId: String) {
-        val result = runCatching {
+        val result = try {
             playbackRepository.resolveChannel(sourceId, channelId)
-        }.getOrElse {
+        } catch (error: CancellationException) {
+            // A newer channel press cancelled this one; that is not an error to show.
+            throw error
+        } catch (error: Exception) {
             _screenState.value = _screenState.value.copy(
                 loadError = appStrings.get(R.string.error_unable_load_content),
                 loadErrorCode = appStrings.get(R.string.error_catalog_code),
@@ -690,6 +699,15 @@ class PlayerViewModel @Inject constructor(
         }
         when (result) {
             is PlaybackResolveResult.Success -> {
+                // Every way to change channel (CH+/-, the picker) comes through here, so this is
+                // where a blocked channel is refused; the current stream keeps playing.
+                if (parentalPlaybackGuard.isPlaybackBlocked(appSessionRepository.sessionState.first(), result.request)) {
+                    _screenState.value = _screenState.value.copy(
+                        channelChangeBanner = appStrings.get(R.string.parental_playback_blocked),
+                    )
+                    showChannelBannerBriefly()
+                    return
+                }
                 // Start the stream first; channel and programme lookups only feed the banner.
                 val liveRequest = result.request.copy(metadata = listOf("LIVE"))
                 _screenState.value = _screenState.value.copy(playbackRequest = liveRequest)
