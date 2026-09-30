@@ -133,7 +133,8 @@ fun rememberImmersiveBrowseState(focusState: ScreenFocusState): ImmersiveBrowseS
  * focus search, which could otherwise jump from a rail to the hero buttons or the screen header.
  *
  * Focus is placed once, when [isReady] first becomes true: back on the rail and card the viewer
- * left (for example to open details), or else on the hero or the first rail.
+ * left (for example to open details), else on [initialFocus] (a section id and card index), else
+ * on the hero or the first rail.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -147,14 +148,21 @@ fun ImmersiveBrowse(
     hero: List<MovieItem> = emptyList(),
     heroActions: ImmersiveHeroActions? = null,
     spotlightWeight: Float = HomeDimens.SPOTLIGHT_WEIGHT,
+    initialFocus: Pair<String, Int>? = null,
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     val focusState = state.focusState
     val hasHero = hero.isNotEmpty() && heroActions != null
     state.sections = sections
     state.hasHero = hasHero
-    // Captured once: where focus was when the viewer left the screen.
-    val restoreTarget = remember { focusState.sectionId to focusState.itemIndex }
+    // Captured once: where focus was when the viewer left the screen, or where it should start.
+    val restoreTarget = remember {
+        if (focusState.hasSavedFocus || initialFocus == null) {
+            focusState.sectionId to focusState.itemIndex
+        } else {
+            initialFocus
+        }
+    }
     var focusPlaced by remember { mutableStateOf(false) }
     // Read through state so rail lambdas stay equal across recompositions and rails can skip.
     val currentSections by rememberUpdatedState(sections)
@@ -162,7 +170,7 @@ fun ImmersiveBrowse(
     LaunchedEffect(isReady, sections.isNotEmpty(), hasHero) {
         if (focusPlaced || !isReady) return@LaunchedEffect
         val savedRail = sections.indexOfFirst { it.id == restoreTarget.first }
-        focusPlaced = if (focusState.hasSavedFocus && savedRail >= 0) {
+        focusPlaced = if ((focusState.hasSavedFocus || initialFocus != null) && savedRail >= 0) {
             state.listState.scrollToItem(savedRail)
             state.railRequester(savedRail)?.let { focusState.restoreFocus(it) } ?: false
         } else {

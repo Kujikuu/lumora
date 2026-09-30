@@ -11,6 +11,9 @@
     <string name="mylist_menu_details">View details</string>
     <string name="mylist_menu_remove">Remove from My List</string>
     <string name="mylist_error_load">Couldn\'t load your list. Check your connection and try again.</string>
+    <string name="related_more_like_this">More like this</string>
+    <string name="related_title">More like %1$s</string>
+    <string name="related_empty">Nothing similar in your playlist yet.</string>
 
     <plurals name="browse_title_count">
         <item quantity="one">%d title</item>

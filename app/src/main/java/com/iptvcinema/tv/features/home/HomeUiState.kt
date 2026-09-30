@@ -32,6 +32,8 @@ data class HomeContent(
 data class HomeRailTitle(
     @StringRes val resId: Int,
     val argument: String? = null,
+    /** Already formatted text, for titles with more than one argument; wins over [resId]. */
+    val text: String? = null,
 )
 
 object HomeSectionIds {
@@ -91,6 +93,15 @@ sealed interface HomeSection {
         override val items: List<HomeContentCard>,
     ) : HomeSection {
         override val id = HomeSectionIds.CATEGORIES
+        override fun withItems(items: List<HomeContentCard>) = copy(items = items)
+    }
+
+    /** A titled rail of 16:9 episode cards (for example one season of a series). */
+    data class Episodes(
+        override val id: String,
+        override val title: HomeRailTitle,
+        override val items: List<HomeContentCard>,
+    ) : HomeSection {
         override fun withItems(items: List<HomeContentCard>) = copy(items = items)
     }
 

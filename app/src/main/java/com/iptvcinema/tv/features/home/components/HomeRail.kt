@@ -34,7 +34,7 @@ import com.iptvcinema.tv.features.home.HomeSection
 import kotlinx.coroutines.launch
 
 internal fun HomeSection.cardStyle(): HomeCardStyle = when (this) {
-    is HomeSection.ContinueWatching, is HomeSection.NextEpisode -> HomeCardStyle.Landscape
+    is HomeSection.ContinueWatching, is HomeSection.NextEpisode, is HomeSection.Episodes -> HomeCardStyle.Landscape
     is HomeSection.RecentChannels, is HomeSection.Channels -> HomeCardStyle.Channel
     is HomeSection.Categories -> HomeCardStyle.Category
     is HomeSection.Rail, is HomeSection.TopRated -> HomeCardStyle.Poster
@@ -122,4 +122,4 @@ fun HomeRail(
 
 @Composable
 private fun HomeRailTitle.resolve(): String =
-    argument?.let { stringResource(resId, it) } ?: stringResource(resId)
+    text ?: argument?.let { stringResource(resId, it) } ?: stringResource(resId)

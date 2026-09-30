@@ -49,3 +49,20 @@ data class SeriesPersonalSnapshot(
     val categoryRails: List<SeriesCategoryRail> = emptyList(),
     val watchedSeriesIds: Set<String> = emptySet(),
 )
+
+/** A title offered on a "More like this" page, with what parental controls check. */
+data class RelatedItem(
+    val card: HomeContentCard,
+    val categoryName: String?,
+    val rating: String?,
+)
+
+/** What a "More like this" page shows for one movie or series. */
+data class RelatedSnapshot(
+    val anchorId: String,
+    val anchorTitle: String,
+    val anchorCategory: String?,
+    val similar: List<RelatedItem> = emptyList(),
+    val topRated: List<RelatedItem> = emptyList(),
+    val newest: List<RelatedItem> = emptyList(),
+)

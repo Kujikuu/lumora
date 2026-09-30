@@ -11,6 +11,9 @@
     <string name="mylist_menu_details">عرض التفاصيل</string>
     <string name="mylist_menu_remove">إزالة من قائمتي</string>
     <string name="mylist_error_load">تعذّر تحميل قائمتك. تحقّق من الاتصال وحاول مرة أخرى.</string>
+    <string name="related_more_like_this">المزيد مثل هذا</string>
+    <string name="related_title">المزيد مثل %1$s</string>
+    <string name="related_empty">لا يوجد شيء مشابه في قائمة التشغيل بعد.</string>
 
     <plurals name="browse_title_count">
         <item quantity="zero">%d عنوان</item>

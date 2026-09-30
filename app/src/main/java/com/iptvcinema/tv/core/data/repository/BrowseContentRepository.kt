@@ -7,16 +7,21 @@ import com.iptvcinema.tv.core.database.CatalogDaoFacade
 import com.iptvcinema.tv.core.database.dao.CategorySummary
 import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.model.WatchHistoryItem
+import com.iptvcinema.tv.core.model.catalog.CatalogMovie
+import com.iptvcinema.tv.core.model.catalog.CatalogSeries
 import com.iptvcinema.tv.core.model.home.BrowseCategory
 import com.iptvcinema.tv.core.model.home.HomeCategoryRail
 import com.iptvcinema.tv.core.model.home.MoviesCatalogSnapshot
 import com.iptvcinema.tv.core.model.home.MoviesPersonalSnapshot
+import com.iptvcinema.tv.core.model.home.RelatedItem
+import com.iptvcinema.tv.core.model.home.RelatedSnapshot
 import com.iptvcinema.tv.core.model.home.SeriesBecauseYouWatched
 import com.iptvcinema.tv.core.model.home.SeriesCatalogSnapshot
 import com.iptvcinema.tv.core.model.home.SeriesCategoryRail
 import com.iptvcinema.tv.core.model.home.SeriesPersonalSnapshot
 import com.iptvcinema.tv.core.util.safeSummary
 import com.iptvcinema.tv.features.home.HomeContentRules
+import com.iptvcinema.tv.features.home.HomeUiMapper.toHomeContentCard
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -119,6 +124,82 @@ class BrowseContentRepository @Inject constructor(
             watchedSeriesIds = watchedSeriesIds.toSet(),
         )
     }
+
+    /** Titles like one movie: its category first, then top rated and new movies. */
+    suspend fun loadMovieRelated(sourceId: String?, movieId: String, isDemoMode: Boolean): RelatedSnapshot? {
+        if (isDemoMode) {
+            val movies = FakeDataProvider.movies.map { it.toDemoCatalogMovie() }
+            val anchor = movies.find { it.id == movieId } ?: return null
+            return RelatedSnapshot(
+                anchorId = anchor.id,
+                anchorTitle = anchor.title,
+                anchorCategory = anchor.categoryName,
+                similar = movies.filter { it.categoryName == anchor.categoryName }.map { it.toRelatedItem() },
+                topRated = movies.sortedByDescending { HomeContentRules.ratingValue(it.rating) }.map { it.toRelatedItem() },
+                newest = movies.map { it.toRelatedItem() },
+            )
+        }
+        sourceId ?: return null
+        val anchor = catalogRepository.getMovie(sourceId, movieId) ?: return null
+        val movies = catalogDaoFacade.movies
+        return RelatedSnapshot(
+            anchorId = anchor.id,
+            anchorTitle = anchor.title,
+            anchorCategory = anchor.categoryName,
+            similar = safely("similarMovies", emptyList()) {
+                anchor.categoryName?.takeIf { it.isNotBlank() }
+                    ?.let { movies.getByCategoryNameLimited(sourceId, it, RAIL_FETCH_LIMIT) }
+                    .orEmpty()
+                    .map { it.toDomain().toRelatedItem() }
+            },
+            topRated = safely("topRatedMovies", emptyList()) {
+                movies.getTopRated(sourceId, HomeContentRules.MIN_TOP_RATING, RAIL_FETCH_LIMIT).map { it.toDomain().toRelatedItem() }
+            },
+            newest = safely("newestMovies", emptyList()) {
+                movies.getNewest(sourceId, RAIL_FETCH_LIMIT).map { it.toDomain().toRelatedItem() }
+            },
+        )
+    }
+
+    /** Titles like one series: its category first, then top rated and latest series. */
+    suspend fun loadSeriesRelated(sourceId: String?, seriesId: String, isDemoMode: Boolean): RelatedSnapshot? {
+        if (isDemoMode) {
+            val series = FakeDataProvider.seriesList.map { it.toDemoCatalogSeries() }
+            val anchor = series.find { it.id == seriesId } ?: return null
+            return RelatedSnapshot(
+                anchorId = anchor.id,
+                anchorTitle = anchor.title,
+                anchorCategory = anchor.categoryName,
+                similar = series.filter { it.categoryName == anchor.categoryName }.map { it.toRelatedItem() },
+                topRated = series.sortedByDescending { HomeContentRules.ratingValue(it.rating) }.map { it.toRelatedItem() },
+                newest = series.sortedByDescending { it.year ?: 0 }.map { it.toRelatedItem() },
+            )
+        }
+        sourceId ?: return null
+        val anchor = catalogRepository.getSeries(sourceId, seriesId) ?: return null
+        val seriesDao = catalogDaoFacade.series
+        return RelatedSnapshot(
+            anchorId = anchor.id,
+            anchorTitle = anchor.title,
+            anchorCategory = anchor.categoryName,
+            similar = safely("similarSeries", emptyList()) {
+                anchor.categoryName?.takeIf { it.isNotBlank() }
+                    ?.let { seriesDao.getByCategoryNameLimited(sourceId, it, RAIL_FETCH_LIMIT) }
+                    .orEmpty()
+                    .map { it.toDomain().toRelatedItem() }
+            },
+            topRated = safely("topRatedSeries", emptyList()) {
+                seriesDao.getTopRated(sourceId, HomeContentRules.MIN_TOP_RATING, RAIL_FETCH_LIMIT).map { it.toDomain().toRelatedItem() }
+            },
+            newest = safely("latestSeries", emptyList()) {
+                seriesDao.getLatest(sourceId, RAIL_FETCH_LIMIT).map { it.toDomain().toRelatedItem() }
+            },
+        )
+    }
+
+    private fun CatalogMovie.toRelatedItem() = RelatedItem(toHomeContentCard(), categoryName, rating)
+
+    private fun CatalogSeries.toRelatedItem() = RelatedItem(toHomeContentCard(), categoryName, rating)
 
     /** Series in the same category as the series watched last, plus that category's name. */
     private suspend fun loadBecauseYouWatchedSeries(

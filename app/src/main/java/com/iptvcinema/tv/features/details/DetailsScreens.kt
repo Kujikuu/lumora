@@ -3,16 +3,8 @@ package com.iptvcinema.tv.features.details
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -23,23 +15,16 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.data.fake.FakeDataProvider
 import com.iptvcinema.tv.core.model.FavoriteContentType
 import com.iptvcinema.tv.core.design.components.DetailHero
 import com.iptvcinema.tv.core.design.components.EmptyState
-import com.iptvcinema.tv.core.design.components.EpisodeLandscapeCard
-import com.iptvcinema.tv.core.design.components.PosterCard
 import com.iptvcinema.tv.core.design.components.SkeletonDetailHero
-import com.iptvcinema.tv.core.design.components.SkeletonEpisodeList
 import com.iptvcinema.tv.core.design.theme.CinemaColors
-import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.PopBackHandler
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
@@ -185,131 +170,6 @@ fun MovieDetailsScreen(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun MovieRelatedScreen(
-    movieId: String,
-    navController: NavController,
-    viewModel: DetailsViewModel = hiltViewModel(),
-) {
-    val uiState by viewModel.movieUiState.collectAsState()
-
-    LaunchedEffect(movieId) {
-        viewModel.loadMovieDetails(movieId)
-    }
-
-    PopBackHandler(onBack = { navController.popBackStack() })
-
-    when (uiState.loadState) {
-        DetailsLoadState.Loading -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(CinemaColors.Background)
-                    .padding(CinemaSpacing.ScreenPadding),
-            ) {
-                SkeletonEpisodeList()
-            }
-        }
-        DetailsLoadState.Error -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(CinemaColors.Background),
-            ) {
-                EmptyState(
-                    title = stringResource(R.string.error_movie_unavailable),
-                    description = uiState.message ?: stringResource(R.string.error_movie_not_found),
-                    primaryAction = stringResource(R.string.btn_back),
-                    secondaryAction = null,
-                    onPrimary = { navController.popBackStack() },
-                    onSecondary = null,
-                )
-            }
-        }
-        DetailsLoadState.Ready -> {
-            val hasRelatedMovies = if (uiState.isDemoMode) {
-                FakeDataProvider.samplePosters().isNotEmpty()
-            } else {
-                uiState.relatedMovies.isNotEmpty()
-            }
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(CinemaColors.Background)
-                    .padding(
-                        horizontal = CinemaSpacing.ScreenPadding,
-                        vertical = CinemaSpacing.ScreenPaddingVertical,
-                    ),
-            ) {
-                if (!hasRelatedMovies) {
-                    Text(
-                        text = stringResource(R.string.rail_more_like_this),
-                        style = MaterialTheme.typography.titleMedium.copy(color = CinemaColors.TextMuted),
-                    )
-                } else {
-                    MovieRelatedSection(
-                        isDemoMode = uiState.isDemoMode,
-                        relatedMovies = uiState.relatedMovies,
-                        onMovieClick = { relatedId ->
-                            navController.navigate(AppRoute.movieDetails(relatedId))
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun MovieRelatedSection(
-    isDemoMode: Boolean,
-    relatedMovies: List<com.iptvcinema.tv.core.model.MovieItem>,
-    onMovieClick: (String) -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                horizontal = CinemaSpacing.ScreenPadding,
-                vertical = CinemaSpacing.ScreenPaddingVertical,
-            ),
-        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
-    ) {
-        Text(
-            text = stringResource(R.string.rail_more_like_this),
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.Bold,
-                color = CinemaColors.White,
-            ),
-        )
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
-        ) {
-            if (isDemoMode) {
-                items(FakeDataProvider.samplePosters(), key = { it.title }) { poster ->
-                    PosterCard(
-                        data = poster,
-                        onClick = {
-                            FakeDataProvider.movies.find { it.title == poster.title }?.let {
-                                onMovieClick(it.id)
-                            }
-                        },
-                    )
-                }
-            } else {
-                items(relatedMovies, key = { it.id }) { related ->
-                    PosterCard(
-                        data = related.toPosterCardData(),
-                        onClick = { onMovieClick(related.id) },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
 fun SeriesDetailsScreen(
     seriesId: String,
     navController: NavController,
@@ -445,6 +305,11 @@ fun SeriesDetailsScreen(
                 } else {
                     null
                 },
+                onMoreLikeThis = if (uiState.isDemoMode || uiState.relatedSeries.isNotEmpty()) {
+                    { navController.navigate(AppRoute.seriesRelated(seriesId)) }
+                } else {
+                    null
+                },
                 showScrollHint = hasEpisodes,
                 backdropUrl = series.backdropUrl ?: series.imageUrl,
                 watchNowFocusRequester = watchNowFocus,
@@ -452,149 +317,3 @@ fun SeriesDetailsScreen(
         }
     }
 }
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-fun SeriesEpisodesScreen(
-    seriesId: String,
-    navController: NavController,
-    viewModel: DetailsViewModel = hiltViewModel(),
-) {
-    val uiState by viewModel.seriesUiState.collectAsState()
-    val seasons = uiState.seasons
-    val context = LocalContext.current
-    val feedbackRatingBlocked = stringResource(R.string.feedback_rating_blocked)
-
-    LaunchedEffect(seriesId) {
-        viewModel.loadSeriesDetails(seriesId)
-    }
-
-    PopBackHandler(onBack = { navController.popBackStack() })
-
-    when (uiState.loadState) {
-        DetailsLoadState.Loading -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(CinemaColors.Background)
-                    .padding(CinemaSpacing.ScreenPadding),
-            ) {
-                SkeletonEpisodeList()
-            }
-        }
-        DetailsLoadState.Error -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(CinemaColors.Background),
-            ) {
-                EmptyState(
-                    title = stringResource(R.string.error_series_unavailable),
-                    description = uiState.message ?: stringResource(R.string.error_series_not_found),
-                    primaryAction = stringResource(R.string.btn_back),
-                    secondaryAction = null,
-                    onPrimary = { navController.popBackStack() },
-                    onSecondary = null,
-                )
-            }
-        }
-        DetailsLoadState.Ready -> {
-            if (uiState.episodesLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(CinemaColors.Background)
-                        .padding(CinemaSpacing.ScreenPadding),
-                ) {
-                    SkeletonEpisodeList()
-                }
-            } else {
-                val series = uiState.series
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(CinemaColors.Background)
-                        .verticalScroll(rememberScrollState())
-                        .padding(
-                            horizontal = CinemaSpacing.ScreenPadding,
-                            vertical = CinemaSpacing.ScreenPaddingVertical,
-                        ),
-                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
-                ) {
-                    if (seasons.isEmpty()) {
-                        Text(
-                            text = stringResource(R.string.details_no_episodes),
-                            style = MaterialTheme.typography.titleMedium.copy(color = CinemaColors.TextMuted),
-                        )
-                    } else {
-                        seasons.forEach { season ->
-                            Text(
-                                text = stringResource(
-                                    R.string.details_season_episodes_count,
-                                    season.seasonNumber,
-                                    season.episodes.size,
-                                ),
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = CinemaColors.White,
-                                ),
-                            )
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
-                            ) {
-                                items(
-                                    items = season.episodes,
-                                    key = { it.id },
-                                ) { episode ->
-                                    EpisodeLandscapeCard(
-                                        episodeNumber = episode.episodeNumber,
-                                        title = episode.title,
-                                        durationMinutes = episode.durationMinutes,
-                                        thumbnailUrl = episode.thumbnailUrl,
-                                        fallbackImageUrl = series?.imageUrl,
-                                        onClick = {
-                                            if (uiState.playbackBlocked) {
-                                                android.widget.Toast.makeText(
-                                                    context,
-                                                    feedbackRatingBlocked,
-                                                    android.widget.Toast.LENGTH_SHORT,
-                                                ).show()
-                                            } else {
-                                                navController.navigate(
-                                                    AppRoute.player(
-                                                        contentId = episode.id,
-                                                        contentType = "episode",
-                                                        seriesId = seriesId,
-                                                    ),
-                                                )
-                                            }
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-private fun com.iptvcinema.tv.core.model.MovieItem.toPosterCardData() =
-    com.iptvcinema.tv.core.design.components.PosterCardData(
-        title = title,
-        year = year.takeIf { it > 0 }?.toString(),
-        runtime = runtimeMinutes.takeIf { it > 0 }?.let { "${it / 60}h ${it % 60}m" },
-        imageUrl = imageUrl,
-        is4K = is4K,
-        contentId = id,
-    )
-
-private fun com.iptvcinema.tv.core.model.SeriesItem.toPosterCardData() =
-    com.iptvcinema.tv.core.design.components.PosterCardData(
-        title = title,
-        year = year.takeIf { it > 0 }?.toString(),
-        imageUrl = imageUrl,
-        is4K = is4K,
-        contentId = id,
-    )

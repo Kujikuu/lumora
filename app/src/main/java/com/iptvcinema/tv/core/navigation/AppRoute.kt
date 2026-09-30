@@ -29,6 +29,7 @@ object AppRoute {
     const val MOVIE_RELATED = "movie_related/{movieId}"
     const val SERIES_DETAILS = "series_details/{seriesId}"
     const val SERIES_EPISODES = "series_episodes/{seriesId}"
+    const val SERIES_RELATED = "series_related/{seriesId}"
     const val CHANNEL_DETAILS = "channel_details/{channelId}"
     const val PLAYER = "player/{contentId}/{contentType}?seriesId={seriesId}&resumePositionMs={resumePositionMs}"
     const val SEARCH = "search"
@@ -49,6 +50,7 @@ object AppRoute {
     fun movieRelated(movieId: String) = "movie_related/$movieId"
     fun seriesDetails(seriesId: String) = "series_details/$seriesId"
     fun seriesEpisodes(seriesId: String) = "series_episodes/$seriesId"
+    fun seriesRelated(seriesId: String) = "series_related/$seriesId"
     fun channelDetails(channelId: String) = "channel_details/$channelId"
     fun player(
         contentId: String,

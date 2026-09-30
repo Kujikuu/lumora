@@ -30,7 +30,8 @@ import com.iptvcinema.tv.features.activation.ActivationScreenWithViewModel
 import com.iptvcinema.tv.features.activation.ActivationViewModel
 import com.iptvcinema.tv.features.details.ChannelDetailsScreen
 import com.iptvcinema.tv.features.details.MovieDetailsScreen
-import com.iptvcinema.tv.features.details.MovieRelatedScreen
+import com.iptvcinema.tv.features.details.RelatedKind
+import com.iptvcinema.tv.features.details.RelatedScreen
 import com.iptvcinema.tv.features.details.SeriesDetailsScreen
 import com.iptvcinema.tv.features.details.SeriesEpisodesScreen
 import com.iptvcinema.tv.features.home.HomeScreen
@@ -389,8 +390,22 @@ fun AppNavGraph(
             arguments = listOf(navArgument("movieId") { type = NavType.StringType }),
         ) { backStackEntry ->
             SessionRouteGuard(navController = navController, requirement = SessionRequirement.Ready) {
-                MovieRelatedScreen(
-                    movieId = backStackEntry.arguments?.getString("movieId").orEmpty(),
+                RelatedScreen(
+                    kind = RelatedKind.Movie,
+                    contentId = backStackEntry.arguments?.getString("movieId").orEmpty(),
+                    navController = navController,
+                )
+            }
+        }
+
+        composable(
+            route = AppRoute.SERIES_RELATED,
+            arguments = listOf(navArgument("seriesId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            SessionRouteGuard(navController = navController, requirement = SessionRequirement.Ready) {
+                RelatedScreen(
+                    kind = RelatedKind.Series,
+                    contentId = backStackEntry.arguments?.getString("seriesId").orEmpty(),
                     navController = navController,
                 )
             }
