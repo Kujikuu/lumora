@@ -5,6 +5,13 @@
     <string name="browse_by_category">Browse by category</string>
     <string name="series_latest">Latest series</string>
 
+    <string name="mylist_episodes">Episodes</string>
+    <string name="mylist_menu_play">Play</string>
+    <string name="mylist_menu_watch_live">Watch live</string>
+    <string name="mylist_menu_details">View details</string>
+    <string name="mylist_menu_remove">Remove from My List</string>
+    <string name="mylist_error_load">Couldn\'t load your list. Check your connection and try again.</string>
+
     <plurals name="browse_title_count">
         <item quantity="one">%d title</item>
         <item quantity="other">%d titles</item>

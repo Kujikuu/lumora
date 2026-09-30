@@ -28,7 +28,8 @@ object HomeSpotlightMapper {
             key = "${card.contentType}:${card.contentId}",
             kind = kind,
             title = card.title,
-            backdropUrl = card.backdropUrl ?: card.imageUrl,
+            // A channel's image is its logo; stretched full screen it would be a blurry crop.
+            backdropUrl = if (kind == HomeSpotlightKind.Channel) card.backdropUrl else card.backdropUrl ?: card.imageUrl,
             ratingBadge = HeroCarouselLogic.ratingBadge(card.rating),
             metadata = cardMetadata(card, kind),
             plot = card.plot,

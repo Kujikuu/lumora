@@ -94,6 +94,15 @@ sealed interface HomeSection {
         override fun withItems(items: List<HomeContentCard>) = copy(items = items)
     }
 
+    /** A titled rail of channel tiles (for example favorite channels). */
+    data class Channels(
+        override val id: String,
+        override val title: HomeRailTitle,
+        override val items: List<HomeContentCard>,
+    ) : HomeSection {
+        override fun withItems(items: List<HomeContentCard>) = copy(items = items)
+    }
+
     data class RecentChannels(override val items: List<HomeContentCard>) : HomeSection {
         override val id = HomeSectionIds.RECENT_CHANNELS
         override val title = HomeRailTitle(R.string.home_recent_channels)

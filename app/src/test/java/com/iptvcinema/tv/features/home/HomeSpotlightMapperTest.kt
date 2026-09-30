@@ -56,4 +56,10 @@ class HomeSpotlightMapperTest {
         assertEquals(HomeSpotlightKind.Channel, spotlight.kind)
         assertEquals(listOf("News"), spotlight.metadata)
     }
+
+    @Test
+    fun `channel spotlight never stretches the logo into a backdrop`() {
+        val card = HomeContentCard(contentId = "c1", contentType = "channel", title = "News One", imageUrl = "logo.png")
+        assertEquals(null, HomeSpotlightMapper.fromCard(card).backdropUrl)
+    }
 }

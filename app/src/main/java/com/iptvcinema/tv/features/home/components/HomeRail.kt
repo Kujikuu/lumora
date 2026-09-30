@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 
 internal fun HomeSection.cardStyle(): HomeCardStyle = when (this) {
     is HomeSection.ContinueWatching, is HomeSection.NextEpisode -> HomeCardStyle.Landscape
-    is HomeSection.RecentChannels -> HomeCardStyle.Channel
+    is HomeSection.RecentChannels, is HomeSection.Channels -> HomeCardStyle.Channel
     is HomeSection.Categories -> HomeCardStyle.Category
     is HomeSection.Rail, is HomeSection.TopRated -> HomeCardStyle.Poster
 }

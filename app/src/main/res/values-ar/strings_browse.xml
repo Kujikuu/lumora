@@ -5,6 +5,13 @@
     <string name="browse_by_category">تصفّح حسب التصنيف</string>
     <string name="series_latest">أحدث المسلسلات</string>
 
+    <string name="mylist_episodes">الحلقات</string>
+    <string name="mylist_menu_play">تشغيل</string>
+    <string name="mylist_menu_watch_live">مشاهدة مباشرة</string>
+    <string name="mylist_menu_details">عرض التفاصيل</string>
+    <string name="mylist_menu_remove">إزالة من قائمتي</string>
+    <string name="mylist_error_load">تعذّر تحميل قائمتك. تحقّق من الاتصال وحاول مرة أخرى.</string>
+
     <plurals name="browse_title_count">
         <item quantity="zero">%d عنوان</item>
         <item quantity="one">عنوان واحد</item>
