@@ -35,6 +35,7 @@ import com.iptvcinema.tv.features.details.SeriesDetailsScreen
 import com.iptvcinema.tv.features.details.SeriesEpisodesScreen
 import com.iptvcinema.tv.features.home.HomeScreen
 import com.iptvcinema.tv.features.livetv.LiveTvScreen
+import com.iptvcinema.tv.features.movies.MoviesBrowseScreen
 import com.iptvcinema.tv.features.movies.MoviesScreen
 import com.iptvcinema.tv.features.mylist.MyListScreen
 import com.iptvcinema.tv.features.parental.ParentalControlsScreen
@@ -47,6 +48,7 @@ import com.iptvcinema.tv.features.profiles.ProfileScreenActions
 import com.iptvcinema.tv.features.profiles.ProfileSelectionScreen
 import com.iptvcinema.tv.features.profiles.ProfileViewModel
 import com.iptvcinema.tv.features.search.SearchScreen
+import com.iptvcinema.tv.features.series.SeriesBrowseScreen
 import com.iptvcinema.tv.features.series.SeriesScreen
 import com.iptvcinema.tv.features.settings.SettingsScreen
 import com.iptvcinema.tv.features.settings.SettingsViewModel
@@ -298,11 +300,25 @@ fun AppNavGraph(
                     defaultValue = ""
                 },
             ),
+        ) {
+            SessionRouteGuard(navController = navController, requirement = SessionRequirement.Ready) {
+                MoviesBrowseScreen(navController = navController)
+            }
+        }
+
+        composable(
+            route = AppRoute.MOVIE_CATALOG,
+            arguments = listOf(
+                navArgument("category") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+            ),
         ) { backStackEntry ->
             SessionRouteGuard(navController = navController, requirement = SessionRequirement.Ready) {
                 MoviesScreen(
                     navController = navController,
-                    initialFilter = backStackEntry.arguments?.getString("filter").orEmpty(),
+                    initialFilter = backStackEntry.arguments?.getString("category").orEmpty(),
                 )
             }
         }
@@ -315,11 +331,25 @@ fun AppNavGraph(
                     defaultValue = ""
                 },
             ),
+        ) {
+            SessionRouteGuard(navController = navController, requirement = SessionRequirement.Ready) {
+                SeriesBrowseScreen(navController = navController)
+            }
+        }
+
+        composable(
+            route = AppRoute.SERIES_CATALOG,
+            arguments = listOf(
+                navArgument("category") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+            ),
         ) { backStackEntry ->
             SessionRouteGuard(navController = navController, requirement = SessionRequirement.Ready) {
                 SeriesScreen(
                     navController = navController,
-                    initialFilter = backStackEntry.arguments?.getString("filter").orEmpty(),
+                    initialFilter = backStackEntry.arguments?.getString("category").orEmpty(),
                 )
             }
         }

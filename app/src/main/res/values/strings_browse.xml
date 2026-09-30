@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings for the Home-style browse screens (Movies, Series, My List, Search, details pages). -->
+<resources>
+    <string name="browse_kind_category">Category</string>
+    <string name="browse_by_category">Browse by category</string>
+    <string name="series_latest">Latest series</string>
+
+    <plurals name="browse_title_count">
+        <item quantity="one">%d title</item>
+        <item quantity="other">%d titles</item>
+    </plurals>
+</resources>

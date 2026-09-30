@@ -42,6 +42,9 @@ object HomeSectionIds {
     const val TOP_RATED_MOVIES = "top_rated_movies"
     const val TOP_RATED_SERIES = "top_rated_series"
     const val RECENT_CHANNELS = "recent_channels"
+    const val CATEGORIES = "categories"
+    const val LATEST_SERIES = "latest_series"
+    const val BECAUSE_YOU_WATCHED_SERIES = "because_you_watched_series"
 
     fun category(name: String): String = "category:$name"
 }
@@ -82,6 +85,15 @@ sealed interface HomeSection {
         override fun withItems(items: List<HomeContentCard>) = copy(items = items)
     }
 
+    /** Category tiles; each opens the full catalog grid on that category. */
+    data class Categories(
+        override val title: HomeRailTitle,
+        override val items: List<HomeContentCard>,
+    ) : HomeSection {
+        override val id = HomeSectionIds.CATEGORIES
+        override fun withItems(items: List<HomeContentCard>) = copy(items = items)
+    }
+
     data class RecentChannels(override val items: List<HomeContentCard>) : HomeSection {
         override val id = HomeSectionIds.RECENT_CHANNELS
         override val title = HomeRailTitle(R.string.home_recent_channels)
@@ -109,7 +121,7 @@ fun List<HomeSection>.withFavorite(
     }
 }
 
-enum class HomeSpotlightKind { Movie, Series, Episode, Channel }
+enum class HomeSpotlightKind { Movie, Series, Episode, Channel, Category }
 
 /** What the top panel and backdrop show for the hero slide or the focused card. */
 data class HomeSpotlight(

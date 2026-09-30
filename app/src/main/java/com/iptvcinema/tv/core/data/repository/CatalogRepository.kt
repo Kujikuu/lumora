@@ -173,6 +173,45 @@ class CatalogRepository @Inject constructor(
             }
         }.distinctUntilChanged().withSourceContext()
 
+    /**
+     * Whether the Movies tab has anything to show, without loading the catalog. Re-emits whenever
+     * the movies table changes (for example during a sync), so callers can reload their rails.
+     */
+    fun observeMoviesAvailability(): Flow<CatalogBrowseState<Unit>> =
+        observeAvailability(R.string.msg_no_movies_synced) { sourceId ->
+            catalogDaoFacade.movies.observeFeatured(sourceId, 1).map { it.isNotEmpty() }
+        }
+
+    /** Like [observeMoviesAvailability], for the Series tab. */
+    fun observeSeriesAvailability(): Flow<CatalogBrowseState<Unit>> =
+        observeAvailability(R.string.msg_no_series_synced) { sourceId ->
+            catalogDaoFacade.series.observeFeatured(sourceId, 1).map { it.isNotEmpty() }
+        }
+
+    private fun observeAvailability(
+        emptyMessageRes: Int,
+        hasContent: (sourceId: String) -> Flow<Boolean>,
+    ): Flow<CatalogBrowseState<Unit>> =
+        appSessionRepository.sessionState
+            .map { it.isDemoMode to it.currentSourceId }
+            .distinctUntilChanged()
+            .flatMapLatest<Pair<Boolean, String?>, CatalogBrowseState<Unit>> { (isDemoMode, sourceId) ->
+                when {
+                    isDemoMode -> flowOf(CatalogBrowseState<Unit>(CatalogLoadState.Ready))
+                    sourceId == null -> flowOf(
+                        CatalogBrowseState<Unit>(CatalogLoadState.Empty, message = appStrings.get(R.string.msg_no_source_connected)),
+                    )
+                    else -> hasContent(sourceId).map { available ->
+                        if (available) {
+                            CatalogBrowseState<Unit>(CatalogLoadState.Ready)
+                        } else {
+                            CatalogBrowseState<Unit>(CatalogLoadState.Empty, message = appStrings.get(emptyMessageRes))
+                        }
+                    }
+                }
+            }
+            .withSourceContext()
+
     fun observeLiveTv(categoryName: String? = null): Flow<CatalogBrowseState<ChannelItem>> =
         appSessionRepository.sessionState.flatMapLatest { session ->
             if (session.isDemoMode) {
@@ -882,8 +921,8 @@ class CatalogRepository @Inject constructor(
         }
 
     private companion object {
-        const val MOVIE_BROWSE_LIMIT = 100
-        const val SERIES_BROWSE_LIMIT = 100
+        const val MOVIE_BROWSE_LIMIT = 2000
+        const val SERIES_BROWSE_LIMIT = 2000
         const val LAST_ADDED_BROWSE_LIMIT = 20
         const val CURRENT_PROGRAMS_BATCH_SIZE = 400
     }

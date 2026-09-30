@@ -75,7 +75,7 @@ class HomeContentRepository @Inject constructor(
         )
     }
 
-    private suspend fun loadNextEpisodes(sourceId: String, history: List<WatchHistoryItem>): List<HomeNextEpisode> =
+    suspend fun loadNextEpisodes(sourceId: String, history: List<WatchHistoryItem>): List<HomeNextEpisode> =
         HomeContentRules.nextEpisodeCandidates(history, NEXT_EPISODE_LIMIT).mapNotNull { finished ->
             val seriesId = finished.seriesId ?: return@mapNotNull null
             val sid = finished.sourceId?.takeIf { it.isNotBlank() } ?: sourceId
@@ -85,7 +85,7 @@ class HomeContentRepository @Inject constructor(
         }
 
     /** Returns the rail plus the anchor movie's category, so a category rail does not repeat it. */
-    private suspend fun loadBecauseYouWatched(
+    suspend fun loadBecauseYouWatched(
         sourceId: String,
         history: List<WatchHistoryItem>,
         watchedMovieIds: Set<String>,
@@ -99,11 +99,12 @@ class HomeContentRepository @Inject constructor(
         return HomeBecauseYouWatched(anchorTitle = anchor.title, movies = related) to anchor.categoryName
     }
 
-    private suspend fun loadCategoryRails(
+    suspend fun loadCategoryRails(
         sourceId: String,
         watchedMovieIds: List<String>,
         excludedCategory: String?,
         isCategoryBlocked: (String) -> Boolean,
+        railCount: Int = CATEGORY_RAIL_COUNT,
     ): List<HomeCategoryRail> {
         val movieDao = catalogDaoFacade.movies
         val watchedCategories = watchedMovieIds
@@ -111,11 +112,11 @@ class HomeContentRepository @Inject constructor(
             .takeIf { it.isNotEmpty() }
             ?.let { ids -> movieDao.getByIds(sourceId, ids).map { it.categoryName } }
             .orEmpty()
-        val fallback = movieDao.getLargestCategoryNames(sourceId, CATEGORY_FALLBACK_LIMIT)
+        val fallback = movieDao.getLargestCategoryNames(sourceId, CATEGORY_FALLBACK_LIMIT.coerceAtLeast(railCount * 2))
         val categories = HomeContentRules.rankCategories(
             watchedCategories = watchedCategories,
             fallback = fallback,
-            limit = CATEGORY_RAIL_COUNT,
+            limit = railCount,
             isBlocked = { it == excludedCategory || isCategoryBlocked(it) },
         )
         return categories.map { name ->
@@ -170,50 +171,8 @@ class HomeContentRepository @Inject constructor(
             fallback
         }
 
-    private fun MovieItem.toDemoCatalogMovie() = CatalogMovie(
-        id = id,
-        sourceId = DEMO_SOURCE_ID,
-        title = title,
-        streamUrl = "",
-        posterUrl = imageUrl,
-        backdropUrl = backdropUrl,
-        categoryId = genres.firstOrNull(),
-        categoryName = genres.firstOrNull(),
-        year = year,
-        durationMinutes = runtimeMinutes,
-        rating = rating,
-        plot = plot,
-        genres = genres,
-    )
-
-    private fun SeriesItem.toDemoCatalogSeries() = CatalogSeries(
-        id = id,
-        sourceId = DEMO_SOURCE_ID,
-        title = title,
-        posterUrl = imageUrl,
-        backdropUrl = backdropUrl,
-        categoryId = genres.firstOrNull(),
-        categoryName = genres.firstOrNull(),
-        plot = plot,
-        rating = rating,
-        year = year,
-    )
-
-    private fun ChannelItem.toDemoCatalogChannel() = CatalogChannel(
-        id = id,
-        sourceId = DEMO_SOURCE_ID,
-        name = name,
-        streamUrl = "",
-        logoUrl = logoUrl,
-        categoryId = category,
-        categoryName = category,
-        tvgId = null,
-        channelNumber = channelNumber,
-    )
-
     private companion object {
         const val TAG = "HomeContent"
-        const val DEMO_SOURCE_ID = "demo"
         /** Fetch more than a rail shows: de-duplication and parental filters remove some. */
         const val RAIL_FETCH_LIMIT = 30
         const val NEXT_EPISODE_LIMIT = 8

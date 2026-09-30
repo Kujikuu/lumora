@@ -28,6 +28,8 @@ data class MovieItem(
     val backdropUrl: String? = null,
     val sortOrder: Int = 0,
     val addedAt: Long? = null,
+    /** The provider category, which parental controls block by (genres are metadata only). */
+    val categoryName: String? = null,
 )
 
 data class EpisodeItem(
@@ -62,6 +64,8 @@ data class SeriesItem(
     val seasons: List<SeasonItem> = emptyList(),
     val sortOrder: Int = 0,
     val addedAt: Long? = null,
+    /** The provider category, which parental controls block by. */
+    val categoryName: String? = null,
 )
 
 data class ChannelItem(

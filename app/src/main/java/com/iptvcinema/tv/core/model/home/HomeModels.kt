@@ -30,6 +30,15 @@ data class HomeContentCard(
     val primaryAction: HomeCardAction = HomeCardAction.WatchNow,
 )
 
+/** Card types that open a browse page instead of a title. */
+object BrowseCardTypes {
+    const val MOVIE_CATEGORY = "movie_category"
+    const val SERIES_CATEGORY = "series_category"
+}
+
+val HomeContentCard.isCategory: Boolean
+    get() = contentType == BrowseCardTypes.MOVIE_CATEGORY || contentType == BrowseCardTypes.SERIES_CATEGORY
+
 fun HomeContentCard.toFavoriteContentType(): FavoriteContentType = when (contentType) {
     "movie" -> FavoriteContentType.MOVIE
     "series" -> FavoriteContentType.SERIES

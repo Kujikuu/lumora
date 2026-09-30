@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings for the Home-style browse screens (Movies, Series, My List, Search, details pages). -->
+<resources>
+    <string name="browse_kind_category">تصنيف</string>
+    <string name="browse_by_category">تصفّح حسب التصنيف</string>
+    <string name="series_latest">أحدث المسلسلات</string>
+
+    <plurals name="browse_title_count">
+        <item quantity="zero">%d عنوان</item>
+        <item quantity="one">عنوان واحد</item>
+        <item quantity="two">عنوانان</item>
+        <item quantity="few">%d عناوين</item>
+        <item quantity="many">%d عنوانًا</item>
+        <item quantity="other">%d عنوان</item>
+    </plurals>
+</resources>

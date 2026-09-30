@@ -21,19 +21,16 @@ import com.iptvcinema.tv.core.model.MovieItem
 import com.iptvcinema.tv.core.model.ParentalControls
 import com.iptvcinema.tv.core.model.SourceStatus
 import com.iptvcinema.tv.core.model.SourceType
-import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.model.WatchHistoryItem
 import com.iptvcinema.tv.core.model.catalog.FeaturedCatalogContent
-import com.iptvcinema.tv.core.model.home.HomeCardAction
 import com.iptvcinema.tv.core.model.home.HomeCatalogSnapshot
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.model.home.HomePersonalSnapshot
 import com.iptvcinema.tv.core.model.home.toFavoriteContentType
 import com.iptvcinema.tv.core.parental.ParentalGate
-import com.iptvcinema.tv.core.util.AppStrings
-import com.iptvcinema.tv.core.util.RemainingWatchTimeFormatter
 import com.iptvcinema.tv.core.util.SyncStatusFormatter
 import com.iptvcinema.tv.core.util.continueWatchingKey
+import com.iptvcinema.tv.features.browse.ContinueWatchingCardFactory
 import com.iptvcinema.tv.core.util.removeContinueWatching
 import com.iptvcinema.tv.core.util.safeSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -70,7 +67,7 @@ class HomeViewModel @Inject constructor(
     private val parentalGate: ParentalGate,
     private val catalogRefreshController: CatalogRefreshController,
     private val catalogSyncProgressTracker: CatalogSyncProgressTracker,
-    private val appStrings: AppStrings,
+    private val continueWatchingCards: ContinueWatchingCardFactory,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
 
@@ -164,7 +161,7 @@ class HomeViewModel @Inject constructor(
     private suspend fun toUiState(inputs: HomeInputs): HomeUiState {
         val gate = inputs.gate
         val continueWatching = inputs.continueHistory.mapNotNull { item ->
-            item.toContinueCard(inputs.session, inputs.favorites)
+            continueWatchingCards.create(item, inputs.session.sourceId, inputs.session.isDemoMode, inputs.favorites)
         }
         val sourceUnusable = gate.sourceStatus == SourceStatus.EXPIRED ||
             (gate.sourceStatus == SourceStatus.FAILED && gate.sourceType == SourceType.M3U)
@@ -197,35 +194,6 @@ class HomeViewModel @Inject constructor(
             message = gate.message,
             sourceStatus = gate.sourceStatus,
             sourceType = gate.sourceType,
-        )
-    }
-
-    private suspend fun WatchHistoryItem.toContinueCard(
-        session: HomeSessionKey,
-        favorites: List<FavoriteItem>,
-    ): HomeContentCard? {
-        val (contentType, favoriteType) = when (this.contentType) {
-            WatchHistoryContentType.MOVIE -> "movie" to FavoriteContentType.MOVIE
-            WatchHistoryContentType.EPISODE -> "episode" to FavoriteContentType.EPISODE
-            WatchHistoryContentType.CHANNEL -> return null
-        }
-        val display = catalogRepository.resolveWatchHistoryCardDisplay(
-            sourceId = session.sourceId,
-            item = this,
-            isDemoMode = session.isDemoMode,
-        )
-        return HomeContentCard(
-            contentId = contentId,
-            contentType = contentType,
-            seriesId = seriesId,
-            title = display.title,
-            subtitle = display.subtitle,
-            imageUrl = display.posterUrl,
-            backdropUrl = display.backdropUrl,
-            progress = durationMs?.takeIf { it > 0 }?.let { (positionMs.toFloat() / it).coerceIn(0f, 1f) },
-            remainingTimeLabel = RemainingWatchTimeFormatter.formatFromWatchHistory(this, appStrings),
-            isFavorite = favorites.isFavorite(contentId, favoriteType),
-            primaryAction = HomeCardAction.ContinueWatching,
         )
     }
 

@@ -161,6 +161,7 @@ object CatalogUiMapper {
         backdropUrl = backdropUrl,
         sortOrder = sortOrder,
         addedAt = addedAt,
+        categoryName = categoryName,
     )
 
     fun CatalogSeries.toSeriesItem(
@@ -182,6 +183,7 @@ object CatalogUiMapper {
         imageUrl = posterUrl,
         backdropUrl = backdropUrl,
         sortOrder = sortOrder,
+        categoryName = categoryName,
     )
 
     fun CatalogMovie.toPosterCardData(): PosterCardData = PosterCardData(

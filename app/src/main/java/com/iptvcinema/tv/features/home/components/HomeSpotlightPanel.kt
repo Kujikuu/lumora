@@ -333,4 +333,5 @@ private fun HomeSpotlightKind.labelRes(): Int = when (this) {
     HomeSpotlightKind.Series -> R.string.home_kind_series
     HomeSpotlightKind.Episode -> R.string.home_kind_episode
     HomeSpotlightKind.Channel -> R.string.home_live_label
+    HomeSpotlightKind.Category -> R.string.browse_kind_category
 }

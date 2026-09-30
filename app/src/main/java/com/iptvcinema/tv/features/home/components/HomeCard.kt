@@ -16,6 +16,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,6 +29,7 @@ import com.iptvcinema.tv.core.design.components.FocusableCinemaCard
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.model.home.HomeContentCard
+import com.iptvcinema.tv.core.util.isolateDirection
 
 enum class HomeCardStyle {
     /** 2:3 poster for catalog rails; the title lives in the spotlight panel. */
@@ -35,16 +38,18 @@ enum class HomeCardStyle {
     Landscape,
     /** 16:9 tile with the channel logo fitted on a dark surface. */
     Channel,
+    /** 16:9 category tile: dimmed artwork from the category under its name. */
+    Category,
 }
 
 internal fun HomeCardStyle.width() = when (this) {
     HomeCardStyle.Poster -> HomeDimens.PosterWidth
-    HomeCardStyle.Landscape, HomeCardStyle.Channel -> HomeDimens.LandscapeWidth
+    HomeCardStyle.Landscape, HomeCardStyle.Channel, HomeCardStyle.Category -> HomeDimens.LandscapeWidth
 }
 
 internal fun HomeCardStyle.height() = when (this) {
     HomeCardStyle.Poster -> HomeDimens.PosterHeight
-    HomeCardStyle.Landscape, HomeCardStyle.Channel -> HomeDimens.LandscapeHeight
+    HomeCardStyle.Landscape, HomeCardStyle.Channel, HomeCardStyle.Category -> HomeDimens.LandscapeHeight
 }
 
 /**
@@ -85,6 +90,7 @@ fun HomeCard(
                     showLoadingSkeleton = false,
                 )
             }
+            HomeCardStyle.Category -> CategoryTile(card)
             HomeCardStyle.Landscape -> CinemaAsyncImage(
                 imageUrl = card.imageUrl ?: card.backdropUrl,
                 contentDescription = card.title,
@@ -106,6 +112,42 @@ fun HomeCard(
         card.rank?.let { rank ->
             RankNumber(rank = rank, modifier = Modifier.align(Alignment.BottomStart))
         }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun CategoryTile(card: HomeContentCard) {
+    Box(modifier = Modifier.fillMaxSize().background(CinemaColors.Surface)) {
+        val artwork = card.backdropUrl ?: card.imageUrl
+        if (artwork != null) {
+            CinemaAsyncImage(
+                imageUrl = artwork,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                showLoadingSkeleton = false,
+            )
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(CinemaColors.Background.copy(alpha = 0.62f)),
+        )
+        Text(
+            text = card.title.isolateDirection(),
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = 14.dp),
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.Bold,
+                color = CinemaColors.White,
+                textAlign = TextAlign.Center,
+                shadow = Shadow(color = CinemaColors.Background, offset = Offset(0f, 1f), blurRadius = 6f),
+            ),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

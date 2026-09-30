@@ -1,4 +1,4 @@
-package com.iptvcinema.tv.features.home
+package com.iptvcinema.tv.features.browse
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -11,53 +11,51 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
-import com.iptvcinema.tv.R
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
 import com.iptvcinema.tv.core.data.repository.CatalogLoadState
 import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.ContinueWatchingMenuDialog
+import com.iptvcinema.tv.core.design.components.shellHeroContentStart
+import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.home.HomeContentCard
-import com.iptvcinema.tv.core.navigation.AppRoute
+import com.iptvcinema.tv.core.navigation.MainShellBackHandler
 import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
 import com.iptvcinema.tv.core.navigation.openContinueWatchingDetails
 import com.iptvcinema.tv.core.navigation.rememberCatalogStateCallbacks
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
-import com.iptvcinema.tv.features.browse.ImmersiveBrowse
-import com.iptvcinema.tv.features.browse.ImmersiveHeroActions
-import com.iptvcinema.tv.features.browse.openBrowseCard
-import com.iptvcinema.tv.features.browse.playBrowseCard
-import com.iptvcinema.tv.features.browse.rememberImmersiveBrowseState
+import com.iptvcinema.tv.features.home.HomeSection
 
 /**
- * Home: the shared immersive layout ([ImmersiveBrowse]) with a hero carousel of the newest movies
- * above rails built from real signals (see [HomeSectionsBuilder]).
+ * A Home-style tab: the shared immersive layout over the rails a [BrowseTabViewModel] builds.
+ * Long press opens the Continue Watching menu on those cards and toggles My List elsewhere.
  */
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun HomeScreen(
+fun BrowseTabScreen(
     navController: NavController,
-    viewModel: HomeViewModel = hiltViewModel(),
+    navItem: NavItem,
+    focusKey: String,
+    title: String,
+    emptyTitle: String,
+    emptyDescription: String,
+    viewModel: BrowseTabViewModel<*, *>,
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val focusState = rememberScreenFocusState("home")
+    val focusState = rememberScreenFocusState(focusKey)
     val browse = rememberImmersiveBrowseState(focusState)
-    val catalogCallbacks = rememberCatalogStateCallbacks(navController)
+    val catalogCallbacks = rememberCatalogStateCallbacks(navController, onRetry = viewModel::refreshCurrentSource)
     val lifecycleOwner = LocalLifecycleOwner.current
     var continueMenuCard by remember { mutableStateOf<HomeContentCard?>(null) }
-    val heroActions = remember(navController, viewModel) {
-        ImmersiveHeroActions(
-            onWatchNow = { movie -> navController.navigate(AppRoute.player(movie.id, "movie")) },
-            onDetails = { movie -> navController.navigate(AppRoute.movieDetails(movie.id)) },
-            onAddToList = viewModel::addHeroToList,
-        )
-    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -67,9 +65,11 @@ fun HomeScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    MainShellBackHandler(navController = navController, isHomeTab = false)
+
     MainShellScaffold(
         navController = navController,
-        selectedNavItem = NavItem.Home,
+        selectedNavItem = navItem,
         onRailExitRight = browse::enter,
     ) {
         ContinueWatchingMenuDialog(
@@ -85,8 +85,8 @@ fun HomeScreen(
             sourceStatus = uiState.sourceStatus,
             sourceType = uiState.sourceType,
             skeletonStyle = CatalogSkeletonStyle.Home,
-            emptyTitle = stringResource(R.string.home_empty_title),
-            emptyDescription = stringResource(R.string.catalog_empty_sync_desc),
+            emptyTitle = emptyTitle,
+            emptyDescription = emptyDescription,
             onAddSource = catalogCallbacks.onAddSource,
             onRetry = catalogCallbacks.onRetry,
             onManageSources = catalogCallbacks.onManageSources,
@@ -97,17 +97,25 @@ fun HomeScreen(
                 state = browse,
                 sections = uiState.sections,
                 isReady = uiState.loadState == CatalogLoadState.Ready,
-                hero = uiState.hero,
-                heroActions = heroActions,
                 onCardClick = { section, card -> openBrowseCard(navController, section, card) },
                 onCardLongClick = { section, card ->
-                    if (section is HomeSection.ContinueWatching) {
-                        continueMenuCard = card
-                    } else {
-                        viewModel.toggleFavorite(card)
+                    when (section) {
+                        is HomeSection.ContinueWatching -> continueMenuCard = card
+                        is HomeSection.Categories -> openBrowseCardDetails(navController, card)
+                        else -> viewModel.toggleFavorite(card)
                     }
                 },
                 overlay = {
+                    Text(
+                        text = title,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(start = shellHeroContentStart(), top = CinemaSpacing.ScreenPaddingVertical),
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = CinemaColors.TextSecondary,
+                        ),
+                    )
                     CatalogRefreshBanner(
                         syncBannerText = uiState.syncBannerText,
                         refreshState = uiState.refreshState,

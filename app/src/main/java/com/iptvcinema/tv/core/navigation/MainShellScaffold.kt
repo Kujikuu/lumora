@@ -46,6 +46,11 @@ fun MainShellScaffold(
             val currentItem = AppRoute.routeToNavItem(navController.currentDestination?.route)
             if (item != currentItem) {
                 shellNavigate(navController, route)
+            } else {
+                // Inside a tab's inner page (a category grid): the tab takes you back to its landing.
+                AppRoute.tabLandingPattern(item)
+                    ?.takeIf { it != navController.currentDestination?.route }
+                    ?.let { navController.popBackStack(it, inclusive = false) }
             }
         },
         onSettingsClick = { shellNavigate(navController, AppRoute.SETTINGS) },

@@ -14,6 +14,14 @@ import com.iptvcinema.tv.core.database.entity.LocalSourceSyncStateEntity
 import com.iptvcinema.tv.core.database.entity.CatalogSyncMetadataEntity
 import kotlinx.coroutines.flow.Flow
 
+/** One catalog category with its size and a sample artwork for its tile. */
+data class CategorySummary(
+    val name: String,
+    val itemCount: Int,
+    val backdropUrl: String?,
+    val posterUrl: String?,
+)
+
 @Dao
 interface CategoryDao {
     @Query("SELECT * FROM categories WHERE sourceId = :sourceId AND contentType = :contentType ORDER BY sortOrder, name")
@@ -280,6 +288,21 @@ interface MovieDao {
     )
     suspend fun getLargestCategoryNames(sourceId: String, limit: Int): List<String>
 
+    /** Categories by size, each with one sample backdrop and poster for its tile. */
+    @Query(
+        """
+        SELECT categoryName AS name, COUNT(*) AS itemCount,
+            MAX(CASE WHEN backdropUrl IS NOT NULL AND TRIM(backdropUrl) != '' THEN backdropUrl END) AS backdropUrl,
+            MAX(CASE WHEN posterUrl IS NOT NULL AND TRIM(posterUrl) != '' THEN posterUrl END) AS posterUrl
+        FROM movies
+        WHERE sourceId = :sourceId AND categoryName IS NOT NULL AND TRIM(categoryName) != ''
+        GROUP BY categoryName
+        ORDER BY itemCount DESC, name
+        LIMIT :limit
+        """,
+    )
+    suspend fun getCategorySummaries(sourceId: String, limit: Int): List<CategorySummary>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<LocalMovieEntity>)
 
@@ -387,6 +410,51 @@ interface SeriesDao {
         """,
     )
     suspend fun getTopRated(sourceId: String, minRating: Double, limit: Int): List<LocalSeriesEntity>
+
+    // Series have no "added" date; the release year, then the provider's order, stands in for it.
+    @Query(
+        """
+        SELECT * FROM series
+        WHERE sourceId = :sourceId
+        ORDER BY
+            CASE WHEN year IS NULL OR year <= 0 THEN 0 ELSE 1 END DESC,
+            year DESC,
+            sortOrder DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun getLatest(sourceId: String, limit: Int): List<LocalSeriesEntity>
+
+    @Query(
+        """
+        SELECT * FROM series
+        WHERE sourceId = :sourceId AND categoryName = :categoryName
+        ORDER BY
+            CASE WHEN year IS NULL OR year <= 0 THEN 0 ELSE 1 END DESC,
+            year DESC,
+            sortOrder DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun getByCategoryNameLimited(
+        sourceId: String,
+        categoryName: String,
+        limit: Int,
+    ): List<LocalSeriesEntity>
+
+    @Query(
+        """
+        SELECT categoryName AS name, COUNT(*) AS itemCount,
+            MAX(CASE WHEN backdropUrl IS NOT NULL AND TRIM(backdropUrl) != '' THEN backdropUrl END) AS backdropUrl,
+            MAX(CASE WHEN posterUrl IS NOT NULL AND TRIM(posterUrl) != '' THEN posterUrl END) AS posterUrl
+        FROM series
+        WHERE sourceId = :sourceId AND categoryName IS NOT NULL AND TRIM(categoryName) != ''
+        GROUP BY categoryName
+        ORDER BY itemCount DESC, name
+        LIMIT :limit
+        """,
+    )
+    suspend fun getCategorySummaries(sourceId: String, limit: Int): List<CategorySummary>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<LocalSeriesEntity>)

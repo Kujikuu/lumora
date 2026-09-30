@@ -5,26 +5,22 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.iptvcinema.tv.R
-import com.iptvcinema.tv.core.navigation.AppRoute
 import com.iptvcinema.tv.core.navigation.NavItem
-import com.iptvcinema.tv.features.catalog.CatalogGridScreen
+import com.iptvcinema.tv.features.browse.BrowseTabScreen
 
-/** Every series of one category, opened from a category tile on the Series tab. */
+/** The Series tab landing; category tiles open [SeriesScreen], the full grid. */
 @Composable
-fun SeriesScreen(
+fun SeriesBrowseScreen(
     navController: NavController,
-    initialFilter: String = "",
-    viewModel: SeriesViewModel = hiltViewModel(),
+    viewModel: SeriesBrowseViewModel = hiltViewModel(),
 ) {
-    CatalogGridScreen(
+    BrowseTabScreen(
         navController = navController,
         navItem = NavItem.Series,
-        focusKey = "series_catalog",
+        focusKey = "series_browse",
         title = stringResource(R.string.nav_series),
-        initialCategory = initialFilter,
         emptyTitle = stringResource(R.string.series_empty_title),
         emptyDescription = stringResource(R.string.catalog_empty_sync_desc),
         viewModel = viewModel,
-        onPosterClick = { seriesId -> navController.navigate(AppRoute.seriesDetails(seriesId)) },
     )
 }

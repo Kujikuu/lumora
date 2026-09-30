@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.core.navigation
 
+import android.net.Uri
 import com.iptvcinema.tv.core.navigation.NavItem.Home
 import com.iptvcinema.tv.core.navigation.NavItem.LiveTv
 import com.iptvcinema.tv.core.navigation.NavItem.Movies
@@ -22,6 +23,8 @@ object AppRoute {
     const val LIVE_TV_BASE = "live_tv"
     const val MOVIES = "movies?filter={filter}"
     const val SERIES = "series?filter={filter}"
+    const val MOVIE_CATALOG = "movie_catalog?category={category}"
+    const val SERIES_CATALOG = "series_catalog?category={category}"
     const val MOVIE_DETAILS = "movie_details/{movieId}"
     const val MOVIE_RELATED = "movie_related/{movieId}"
     const val SERIES_DETAILS = "series_details/{seriesId}"
@@ -67,6 +70,8 @@ object AppRoute {
     }
     fun movies(filter: String = "") = "movies?filter=$filter"
     fun series(filter: String = "") = "series?filter=$filter"
+    fun movieCatalog(category: String = "") = "movie_catalog?category=${Uri.encode(category)}"
+    fun seriesCatalog(category: String = "") = "series_catalog?category=${Uri.encode(category)}"
     fun liveTv(channelId: String? = null, openGuide: Boolean = false): String =
         "live_tv?channelId=${channelId.orEmpty()}&openGuide=$openGuide"
 
@@ -81,11 +86,18 @@ object AppRoute {
         Profile -> PROFILE_SELECTION
     }
 
+    /** The route pattern of a tab's landing page, for tabs that have inner pages. */
+    fun tabLandingPattern(item: NavItem): String? = when (item) {
+        Movies -> MOVIES
+        Series -> SERIES
+        else -> null
+    }
+
     fun routeToNavItem(route: String?): NavItem? = when (route?.substringBefore("?")?.substringBefore("/")) {
         HOME -> Home
         LIVE_TV_BASE -> LiveTv
-        MOVIES.substringBefore("?") -> Movies
-        SERIES.substringBefore("?") -> Series
+        MOVIES.substringBefore("?"), MOVIE_CATALOG.substringBefore("?") -> Movies
+        SERIES.substringBefore("?"), SERIES_CATALOG.substringBefore("?") -> Series
         MY_LIST -> MyList
         SEARCH -> Search
         SETTINGS -> Settings
@@ -97,6 +109,8 @@ object AppRoute {
         LIVE_TV_BASE,
         MOVIES.substringBefore("?"),
         SERIES.substringBefore("?"),
+        MOVIE_CATALOG.substringBefore("?"),
+        SERIES_CATALOG.substringBefore("?"),
         SEARCH,
         MY_LIST,
         SETTINGS,

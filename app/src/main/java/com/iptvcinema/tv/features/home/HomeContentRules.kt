@@ -73,4 +73,14 @@ object HomeContentRules {
         history
             .filter { it.contentType == WatchHistoryContentType.MOVIE }
             .maxByOrNull { it.lastWatchedAt }
+
+    /** Series the viewer watched, most recent first. */
+    fun watchedSeriesIds(history: List<WatchHistoryItem>): List<String> =
+        history
+            .filter { it.contentType == WatchHistoryContentType.EPISODE && !it.seriesId.isNullOrBlank() }
+            .sortedByDescending { it.lastWatchedAt }
+            .mapNotNull { it.seriesId }
+            .distinct()
+
+    fun lastWatchedSeriesId(history: List<WatchHistoryItem>): String? = watchedSeriesIds(history).firstOrNull()
 }
