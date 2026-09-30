@@ -73,6 +73,8 @@ fun AppNavGraph(
     val activity = LocalActivity.current as ComponentActivity
     val sessionViewModel: SessionViewModel = hiltViewModel(activity)
 
+    PendingDeepLinkHandler(navController = navController, sessionViewModel = sessionViewModel)
+
     // The default NavHost crossfade is 700 ms, which feels sluggish on a remote.
     NavHost(
         navController = navController,

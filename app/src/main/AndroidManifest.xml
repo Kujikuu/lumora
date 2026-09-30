@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Lets the app publish its Continue Watching items to the TV home screen's Watch Next row. -->
+    <uses-permission android:name="com.android.providers.tv.permission.WRITE_EPG_DATA" />
 
     <uses-feature
         android:name="android.software.leanback"
@@ -36,6 +38,7 @@
         <activity
             android:name=".app.MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:screenOrientation="landscape"
             android:theme="@style/Theme.IptvCinema.Splash"
             android:windowSoftInputMode="adjustResize">
@@ -43,7 +46,23 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
+            <!-- Watch Next cards on the home screen open lumora://play?type=…&id=… -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data
+                    android:host="play"
+                    android:scheme="lumora" />
+            </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".core.tvhome.WatchNextRemovedReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.media.tv.action.WATCH_NEXT_PROGRAM_BROWSABLE_DISABLED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

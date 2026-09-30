@@ -6,6 +6,7 @@ import com.iptvcinema.tv.core.model.catalog.CatalogChannel
 import com.iptvcinema.tv.core.data.repository.ParentalControlsRepository
 import com.iptvcinema.tv.core.datastore.AppSessionState
 import com.iptvcinema.tv.core.model.WatchHistoryContentType
+import com.iptvcinema.tv.core.model.WatchHistoryItem
 import com.iptvcinema.tv.core.player.PlaybackRequest
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -16,14 +17,27 @@ class ParentalPlaybackGuard @Inject constructor(
     private val parentalControlsRepository: ParentalControlsRepository,
     private val parentalGate: ParentalGate,
 ) {
-    suspend fun isPlaybackBlocked(session: AppSessionState, request: PlaybackRequest): Boolean {
+    suspend fun isPlaybackBlocked(session: AppSessionState, request: PlaybackRequest): Boolean =
+        isContentBlocked(session, request.contentType, request.contentId, request.seriesId, request.sourceId)
+
+    /** Same check for a history item, e.g. before showing it outside the app on the TV home screen. */
+    suspend fun isHistoryItemBlocked(session: AppSessionState, item: WatchHistoryItem): Boolean =
+        isContentBlocked(session, item.contentType, item.contentId, item.seriesId, item.sourceId)
+
+    private suspend fun isContentBlocked(
+        session: AppSessionState,
+        contentType: WatchHistoryContentType,
+        contentId: String,
+        seriesId: String?,
+        itemSourceId: String?,
+    ): Boolean {
         if (session.isDemoMode) return false
         val profileId = session.currentProfileId ?: return false
-        val sourceId = request.sourceId ?: session.currentSourceId ?: return false
+        val sourceId = itemSourceId ?: session.currentSourceId ?: return false
         val controls = parentalControlsRepository.getControls(profileId) ?: return false
-        return when (request.contentType) {
+        return when (contentType) {
             WatchHistoryContentType.MOVIE -> {
-                val movie = catalogRepository.getMovie(sourceId, request.contentId)?.toMovieItem()
+                val movie = catalogRepository.getMovie(sourceId, contentId)?.toMovieItem()
                     ?: return false
                 parentalGate.isContentBlocked(
                     // Blocks are set per provider category; the genre is only a fallback.
@@ -33,8 +47,7 @@ class ParentalPlaybackGuard @Inject constructor(
                 )
             }
             WatchHistoryContentType.EPISODE -> {
-                val seriesId = request.seriesId ?: return false
-                val series = catalogRepository.getSeries(sourceId, seriesId) ?: return false
+                val series = catalogRepository.getSeries(sourceId, seriesId ?: return false) ?: return false
                 parentalGate.isContentBlocked(
                     categoryName = series.categoryName,
                     contentRating = series.rating,
@@ -42,7 +55,7 @@ class ParentalPlaybackGuard @Inject constructor(
                 )
             }
             WatchHistoryContentType.CHANNEL -> {
-                val channel = catalogRepository.getChannel(sourceId, request.contentId) ?: return false
+                val channel = catalogRepository.getChannel(sourceId, contentId) ?: return false
                 parentalGate.isContentBlocked(
                     categoryName = channel.categoryName,
                     contentRating = null,

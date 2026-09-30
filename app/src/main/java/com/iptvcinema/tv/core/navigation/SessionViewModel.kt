@@ -8,6 +8,8 @@ import com.iptvcinema.tv.core.data.repository.CloudAccountStatus
 import com.iptvcinema.tv.core.data.repository.ProfilesRepository
 import com.iptvcinema.tv.core.datastore.AppSessionRepository
 import com.iptvcinema.tv.core.datastore.AppSessionState
+import com.iptvcinema.tv.core.tvhome.PendingDeepLinkStore
+import com.iptvcinema.tv.core.tvhome.PlaybackDeepLink
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,7 +29,12 @@ class SessionViewModel @Inject constructor(
     private val cloudAccountRetryCoordinator: CloudAccountRetryCoordinator,
     private val authRepository: AuthRepository,
     private val profilesRepository: ProfilesRepository,
+    private val pendingDeepLinkStore: PendingDeepLinkStore,
 ) : ViewModel() {
+    val pendingDeepLink: StateFlow<PlaybackDeepLink?> = pendingDeepLinkStore.pending
+
+    fun consumeDeepLink(link: PlaybackDeepLink) = pendingDeepLinkStore.consume(link)
+
     val isCloudDegraded: StateFlow<Boolean> = cloudAccountStatus.isDegraded
     private val _isHydrated = MutableStateFlow(false)
     val isHydrated: StateFlow<Boolean> = _isHydrated.asStateFlow()

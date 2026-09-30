@@ -7,6 +7,7 @@ import androidx.work.Configuration
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import com.iptvcinema.tv.core.sync.CloudSyncInitializer
+import com.iptvcinema.tv.core.tvhome.WatchNextSync
 import dagger.hilt.android.HiltAndroidApp
 import java.io.IOException
 import java.net.SocketTimeoutException
@@ -20,11 +21,13 @@ class IptvCinemaApp : Application(), ImageLoaderFactory, Configuration.Provider 
     @Inject lateinit var imageLoader: ImageLoader
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var cloudSyncInitializer: CloudSyncInitializer
+    @Inject lateinit var watchNextSync: WatchNextSync
 
     override fun onCreate() {
         super.onCreate()
         installUncaughtExceptionGuard()
         cloudSyncInitializer.hashCode()
+        watchNextSync.hashCode()
     }
 
     override fun newImageLoader(): ImageLoader = imageLoader

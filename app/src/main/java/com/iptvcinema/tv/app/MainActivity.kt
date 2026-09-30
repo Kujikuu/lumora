@@ -1,6 +1,7 @@
 package com.iptvcinema.tv.app
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -11,6 +12,7 @@ import com.iptvcinema.tv.core.design.theme.CinemaTheme
 import com.iptvcinema.tv.core.navigation.AppNavGraph
 import com.iptvcinema.tv.core.platform.AppLocaleHelper
 import com.iptvcinema.tv.core.player.PlayerManager
+import com.iptvcinema.tv.core.tvhome.PendingDeepLinkStore
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -18,6 +20,9 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
     @Inject
     lateinit var playerManager: PlayerManager
+
+    @Inject
+    lateinit var pendingDeepLinkStore: PendingDeepLinkStore
 
     // Applies the language chosen in Settings; the system per-app language service is
     // missing on many TVs, so it cannot be relied on.
@@ -29,9 +34,17 @@ class MainActivity : ComponentActivity() {
         // Released on the first frame; the animated intro lives in the Compose SplashScreen.
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        // A recreated activity already handled the link that launched it.
+        if (savedInstanceState == null) pendingDeepLinkStore.offer(intent?.dataString)
         setContent {
             IptvCinemaAppContent()
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingDeepLinkStore.offer(intent.dataString)
     }
 
     override fun onDestroy() {

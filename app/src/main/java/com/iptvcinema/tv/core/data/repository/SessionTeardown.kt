@@ -8,6 +8,7 @@ import com.iptvcinema.tv.core.data.repository.supabase.SupabasePlaylistSourcesRe
 import com.iptvcinema.tv.core.datastore.AppSessionRepository
 import com.iptvcinema.tv.core.parental.ParentalGate
 import com.iptvcinema.tv.core.sync.CloudDataSyncScheduler
+import com.iptvcinema.tv.core.tvhome.WatchNextPublisher
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -31,6 +32,7 @@ class SessionTeardown @Inject constructor(
     private val cloudAccountStatus: CloudAccountStatus,
     private val parentalGate: ParentalGate,
     private val cloudDataSyncScheduler: CloudDataSyncScheduler,
+    private val watchNextPublisher: WatchNextPublisher,
 ) {
     suspend fun signOut() = withContext(Dispatchers.IO + NonCancellable) {
         if (authRepository.isConfigured()) {
@@ -46,6 +48,7 @@ class SessionTeardown @Inject constructor(
         runStep("user data cache") { cloudUserDataCache.clearAll() }
         runStep("playlist cache") { playlistSourcesRepository.clearMemoryCache() }
         runStep("sync jobs") { cloudDataSyncScheduler.cancelOneTimeSync() }
+        runStep("watch next") { watchNextPublisher.clear() }
         cloudAccountStatus.reset()
         parentalGate.clearSession()
         runStep("playlist credentials") { localCredentialsStore.clearAll() }

@@ -72,6 +72,14 @@ the server's timezone. Catch-up is seekable and never written to watch history. 
 kept for 72h (`EpgRetention.PAST_MS`), which caps how far back catch-up reaches. M3U catch-up is
 not supported yet.
 
+### Android TV home screen (Watch Next)
+
+`core/tvhome/WatchNextSync` mirrors the current profile's Continue Watching (movies in progress,
+the next episode of a series) into the launcher's Watch Next row, minus anything parental controls
+block. Cards open `lumora://play?type=…&id=…`; the app plays it once the session is ready (another
+profile's card opens its details page instead). Removing a card from the home screen removes it
+from Continue Watching, and signing out clears the row.
+
 ## Core App Screens
 
 1. Splash / Launcher
