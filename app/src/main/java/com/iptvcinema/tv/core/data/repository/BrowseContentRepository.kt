@@ -262,7 +262,9 @@ class BrowseContentRepository @Inject constructor(
         return MoviesCatalogSnapshot(
             newest = movies,
             topRated = movies.sortedByDescending { HomeContentRules.ratingValue(it.rating) },
-            categories = movies.demoCategories({ it.categoryName }, { it.backdropUrl }, { it.posterUrl }),
+            categories = demoCategoryTiles(FakeDataProvider.movieCategories) { name ->
+                FakeDataProvider.moviesForCategory(name).map { it.backdropUrl to it.imageUrl }
+            },
         )
     }
 
@@ -282,7 +284,9 @@ class BrowseContentRepository @Inject constructor(
         return SeriesCatalogSnapshot(
             latest = series.sortedByDescending { it.year ?: 0 },
             topRated = series.sortedByDescending { HomeContentRules.ratingValue(it.rating) },
-            categories = series.demoCategories({ it.categoryName }, { it.backdropUrl }, { it.posterUrl }),
+            categories = demoCategoryTiles(FakeDataProvider.seriesCategories) { name ->
+                FakeDataProvider.seriesForCategory(name).map { it.backdropUrl to it.imageUrl }
+            },
         )
     }
 
@@ -297,22 +301,20 @@ class BrowseContentRepository @Inject constructor(
         )
     }
 
-    private fun <T> List<T>.demoCategories(
-        name: (T) -> String?,
-        backdrop: (T) -> String?,
-        poster: (T) -> String?,
+    /** Demo tiles use the demo grid's own categories, so each tile opens its category. */
+    private fun demoCategoryTiles(
+        names: List<String>,
+        artwork: (String) -> List<Pair<String?, String?>>,
     ): List<BrowseCategory> =
-        groupBy { name(it).orEmpty() }
-            .filterKeys { it.isNotBlank() }
-            .map { (category, items) ->
-                BrowseCategory(
-                    name = category,
-                    itemCount = items.size,
-                    backdropUrl = items.firstNotNullOfOrNull(backdrop),
-                    posterUrl = items.firstNotNullOfOrNull(poster),
-                )
-            }
-            .sortedByDescending { it.itemCount }
+        names.filterNot { it.equals("All", ignoreCase = true) }.mapNotNull { name ->
+            val items = artwork(name).takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+            BrowseCategory(
+                name = name,
+                itemCount = items.size,
+                backdropUrl = items.firstNotNullOfOrNull { it.first },
+                posterUrl = items.firstNotNullOfOrNull { it.second },
+            )
+        }
 
     private suspend fun <T> safely(section: String, fallback: T, block: suspend () -> T): T =
         try {

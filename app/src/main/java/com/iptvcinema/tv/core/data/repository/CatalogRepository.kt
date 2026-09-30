@@ -703,30 +703,16 @@ class CatalogRepository @Inject constructor(
                 categories.firstOrNull { it.name.equals(name, ignoreCase = true) }
             } ?: categories.firstOrNull()
             val allMoviesFlow = catalogDaoFacade.movies.observeAllLimited(sourceId, MOVIE_BROWSE_LIMIT)
-            val movieFlow = when {
+            // The whole list (up to MOVIE_BROWSE_LIMIT rows) is read only when the category is
+            // empty; reading it alongside every category was 2,000 extra rows per sync batch.
+            val resolvedMovieFlow = when {
                 selectedCategory == null -> allMoviesFlow
                 isRecentlyAddedCategory(selectedCategory.name) ->
                     catalogDaoFacade.movies.observeRecentlyAdded(sourceId, LAST_ADDED_BROWSE_LIMIT)
-                else -> combine(
-                    catalogDaoFacade.movies.observeByCategoryLimited(
-                        sourceId,
-                        selectedCategory.id,
-                        MOVIE_BROWSE_LIMIT,
-                    ),
-                    allMoviesFlow,
-                ) { categoryMovies, allMovies ->
-                    categoryMovies.ifEmpty { allMovies }
-                }
-            }
-            val resolvedMovieFlow = if (
-                selectedCategory != null &&
-                isRecentlyAddedCategory(selectedCategory.name)
-            ) {
-                combine(movieFlow, allMoviesFlow) { recentMovies, allMovies ->
-                    recentMovies.ifEmpty { allMovies }
-                }
-            } else {
-                movieFlow
+                        .orWhenEmpty(allMoviesFlow)
+                else -> catalogDaoFacade.movies
+                    .observeByCategoryLimited(sourceId, selectedCategory.id, MOVIE_BROWSE_LIMIT)
+                    .orWhenEmpty(allMoviesFlow)
             }
             resolvedMovieFlow.map { movies ->
                 if (categories.isEmpty() && movies.isEmpty()) {
@@ -760,12 +746,7 @@ class CatalogRepository @Inject constructor(
             val seriesFlow = if (selectedCategory == null) {
                 allSeriesFlow
             } else {
-                combine(
-                    catalogDaoFacade.series.observeByCategory(sourceId, selectedCategory.id),
-                    allSeriesFlow,
-                ) { categorySeries, allSeries ->
-                    categorySeries.ifEmpty { allSeries }
-                }
+                catalogDaoFacade.series.observeByCategory(sourceId, selectedCategory.id).orWhenEmpty(allSeriesFlow)
             }
             seriesFlow.map { seriesItems ->
                 if (categories.isEmpty() && seriesItems.isEmpty()) {
@@ -897,6 +878,10 @@ class CatalogRepository @Inject constructor(
             )
         },
     )
+
+    /** This flow's rows, or [fallback]'s while this one has none; [fallback] is only read then. */
+    private fun <T> Flow<List<T>>.orWhenEmpty(fallback: Flow<List<T>>): Flow<List<T>> =
+        flatMapLatest { rows -> if (rows.isEmpty()) fallback else flowOf(rows) }
 
     private fun isRecentlyAddedCategory(name: String): Boolean {
         val normalized = name.trim()

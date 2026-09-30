@@ -98,7 +98,7 @@ fun SearchScreen(
     MainShellScaffold(
         navController = navController,
         selectedNavItem = NavItem.Search,
-        onRailExitRight = ::focusKeyboard,
+        onRailExitRight = if (uiState.loadState == CatalogLoadState.Ready) ::focusKeyboard else null,
     ) {
         if (uiState.loadState != CatalogLoadState.Ready) {
             CatalogStateContent(

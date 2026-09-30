@@ -289,15 +289,18 @@ interface MovieDao {
     suspend fun getLargestCategoryNames(sourceId: String, limit: Int): List<String>
 
     /** Categories by size, each with one sample backdrop and poster for its tile. */
+    // Starts from the categories table, the list the catalog grid opens by name, so a tile always
+    // names a category the grid can show.
     @Query(
         """
-        SELECT categoryName AS name, COUNT(*) AS itemCount,
-            MAX(CASE WHEN backdropUrl IS NOT NULL AND TRIM(backdropUrl) != '' THEN backdropUrl END) AS backdropUrl,
-            MAX(CASE WHEN posterUrl IS NOT NULL AND TRIM(posterUrl) != '' THEN posterUrl END) AS posterUrl
-        FROM movies
-        WHERE sourceId = :sourceId AND categoryName IS NOT NULL AND TRIM(categoryName) != ''
-        GROUP BY categoryName
-        ORDER BY itemCount DESC, name
+        SELECT c.name AS name, COUNT(t.id) AS itemCount,
+            MAX(CASE WHEN t.backdropUrl IS NOT NULL AND TRIM(t.backdropUrl) != '' THEN t.backdropUrl END) AS backdropUrl,
+            MAX(CASE WHEN t.posterUrl IS NOT NULL AND TRIM(t.posterUrl) != '' THEN t.posterUrl END) AS posterUrl
+        FROM categories c
+        JOIN movies t ON t.sourceId = c.sourceId AND t.categoryId = c.id
+        WHERE c.sourceId = :sourceId AND c.contentType = 'VOD' AND TRIM(c.name) != ''
+        GROUP BY c.id
+        ORDER BY itemCount DESC, c.sortOrder, c.name
         LIMIT :limit
         """,
     )
@@ -442,15 +445,18 @@ interface SeriesDao {
         limit: Int,
     ): List<LocalSeriesEntity>
 
+    // Starts from the categories table, the list the catalog grid opens by name, so a tile always
+    // names a category the grid can show.
     @Query(
         """
-        SELECT categoryName AS name, COUNT(*) AS itemCount,
-            MAX(CASE WHEN backdropUrl IS NOT NULL AND TRIM(backdropUrl) != '' THEN backdropUrl END) AS backdropUrl,
-            MAX(CASE WHEN posterUrl IS NOT NULL AND TRIM(posterUrl) != '' THEN posterUrl END) AS posterUrl
-        FROM series
-        WHERE sourceId = :sourceId AND categoryName IS NOT NULL AND TRIM(categoryName) != ''
-        GROUP BY categoryName
-        ORDER BY itemCount DESC, name
+        SELECT c.name AS name, COUNT(t.id) AS itemCount,
+            MAX(CASE WHEN t.backdropUrl IS NOT NULL AND TRIM(t.backdropUrl) != '' THEN t.backdropUrl END) AS backdropUrl,
+            MAX(CASE WHEN t.posterUrl IS NOT NULL AND TRIM(t.posterUrl) != '' THEN t.posterUrl END) AS posterUrl
+        FROM categories c
+        JOIN series t ON t.sourceId = c.sourceId AND t.categoryId = c.id
+        WHERE c.sourceId = :sourceId AND c.contentType = 'SERIES' AND TRIM(c.name) != ''
+        GROUP BY c.id
+        ORDER BY itemCount DESC, c.sortOrder, c.name
         LIMIT :limit
         """,
     )

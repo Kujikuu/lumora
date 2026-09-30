@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.data.repository.CatalogRepository
+import com.iptvcinema.tv.core.data.repository.ParentalControlsDefaults
 import com.iptvcinema.tv.core.data.repository.ParentalControlsRepository
 import com.iptvcinema.tv.core.data.repository.ProfilesRepository
 import com.iptvcinema.tv.core.model.ParentalControls
@@ -82,7 +83,7 @@ class ParentalControlsViewModel @Inject constructor(
      */
     fun updateControls(transform: (ParentalControls) -> ParentalControls) {
         val ready = _uiState.value as? ParentalUiState.Ready ?: return
-        if (ready.locked) return
+        if (ready.locked || ParentalControlsDefaults.isFallback(ready.controls)) return
         val updated = transform(ready.controls)
         _uiState.value = ready.copy(controls = updated)
         viewModelScope.launch {
@@ -154,6 +155,12 @@ class ParentalControlsViewModel @Inject constructor(
         }
         selectedProfileId = profileId
         val controls = parentalControlsRepository.ensureControls(profileId)
+        if (ParentalControlsDefaults.isFallback(controls)) {
+            // The real controls could not be read. Showing the PIN-less stand-in would unlock
+            // the screen, and saving it would wipe the real PIN, so offer Retry instead.
+            _uiState.value = ParentalUiState.Error(appStrings.get(R.string.parental_error_load))
+            return
+        }
         val liveCategories = catalogRepository.getCategoryNames(CatalogContentType.LIVE)
         val vodCategories = catalogRepository.getCategoryNames(CatalogContentType.VOD)
         val seriesCategories = catalogRepository.getCategoryNames(CatalogContentType.SERIES)
