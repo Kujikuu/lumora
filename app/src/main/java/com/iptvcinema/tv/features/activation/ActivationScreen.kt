@@ -249,11 +249,15 @@ private fun CodeBlock(uiState: ActivationUiState) {
     val code = (uiState as? ActivationUiState.Ready)?.code
     Text(
         text = code ?: stringResource(R.string.activation_generating),
+        // One line, always: a wrapped code hides its second half under the countdown.
+        maxLines = 1,
+        softWrap = false,
         style = if (code != null) {
             MaterialTheme.typography.displaySmall.copy(
                 color = CinemaColors.White,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 5.sp,
+                fontSize = 40.sp,
+                letterSpacing = 3.sp,
             )
         } else {
             MaterialTheme.typography.titleLarge.copy(color = CinemaColors.TextSecondary)
