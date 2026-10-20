@@ -74,7 +74,8 @@ private class SplashAnimations(startValue: Float) {
 
 /**
  * Branded intro: the logo bands stack in, the "tv" card pops, then the wordmark reveals.
- * Calls [onFinished] once the intro has played and [isReady] is true.
+ * Calls [onFinished] once [isReady] is true and the brand has shown for a short minimum
+ * (see [SplashExitPolicy]); a slow destination lets the full intro play.
  */
 @Composable
 fun SplashScreen(
@@ -89,8 +90,14 @@ fun SplashScreen(
     }
     val animations = remember { SplashAnimations(startValue = if (skipIntro) 1f else 0f) }
     var introFinished by remember { mutableStateOf(skipIntro) }
-    val phase = SplashExitPolicy.phase(introFinished, destinationReady = isReady)
+    var minimumShown by remember { mutableStateOf(skipIntro) }
+    val phase = SplashExitPolicy.phase(introFinished, minimumShown, destinationReady = isReady)
     val currentOnFinished by rememberUpdatedState(onFinished)
+
+    LaunchedEffect(Unit) {
+        delay(SplashExitPolicy.MINIMUM_BRAND_MS)
+        minimumShown = true
+    }
 
     LaunchedEffect(Unit) {
         if (!skipIntro) {
