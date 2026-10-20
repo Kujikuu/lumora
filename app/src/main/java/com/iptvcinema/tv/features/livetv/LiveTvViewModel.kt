@@ -33,6 +33,7 @@ import com.iptvcinema.tv.core.util.AppStrings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +43,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -50,7 +52,9 @@ import kotlinx.coroutines.flow.SharingStarted
 data class LiveTvUiState(
     val loadState: CatalogLoadState = CatalogLoadState.Loading,
     val categories: List<String> = emptyList(),
+    /** The plain channel rows; what is on now lives in [currentPrograms], keyed by channel id. */
     val channels: List<ChannelItem> = emptyList(),
+    val currentPrograms: Map<String, EpgProgram> = emptyMap(),
     val epgPrograms: List<EpgProgram> = emptyList(),
     val selectedChannelPrograms: List<EpgProgram> = emptyList(),
     val guideWindowStartMs: Long = GuideLayoutHelper.defaultWindowStart(System.currentTimeMillis()),
@@ -69,7 +73,9 @@ data class LiveTvUiState(
 ) {
     val previewChannel: ChannelItem?
         get() {
-            val channel = selectedChannel ?: channels.firstOrNull() ?: return null
+            val channel = selectedChannel
+                ?: channels.firstOrNull()?.let { LiveTvNowPlaying.withCurrentProgram(it, currentPrograms, nowMs) }
+                ?: return null
             val program = focusedProgram
             return if (program != null && program.channelId == channel.id) {
                 GuideLayoutHelper.channelItemWithProgram(channel, program, nowMs)
@@ -160,8 +166,12 @@ class LiveTvViewModel @Inject constructor(
                         state.categories
                     }
                     val filteredChannels = if (controls != null) {
+                        // Thousands of channels share a handful of categories: check each once.
+                        val blockedByCategory = HashMap<String, Boolean>()
                         state.items.filter { channel ->
-                            !parentalGate.isCategoryBlocked(channel.category, controls)
+                            !blockedByCategory.getOrPut(channel.category) {
+                                parentalGate.isCategoryBlocked(channel.category, controls)
+                            }
                         }
                     } else {
                         state.items
@@ -179,7 +189,10 @@ class LiveTvViewModel @Inject constructor(
                         favoriteChannelIds = favorites.channelIds(),
                     )
                 }
-            }.collect { result ->
+            }
+                // Mapping and filtering the channel list is heavy on a weak TV; keep it off Main.
+                .flowOn(Dispatchers.Default)
+                .collect { result ->
                 browseState.value = result.slice
                 currentParentalControls = result.controls
                 favoriteChannelIds.value = result.favoriteChannelIds
@@ -236,18 +249,11 @@ class LiveTvViewModel @Inject constructor(
                 val epg = right.epg
                 val nowPlayingId = right.nowPlayingId
                 val windowEnd = GuideLayoutHelper.windowEndFromStart(left.windowStart)
-                val currentProgramsByChannel = epg
-                    .filter { program -> program.startEpochMs <= clock && program.endEpochMs > clock }
-                    .associateBy { program -> program.channelId }
-                val channels = left.browse.channels.map { channel ->
-                    currentProgramsByChannel[channel.id]?.let { program ->
-                        GuideLayoutHelper.channelItemWithProgram(channel, program, clock)
-                    } ?: channel
-                }
+                // The channel list passes through untouched; only the selected channel gets its
+                // programme filled in, so the minute tick no longer rebuilds every row.
+                val currentPrograms = LiveTvNowPlaying.currentProgramsByChannel(epg, clock)
                 val selectedChannel = left.channel?.let { channel ->
-                    currentProgramsByChannel[channel.id]?.let { program ->
-                        GuideLayoutHelper.channelItemWithProgram(channel, program, clock)
-                    } ?: channel
+                    LiveTvNowPlaying.withCurrentProgram(channel, currentPrograms, clock)
                 }
                 val channelPrograms = selectedChannel?.let { channel ->
                     GuideLayoutHelper.programsForSelectedChannel(
@@ -260,7 +266,8 @@ class LiveTvViewModel @Inject constructor(
                 LiveTvUiState(
                     loadState = left.browse.loadState,
                     categories = left.browse.categories,
-                    channels = channels,
+                    channels = left.browse.channels,
+                    currentPrograms = currentPrograms,
                     epgPrograms = epg,
                     selectedChannelPrograms = channelPrograms,
                     guideWindowStartMs = left.windowStart,
@@ -273,12 +280,17 @@ class LiveTvViewModel @Inject constructor(
                     sourceType = left.browse.sourceType,
                     nowPlayingChannelId = nowPlayingId,
                     favoriteChannelIds = right.favoriteChannelIds,
-                    syncBannerText = _uiState.value.syncBannerText,
-                    refreshState = _uiState.value.refreshState,
                 )
-            }.collect { state ->
-                _uiState.value = state
             }
+                .flowOn(Dispatchers.Default)
+                .collect { state ->
+                    // Banner and refresh state may have changed while this was built off Main.
+                    val current = _uiState.value
+                    _uiState.value = state.copy(
+                        syncBannerText = current.syncBannerText,
+                        refreshState = current.refreshState,
+                    )
+                }
         }
 
         startClock()
