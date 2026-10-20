@@ -3,7 +3,16 @@ package com.iptvcinema.tv.core.database.entity
 import androidx.room.Entity
 import androidx.room.Index
 
-@Entity(tableName = "categories", primaryKeys = ["id", "sourceId"])
+// The primary keys start with id, so every "WHERE sourceId = ?" query needs its own index.
+// Each index below matches a real query shape (see CatalogDaos); keep them few, since every
+// index slows the bulk inserts of a catalog sync. DatabaseModule.CATALOG_INDEXES_V10 creates the
+// same indexes for upgraded installs; change both together.
+
+@Entity(
+    tableName = "categories",
+    primaryKeys = ["id", "sourceId"],
+    indices = [Index(value = ["sourceId", "contentType", "sortOrder", "name"], name = "idx_categories_type_order")],
+)
 data class LocalCategoryEntity(
     val id: String,
     val sourceId: String,
@@ -12,7 +21,14 @@ data class LocalCategoryEntity(
     val sortOrder: Int = 0,
 )
 
-@Entity(tableName = "channels", primaryKeys = ["id", "sourceId"])
+@Entity(
+    tableName = "channels",
+    primaryKeys = ["id", "sourceId"],
+    indices = [
+        Index(value = ["sourceId", "sortOrder"], name = "idx_channels_order"),
+        Index(value = ["sourceId", "categoryId", "sortOrder"], name = "idx_channels_category"),
+    ],
+)
 data class LocalChannelEntity(
     val id: String,
     val sourceId: String,
@@ -28,7 +44,17 @@ data class LocalChannelEntity(
     val archiveDays: Int = 0,
 )
 
-@Entity(tableName = "movies", primaryKeys = ["id", "sourceId"])
+@Entity(
+    tableName = "movies",
+    primaryKeys = ["id", "sourceId"],
+    indices = [
+        Index(value = ["sourceId", "sortOrder"], name = "idx_movies_order"),
+        Index(value = ["sourceId", "categoryId", "sortOrder"], name = "idx_movies_category"),
+        Index(value = ["sourceId", "categoryName", "addedAt", "sortOrder"], name = "idx_movies_category_name"),
+        Index(value = ["sourceId", "addedAt", "sortOrder"], name = "idx_movies_added"),
+        Index(value = ["sourceId", "ratingValue", "year"], name = "idx_movies_rating"),
+    ],
+)
 data class LocalMovieEntity(
     val id: String,
     val sourceId: String,
@@ -47,9 +73,22 @@ data class LocalMovieEntity(
     val youtubeTrailer: String? = null,
     val sortOrder: Int = 0,
     val addedAt: Long? = null,
+    // Derived from rating so top-rated rails can use an index. Keep it last and never pass it
+    // by hand; a copy(rating = ...) must also recompute it.
+    val ratingValue: Double? = RatingValue.of(rating),
 )
 
-@Entity(tableName = "series", primaryKeys = ["id", "sourceId"])
+@Entity(
+    tableName = "series",
+    primaryKeys = ["id", "sourceId"],
+    indices = [
+        Index(value = ["sourceId", "sortOrder"], name = "idx_series_order"),
+        Index(value = ["sourceId", "categoryId", "sortOrder"], name = "idx_series_category"),
+        Index(value = ["sourceId", "categoryName", "year", "sortOrder"], name = "idx_series_category_name"),
+        Index(value = ["sourceId", "year", "sortOrder"], name = "idx_series_year"),
+        Index(value = ["sourceId", "ratingValue", "year"], name = "idx_series_rating"),
+    ],
+)
 data class LocalSeriesEntity(
     val id: String,
     val sourceId: String,
@@ -64,9 +103,17 @@ data class LocalSeriesEntity(
     val cast: String? = null,
     val youtubeTrailer: String? = null,
     val sortOrder: Int = 0,
+    // Derived from rating so top-rated rails can use an index (see LocalMovieEntity).
+    val ratingValue: Double? = RatingValue.of(rating),
 )
 
-@Entity(tableName = "episodes", primaryKeys = ["id", "sourceId"])
+@Entity(
+    tableName = "episodes",
+    primaryKeys = ["id", "sourceId"],
+    indices = [
+        Index(value = ["sourceId", "seriesId", "seasonNumber", "episodeNumber"], name = "idx_episodes_series"),
+    ],
+)
 data class LocalEpisodeEntity(
     val id: String,
     val sourceId: String,

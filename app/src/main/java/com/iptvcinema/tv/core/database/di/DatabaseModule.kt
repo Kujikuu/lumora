@@ -2,6 +2,7 @@ package com.iptvcinema.tv.core.database.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.iptvcinema.tv.core.database.IptvDatabase
@@ -33,7 +34,12 @@ object DatabaseModule {
         MIGRATION_6_7,
         MIGRATION_7_8,
         MIGRATION_8_9,
-    ).build()
+        MIGRATION_9_10,
+    )
+        // Room picks TRUNCATE on low-RAM devices (like our target TVs), where UI reads wait
+        // behind sync writes. WAL lets reads run while a sync is writing.
+        .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
+        .build()
 
     private val MIGRATION_1_2 = object : Migration(1, 2) {
         override fun migrate(db: SupportSQLiteDatabase) {
@@ -193,6 +199,43 @@ object DatabaseModule {
             // Force the next sync to refetch live streams so catch-up info is filled in
             // even when the provider would otherwise answer 304 Not Modified.
             db.execSQL("DELETE FROM catalog_sync_metadata WHERE resourceKey = 'xtream_live_streams'")
+        }
+    }
+
+    // Each index matches a query shape in CatalogDaos, since the (id, sourceId) primary keys
+    // cannot serve "WHERE sourceId = ?". Names and columns must match the @Entity indices
+    // exactly, or Room's schema check fails after the migration.
+    internal val CATALOG_INDEXES_V10 = listOf(
+        "CREATE INDEX IF NOT EXISTS `idx_categories_type_order` " +
+            "ON `categories` (`sourceId`, `contentType`, `sortOrder`, `name`)",
+        "CREATE INDEX IF NOT EXISTS `idx_channels_order` ON `channels` (`sourceId`, `sortOrder`)",
+        "CREATE INDEX IF NOT EXISTS `idx_channels_category` ON `channels` (`sourceId`, `categoryId`, `sortOrder`)",
+        "CREATE INDEX IF NOT EXISTS `idx_movies_order` ON `movies` (`sourceId`, `sortOrder`)",
+        "CREATE INDEX IF NOT EXISTS `idx_movies_category` ON `movies` (`sourceId`, `categoryId`, `sortOrder`)",
+        "CREATE INDEX IF NOT EXISTS `idx_movies_category_name` " +
+            "ON `movies` (`sourceId`, `categoryName`, `addedAt`, `sortOrder`)",
+        "CREATE INDEX IF NOT EXISTS `idx_movies_added` ON `movies` (`sourceId`, `addedAt`, `sortOrder`)",
+        "CREATE INDEX IF NOT EXISTS `idx_movies_rating` ON `movies` (`sourceId`, `ratingValue`, `year`)",
+        "CREATE INDEX IF NOT EXISTS `idx_series_order` ON `series` (`sourceId`, `sortOrder`)",
+        "CREATE INDEX IF NOT EXISTS `idx_series_category` ON `series` (`sourceId`, `categoryId`, `sortOrder`)",
+        "CREATE INDEX IF NOT EXISTS `idx_series_category_name` " +
+            "ON `series` (`sourceId`, `categoryName`, `year`, `sortOrder`)",
+        "CREATE INDEX IF NOT EXISTS `idx_series_year` ON `series` (`sourceId`, `year`, `sortOrder`)",
+        "CREATE INDEX IF NOT EXISTS `idx_series_rating` ON `series` (`sourceId`, `ratingValue`, `year`)",
+        "CREATE INDEX IF NOT EXISTS `idx_episodes_series` " +
+            "ON `episodes` (`sourceId`, `seriesId`, `seasonNumber`, `episodeNumber`)",
+    )
+
+    /** Adds the catalog indexes and the numeric rating column the top-rated rails sort on. */
+    internal val MIGRATION_9_10 = object : Migration(9, 10) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE movies ADD COLUMN ratingValue REAL")
+            db.execSQL("ALTER TABLE series ADD COLUMN ratingValue REAL")
+            // Same value RatingValue.of() gives new rows. Filled before the indexes exist so each
+            // index is built once instead of updated row by row.
+            db.execSQL("UPDATE movies SET ratingValue = CAST(rating AS REAL) WHERE rating IS NOT NULL")
+            db.execSQL("UPDATE series SET ratingValue = CAST(rating AS REAL) WHERE rating IS NOT NULL")
+            CATALOG_INDEXES_V10.forEach(db::execSQL)
         }
     }
 

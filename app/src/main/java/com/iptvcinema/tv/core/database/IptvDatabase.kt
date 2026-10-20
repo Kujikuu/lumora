@@ -5,7 +5,6 @@ import androidx.room.RoomDatabase
 import androidx.room.withTransaction
 import com.iptvcinema.tv.core.catalog.CatalogChangeSummary
 import com.iptvcinema.tv.core.catalog.CatalogSyncPolicy
-import com.iptvcinema.tv.core.catalog.CatalogDiff
 import com.iptvcinema.tv.core.database.dao.CategoryDao
 import com.iptvcinema.tv.core.database.dao.ChannelDao
 import com.iptvcinema.tv.core.database.dao.EpisodeDao
@@ -47,7 +46,7 @@ import javax.inject.Singleton
         CachedParentalControlsEntity::class,
         CachedPlaylistSourceEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = false,
 )
 abstract class IptvDatabase : RoomDatabase() {
@@ -146,6 +145,15 @@ class CatalogDaoFacade @Inject constructor(
         database.catalogSyncMetadataDao().deleteBySource(sourceId)
     }
 
+    /**
+     * Applies one sync's catalog to the database.
+     *
+     * Each resource (live, VOD, series) commits on its own, and very large ones in groups (see
+     * [CatalogItemReconciler]), instead of one transaction for the whole sync. With WAL, readers
+     * never wait for these writes; this keeps other writers from waiting for the whole sync too.
+     * The sync metadata and counts are saved last, so a sync that stops half way is redone in
+     * full next time and ends in the same state.
+     */
     suspend fun reconcileCatalog(
         sourceId: String,
         liveCategories: List<LocalCategoryEntity>?,
@@ -156,49 +164,76 @@ class CatalogDaoFacade @Inject constructor(
         seriesItems: List<LocalSeriesEntity>?,
         metadata: List<CatalogSyncMetadataEntity>,
         syncedAtEpochMs: Long,
-    ): CatalogReconcileResult = database.withTransaction {
-        var changes = CatalogChangeSummary()
-        val liveCategoriesChanged = liveCategories?.let { reconcileCategories(sourceId, LIVE, it) } == true
-        if (channels != null) {
-            changes += reconcileChannels(sourceId, channels)
-        } else if (liveCategoriesChanged) {
-            changes += CatalogChangeSummary(updated = database.channelDao().syncCategoryNames(sourceId))
-        }
-        val vodCategoriesChanged = vodCategories?.let { reconcileCategories(sourceId, VOD, it) } == true
-        if (movies != null) {
-            changes += reconcileMovies(sourceId, movies)
-        } else if (vodCategoriesChanged) {
-            changes += CatalogChangeSummary(updated = database.movieDao().syncCategoryNames(sourceId))
-        }
-        val seriesCategoriesChanged = seriesCategories?.let { reconcileCategories(sourceId, SERIES, it) } == true
-        if (seriesItems != null) {
-            changes += reconcileSeries(sourceId, seriesItems)
-        } else if (seriesCategoriesChanged) {
-            changes += CatalogChangeSummary(updated = database.seriesDao().syncCategoryNames(sourceId))
-        }
-        if (metadata.isNotEmpty()) database.catalogSyncMetadataDao().upsertAll(metadata)
-        val liveChannelCount = database.channelDao().countBySource(sourceId)
-        val movieCount = database.movieDao().countBySource(sourceId)
-        val seriesCount = database.seriesDao().countBySource(sourceId)
-        val epgAvailable = database.syncStateDao().get(sourceId)?.epgAvailable ?: false
-        database.syncStateDao().upsert(
-            LocalSourceSyncStateEntity(
-                sourceId = sourceId,
-                lastSyncedAtEpochMs = syncedAtEpochMs,
+    ): CatalogReconcileResult {
+        val liveChanges = reconcileResource(
+            sourceId = sourceId,
+            contentType = LIVE,
+            categories = liveCategories,
+            items = channels,
+            reconcileItems = ::reconcileChannels,
+            syncCategoryNames = { database.channelDao().syncCategoryNames(sourceId) },
+        )
+        val vodChanges = reconcileResource(
+            sourceId = sourceId,
+            contentType = VOD,
+            categories = vodCategories,
+            items = movies,
+            reconcileItems = ::reconcileMovies,
+            syncCategoryNames = { database.movieDao().syncCategoryNames(sourceId) },
+        )
+        val seriesChanges = reconcileResource(
+            sourceId = sourceId,
+            contentType = SERIES,
+            categories = seriesCategories,
+            items = seriesItems,
+            reconcileItems = ::reconcileSeries,
+            syncCategoryNames = { database.seriesDao().syncCategoryNames(sourceId) },
+        )
+        return database.withTransaction {
+            if (metadata.isNotEmpty()) database.catalogSyncMetadataDao().upsertAll(metadata)
+            val liveChannelCount = database.channelDao().countBySource(sourceId)
+            val movieCount = database.movieDao().countBySource(sourceId)
+            val seriesCount = database.seriesDao().countBySource(sourceId)
+            val epgAvailable = database.syncStateDao().get(sourceId)?.epgAvailable ?: false
+            database.syncStateDao().upsert(
+                LocalSourceSyncStateEntity(
+                    sourceId = sourceId,
+                    lastSyncedAtEpochMs = syncedAtEpochMs,
+                    liveChannelCount = liveChannelCount,
+                    movieCount = movieCount,
+                    seriesCount = seriesCount,
+                    epgAvailable = epgAvailable,
+                    lastError = null,
+                ),
+            )
+            CatalogReconcileResult(
+                changes = liveChanges + vodChanges + seriesChanges,
                 liveChannelCount = liveChannelCount,
                 movieCount = movieCount,
                 seriesCount = seriesCount,
                 epgAvailable = epgAvailable,
-                lastError = null,
-            ),
-        )
-        CatalogReconcileResult(
-            changes = changes,
-            liveChannelCount = liveChannelCount,
-            movieCount = movieCount,
-            seriesCount = seriesCount,
-            epgAvailable = epgAvailable,
-        )
+            )
+        }
+    }
+
+    /**
+     * Categories first, in their own short transaction; then the items. When only the categories
+     * came in, existing items take the new category names in that same transaction.
+     */
+    private suspend fun <T> reconcileResource(
+        sourceId: String,
+        contentType: String,
+        categories: List<LocalCategoryEntity>?,
+        items: List<T>?,
+        reconcileItems: suspend (String, List<T>) -> CatalogChangeSummary,
+        syncCategoryNames: suspend () -> Int,
+    ): CatalogChangeSummary {
+        val renamed = database.withTransaction {
+            val categoriesChanged = categories?.let { reconcileCategories(sourceId, contentType, it) } == true
+            if (items == null && categoriesChanged) syncCategoryNames() else 0
+        }
+        val itemChanges = items?.let { reconcileItems(sourceId, it) } ?: CatalogChangeSummary()
+        return itemChanges + CatalogChangeSummary(updated = renamed)
     }
 
     private suspend fun reconcileCategories(
@@ -223,31 +258,33 @@ class CatalogDaoFacade @Inject constructor(
     private suspend fun reconcileChannels(
         sourceId: String,
         incoming: List<LocalChannelEntity>,
-    ): CatalogChangeSummary = reconcileItems(
+    ): CatalogChangeSummary = CatalogItemReconciler.reconcile(
         incoming = incoming,
         idOf = LocalChannelEntity::id,
         existingIds = { database.channelDao().getIdsBySource(sourceId) },
         existingByIds = { database.channelDao().getByIds(sourceId, it) },
         upsert = database.channelDao()::upsertAll,
         delete = { database.channelDao().deleteByIds(sourceId, it) },
+        inTransaction = ::inTransaction,
     )
 
     private suspend fun reconcileMovies(
         sourceId: String,
         incoming: List<LocalMovieEntity>,
-    ): CatalogChangeSummary = reconcileItems(
+    ): CatalogChangeSummary = CatalogItemReconciler.reconcile(
         incoming = incoming,
         idOf = LocalMovieEntity::id,
         existingIds = { database.movieDao().getIdsBySource(sourceId) },
         existingByIds = { database.movieDao().getByIds(sourceId, it) },
         upsert = database.movieDao()::upsertAll,
         delete = { database.movieDao().deleteByIds(sourceId, it) },
+        inTransaction = ::inTransaction,
     )
 
     private suspend fun reconcileSeries(
         sourceId: String,
         incoming: List<LocalSeriesEntity>,
-    ): CatalogChangeSummary = reconcileItems(
+    ): CatalogChangeSummary = CatalogItemReconciler.reconcile(
         incoming = incoming,
         idOf = LocalSeriesEntity::id,
         existingIds = { database.seriesDao().getIdsBySource(sourceId) },
@@ -257,31 +294,10 @@ class CatalogDaoFacade @Inject constructor(
             database.seriesDao().deleteByIds(sourceId, ids)
             database.episodeDao().deleteBySeriesIds(sourceId, ids)
         },
+        inTransaction = ::inTransaction,
     )
 
-    private suspend fun <T> reconcileItems(
-        incoming: List<T>,
-        idOf: (T) -> String,
-        existingIds: suspend () -> List<String>,
-        existingByIds: suspend (List<String>) -> List<T>,
-        upsert: suspend (List<T>) -> Unit,
-        delete: suspend (List<String>) -> Unit,
-    ): CatalogChangeSummary {
-        val uniqueIncoming = incoming.associateBy(idOf).values.toList()
-        val localIds = existingIds().toHashSet()
-        val incomingIds = uniqueIncoming.mapTo(hashSetOf(), idOf)
-        var added = 0
-        var updated = 0
-        CatalogSyncPolicy.databaseBatches(uniqueIncoming).forEach { chunk ->
-            val diff = CatalogDiff.upserts(chunk, existingByIds(chunk.map(idOf)), idOf)
-            added += diff.added
-            updated += diff.updated
-            if (diff.items.isNotEmpty()) upsert(diff.items)
-        }
-        val removed = CatalogDiff.removedIds(localIds, incomingIds).toList()
-        CatalogSyncPolicy.databaseBatches(removed).forEach { if (it.isNotEmpty()) delete(it) }
-        return CatalogChangeSummary(added = added, updated = updated, removed = removed.size)
-    }
+    private suspend fun inTransaction(block: suspend () -> Unit) = database.withTransaction { block() }
 
     companion object {
         const val LIVE = "LIVE"
