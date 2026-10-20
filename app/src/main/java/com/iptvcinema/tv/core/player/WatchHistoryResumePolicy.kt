@@ -2,6 +2,7 @@ package com.iptvcinema.tv.core.player
 
 import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.model.WatchHistoryItem
+import kotlin.math.abs
 
 object WatchHistoryResumePolicy {
     const val RESUME_MIN_MS = 5_000L
@@ -12,6 +13,11 @@ object WatchHistoryResumePolicy {
     const val AUTOPLAY_RELEASE_BUFFER_MS = 5_000L
     /** @deprecated Use [shouldShowAutoplay] for fixed remaining-time UX. */
     const val AUTOPLAY_THRESHOLD_RATIO = 0.95
+
+    // Smaller gaps are not worth the rebuffer a seek costs.
+    const val LATE_RESUME_MIN_DIFFERENCE_MS = 10_000L
+    // Past this much watching, a jump would feel like the player skipping on its own.
+    const val LATE_RESUME_MAX_PLAYED_MS = 10_000L
 
     fun resumePositionMs(
         positionMs: Long,
@@ -52,6 +58,24 @@ object WatchHistoryResumePolicy {
     fun secondsUntilEnd(positionMs: Long, durationMs: Long): Int {
         val remainingMs = (durationMs - positionMs).coerceAtLeast(0L)
         return ((remainingMs + 999L) / 1000L).toInt()
+    }
+
+    /**
+     * Playback starts from the cached resume point so it never waits on the server. When the
+     * server's point arrives and differs, this says where to seek, or null to keep playing.
+     * It only moves playback that barely started and the viewer has not touched. A server
+     * point of zero is ignored: a failed read looks the same as "no history".
+     */
+    fun lateResumeSeekMs(
+        startedFromMs: Long,
+        serverResumeMs: Long,
+        currentPositionMs: Long,
+        userSeeked: Boolean,
+    ): Long? {
+        if (userSeeked || serverResumeMs <= 0L) return null
+        if (abs(serverResumeMs - startedFromMs) < LATE_RESUME_MIN_DIFFERENCE_MS) return null
+        if (abs(currentPositionMs - startedFromMs) > LATE_RESUME_MAX_PLAYED_MS) return null
+        return serverResumeMs
     }
 
     /** Some IPTV streams never report "ended"; treat the last half second as the end. */

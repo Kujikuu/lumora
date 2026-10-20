@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.core.data.repository.supabase
 
+import android.util.Log
 import com.iptvcinema.tv.core.data.local.CloudUserDataCache
 import com.iptvcinema.tv.core.data.repository.WatchHistoryRepository
 import com.iptvcinema.tv.core.model.WatchHistoryContentType
@@ -18,6 +19,7 @@ import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -116,6 +118,12 @@ class SupabaseWatchHistoryRepository @Inject constructor(
             .firstOrNull()
             ?.toDomain()
 
+    override suspend fun getCachedProgress(
+        profileId: String,
+        contentId: String,
+        contentType: WatchHistoryContentType,
+    ): WatchHistoryItem? = cloudUserDataCache.findWatchProgress(profileId, contentId, contentType)
+
     override suspend fun upsertProgress(
         profileId: String,
         contentId: String,
@@ -161,7 +169,38 @@ class SupabaseWatchHistoryRepository @Inject constructor(
             lastUpsertPositionMs = positionMs
             lastUpsertAtMs = nowMs
         }
+        cacheSavedProgress(upsert)
         refreshTrigger.emit(Unit)
+    }
+
+    // The player reads its resume point from the cache first. Writing each saved position
+    // through keeps that read right even when nothing refreshed the history since.
+    private suspend fun cacheSavedProgress(saved: WatchHistoryUpsertDto) {
+        try {
+            val contentType = WatchHistoryContentType.valueOf(saved.contentType)
+            val cached = cloudUserDataCache.findWatchProgress(saved.profileId, saved.contentId, contentType)
+            cloudUserDataCache.saveWatchProgress(
+                WatchHistoryItem(
+                    id = cached?.id ?: "${saved.profileId}:${saved.contentType}:${saved.contentId}",
+                    profileId = saved.profileId,
+                    // Null fields are left out of the upsert, so the server keeps its values; match that.
+                    sourceId = saved.sourceId ?: cached?.sourceId,
+                    contentId = saved.contentId,
+                    contentType = contentType,
+                    seriesId = saved.seriesId ?: cached?.seriesId,
+                    title = saved.title,
+                    posterUrl = saved.posterUrl ?: cached?.posterUrl,
+                    positionMs = saved.positionMs,
+                    durationMs = saved.durationMs ?: cached?.durationMs,
+                    lastWatchedAt = Instant.parse(saved.lastWatchedAt),
+                ),
+            )
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            // The server already has the position; a stale cache only costs a late seek.
+            Log.w(TAG, "Could not cache saved progress", error)
+        }
     }
 
     override suspend fun getDistinctSeriesIds(profileId: String): List<String> =
@@ -292,6 +331,7 @@ class SupabaseWatchHistoryRepository @Inject constructor(
     )
 
     companion object {
+        private const val TAG = "SupabaseWatchHistory"
         private const val TABLE = "watch_history"
         private const val COLUMN_PROFILE_ID = "profile_id"
         private const val COLUMN_SOURCE_ID = "source_id"

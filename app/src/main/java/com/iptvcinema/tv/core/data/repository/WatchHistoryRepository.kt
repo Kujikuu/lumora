@@ -12,6 +12,17 @@ interface WatchHistoryRepository {
         contentId: String,
         contentType: WatchHistoryContentType,
     ): WatchHistoryItem?
+
+    /**
+     * Progress from data already on the device, never the network, so the player can start
+     * without a server round trip. Null when nothing is cached; [getProgress] stays the
+     * source of truth.
+     */
+    suspend fun getCachedProgress(
+        profileId: String,
+        contentId: String,
+        contentType: WatchHistoryContentType,
+    ): WatchHistoryItem?
     suspend fun upsertProgress(
         profileId: String,
         contentId: String,

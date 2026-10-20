@@ -2,6 +2,7 @@ package com.iptvcinema.tv.core.player
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -150,5 +151,80 @@ class WatchHistoryResumePolicyTest {
     fun shouldAdvanceToNext_onlyAtTheVeryEnd() {
         assertFalse(WatchHistoryResumePolicy.shouldAdvanceToNext(290_000L, 300_000L))
         assertTrue(WatchHistoryResumePolicy.shouldAdvanceToNext(299_600L, 300_000L))
+    }
+
+    @Test
+    fun lateResumeSeekMs_seeksToServerPoint_whenPlaybackBarelyStarted() {
+        assertEquals(
+            2_400_000L,
+            WatchHistoryResumePolicy.lateResumeSeekMs(
+                startedFromMs = 600_000L,
+                serverResumeMs = 2_400_000L,
+                currentPositionMs = 603_000L,
+                userSeeked = false,
+            ),
+        )
+    }
+
+    @Test
+    fun lateResumeSeekMs_seeksFromZero_whenNothingWasCached() {
+        assertEquals(
+            1_800_000L,
+            WatchHistoryResumePolicy.lateResumeSeekMs(
+                startedFromMs = 0L,
+                serverResumeMs = 1_800_000L,
+                currentPositionMs = 0L,
+                userSeeked = false,
+            ),
+        )
+    }
+
+    @Test
+    fun lateResumeSeekMs_null_whenServerAgreesWithCache() {
+        assertNull(
+            WatchHistoryResumePolicy.lateResumeSeekMs(
+                startedFromMs = 600_000L,
+                serverResumeMs = 604_000L,
+                currentPositionMs = 600_000L,
+                userSeeked = false,
+            ),
+        )
+    }
+
+    @Test
+    fun lateResumeSeekMs_null_whenServerHasNoResumePoint() {
+        // A failed read also comes back as "no history", so zero must never rewind playback.
+        assertNull(
+            WatchHistoryResumePolicy.lateResumeSeekMs(
+                startedFromMs = 600_000L,
+                serverResumeMs = 0L,
+                currentPositionMs = 600_000L,
+                userSeeked = false,
+            ),
+        )
+    }
+
+    @Test
+    fun lateResumeSeekMs_null_onceViewerHasWatchedAWhile() {
+        assertNull(
+            WatchHistoryResumePolicy.lateResumeSeekMs(
+                startedFromMs = 0L,
+                serverResumeMs = 1_800_000L,
+                currentPositionMs = 20_000L,
+                userSeeked = false,
+            ),
+        )
+    }
+
+    @Test
+    fun lateResumeSeekMs_null_whenViewerSeeked() {
+        assertNull(
+            WatchHistoryResumePolicy.lateResumeSeekMs(
+                startedFromMs = 0L,
+                serverResumeMs = 1_800_000L,
+                currentPositionMs = 1_000L,
+                userSeeked = true,
+            ),
+        )
     }
 }

@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.features.player
 
+import android.os.SystemClock
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,6 +17,7 @@ import com.iptvcinema.tv.core.model.EpgProgram
 import com.iptvcinema.tv.core.model.SeasonItem
 import com.iptvcinema.tv.core.model.SourceType
 import com.iptvcinema.tv.core.model.WatchHistoryContentType
+import com.iptvcinema.tv.core.model.catalog.CatalogChannel
 import com.iptvcinema.tv.core.model.catalog.CatalogEpisode
 import com.iptvcinema.tv.core.player.ChannelDirection
 import com.iptvcinema.tv.core.player.NextEpisodeResolver
@@ -132,6 +134,9 @@ class PlayerViewModel @Inject constructor(
     private val channelZapMutex = Mutex()
     private var pendingZapChannelId: String? = null
     private var playbackToken: Int? = null
+    private var userSeekedSinceStart = false
+    private var cachedZapChannelFilter: ((CatalogChannel) -> Boolean)? = null
+    private var cachedZapChannelFilterAtMs = 0L
     private val episodePickerLoadCoordinator = EpisodePickerLoadCoordinator(viewModelScope)
 
     init {
@@ -178,6 +183,7 @@ class PlayerViewModel @Inject constructor(
                 scheduleProgressSave()
             }
             is PlayerCommand.SeekRelative, is PlayerCommand.SeekTo -> {
+                userSeekedSinceStart = true
                 playerManager.handleCommand(command)
                 scheduleProgressSave()
                 if (_screenState.value.showAutoplayCountdown) {
@@ -449,9 +455,14 @@ class PlayerViewModel @Inject constructor(
                     )
                     return
                 }
+                // An explicit resume point from navigation wins. Otherwise start from the cached
+                // point now and let the server's answer correct it once, so the first frame never
+                // waits on a Supabase round trip.
+                val explicitResumeMs = resumePositionArg?.takeIf { it > 0L }
+                val useStoredResume = explicitResumeMs == null && continueWatchingEnabled
                 val resumeMs = when {
-                    resumePositionArg != null && resumePositionArg > 0L -> resumePositionArg
-                    continueWatchingEnabled -> loadResumePosition(result.request)
+                    explicitResumeMs != null -> explicitResumeMs
+                    useStoredResume -> loadResumePosition(result.request, fromCache = true)
                     else -> 0L
                 }
                 _screenState.value = PlayerScreenState(
@@ -461,7 +472,9 @@ class PlayerViewModel @Inject constructor(
                     isEpisode = result.request.contentType == WatchHistoryContentType.EPISODE,
                     seriesId = result.request.seriesId ?: seriesIdArg,
                 )
+                userSeekedSinceStart = false
                 playbackToken = playerManager.play(result.request, resumeMs, isXtreamSource())
+                if (useStoredResume) reconcileResumeWithServer(result.request, resumeMs, playbackToken)
                 updateLivePlaybackSession(result.request)
                 scheduleProgressSave()
                 loadLiveProgramInfo(result.request)
@@ -559,9 +572,8 @@ class PlayerViewModel @Inject constructor(
             val result = resolveEpisodeForPlayback(sourceId, episode)
             when (result) {
                 is PlaybackResolveResult.Success -> {
-                    if (previousRequest != null) {
-                        markEpisodeCompleted(previousRequest)
-                    }
+                    // Read before play(), which resets the player state to the new episode.
+                    val previousDurationMs = previousRequest?.let { resolveDurationMs(playerManager.state.value, it) }
                     pendingNextEpisode = null
                     pendingPreviousRequest = null
                     pendingTransitionSourceId = null
@@ -582,7 +594,12 @@ class PlayerViewModel @Inject constructor(
                         episodePickerOpen = false,
                         episodePickerSeasons = emptyList(),
                     )
+                    userSeekedSinceStart = false
                     playbackToken = playerManager.play(result.request, 0L, isXtreamSource())
+                    // Marking the finished episode is a server write; it no longer delays the next one.
+                    if (previousRequest != null) {
+                        viewModelScope.launch { markEpisodeCompleted(previousRequest, previousDurationMs) }
+                    }
                     scheduleProgressSave()
                     loadLiveProgramInfo(result.request)
                     stopEpgRefresh()
@@ -664,7 +681,7 @@ class PlayerViewModel @Inject constructor(
             val target = channelZapMutex.withLock {
                 val fromId = pendingZapChannelId ?: request.contentId
                 val adjacent = try {
-                    val allowed = parentalPlaybackGuard.channelFilter(appSessionRepository.sessionState.first())
+                    val allowed = zapChannelFilter()
                     catalogRepository.getAdjacentChannel(sourceId, fromId, direction, allowed)
                 } catch (error: CancellationException) {
                     throw error
@@ -680,13 +697,34 @@ class PlayerViewModel @Inject constructor(
             channelZapJob?.cancel()
             channelZapJob = viewModelScope.launch {
                 delay(PlaybackTuning.CHANNEL_ZAP_DEBOUNCE_MS)
-                switchToResolvedChannel(sourceId, target.id)
+                // The target was picked through the parental channel filter, which is the same
+                // check isPlaybackBlocked would run, so the zap skips that second server read.
+                switchToResolvedChannel(sourceId, target.id, vettedByChannelFilter = true)
                 if (pendingZapChannelId == target.id) pendingZapChannelId = null
             }
         }
     }
 
-    private suspend fun switchToResolvedChannel(sourceId: String, channelId: String) {
+    // Reading the parental controls is a server round trip. Fetching them on every CH+/-
+    // press made each press wait on the network before the banner moved, so one read is
+    // shared by a burst of presses.
+    private suspend fun zapChannelFilter(): (CatalogChannel) -> Boolean {
+        val nowMs = SystemClock.elapsedRealtime()
+        cachedZapChannelFilter
+            ?.takeIf { nowMs - cachedZapChannelFilterAtMs < PlaybackTuning.ZAP_CHANNEL_FILTER_REUSE_MS }
+            ?.let { return it }
+        return parentalPlaybackGuard.channelFilter(appSessionRepository.sessionState.first())
+            .also {
+                cachedZapChannelFilter = it
+                cachedZapChannelFilterAtMs = nowMs
+            }
+    }
+
+    private suspend fun switchToResolvedChannel(
+        sourceId: String,
+        channelId: String,
+        vettedByChannelFilter: Boolean = false,
+    ) {
         val result = try {
             playbackRepository.resolveChannel(sourceId, channelId)
         } catch (error: CancellationException) {
@@ -701,9 +739,12 @@ class PlayerViewModel @Inject constructor(
         }
         when (result) {
             is PlaybackResolveResult.Success -> {
-                // Every way to change channel (CH+/-, the picker) comes through here, so this is
-                // where a blocked channel is refused; the current stream keeps playing.
-                if (parentalPlaybackGuard.isPlaybackBlocked(appSessionRepository.sessionState.first(), result.request)) {
+                // Every way to change channel comes through here, so this is where a blocked
+                // channel is refused; the current stream keeps playing. CH+/- targets already
+                // passed the same check in zapChannelFilter, so only the picker pays for it here.
+                if (!vettedByChannelFilter &&
+                    parentalPlaybackGuard.isPlaybackBlocked(appSessionRepository.sessionState.first(), result.request)
+                ) {
                     _screenState.value = _screenState.value.copy(
                         channelChangeBanner = appStrings.get(R.string.parental_playback_blocked),
                     )
@@ -935,12 +976,15 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private suspend fun markEpisodeCompleted(request: PlaybackRequest) {
+    private suspend fun markEpisodeCompleted(
+        request: PlaybackRequest,
+        knownDurationMs: Long? = resolveDurationMs(playerManager.state.value, request),
+    ) {
         if (!continueWatchingEnabled) return
         runCatching {
             val session = appSessionRepository.sessionState.first()
             val profileId = session.currentProfileId ?: return
-            val durationMs = resolveDurationMs(playerManager.state.value, request) ?: return
+            val durationMs = knownDurationMs ?: return
             if (durationMs <= 0L) return
             persistWatchProgress(
                 profileId = profileId,
@@ -972,19 +1016,39 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private suspend fun loadResumePosition(request: PlaybackRequest): Long {
+    private suspend fun loadResumePosition(request: PlaybackRequest, fromCache: Boolean): Long {
         if (request.isLive || request.isCatchup) return 0L
         return runCatching {
             val session = appSessionRepository.sessionState.first()
             val profileId = session.currentProfileId ?: return 0L
-            val history = watchHistoryRepository.getProgress(
-                profileId = profileId,
-                contentId = request.contentId,
-                contentType = request.contentType,
-            ) ?: return 0L
+            val history = if (fromCache) {
+                watchHistoryRepository.getCachedProgress(profileId, request.contentId, request.contentType)
+            } else {
+                watchHistoryRepository.getProgress(profileId, request.contentId, request.contentType)
+            } ?: return 0L
             val durationMs = history.durationMs ?: request.durationMs ?: return 0L
             WatchHistoryResumePolicy.resumePositionMs(history.positionMs, durationMs)
         }.getOrDefault(0L)
+    }
+
+    // The cache can be behind the server (another device, or no refresh since the last save
+    // here). When the server's point arrives, seek once if playback has barely started and
+    // the viewer has not seeked; otherwise keep playing where we are.
+    private fun reconcileResumeWithServer(request: PlaybackRequest, startedFromMs: Long, token: Int?) {
+        if (request.isLive || request.isCatchup) return
+        viewModelScope.launch {
+            val serverResumeMs = loadResumePosition(request, fromCache = false)
+            if (token == null || token != playbackToken) return@launch
+            if (_screenState.value.playbackRequest?.contentId != request.contentId) return@launch
+            val target = WatchHistoryResumePolicy.lateResumeSeekMs(
+                startedFromMs = startedFromMs,
+                serverResumeMs = serverResumeMs,
+                currentPositionMs = playerManager.getExoPlayer().currentPosition,
+                userSeeked = userSeekedSinceStart,
+            ) ?: return@launch
+            playerManager.handleCommand(PlayerCommand.SeekTo(target))
+            _screenState.value = _screenState.value.copy(resumeFromMs = target)
+        }
     }
 
     private fun saveProgressNow() {

@@ -38,6 +38,9 @@ object PlaybackTuning {
     /** Rapid channel up/down presses only start the stream once the user settles. */
     const val CHANNEL_ZAP_DEBOUNCE_MS = 250L
 
+    /** One parental-controls read serves every CH+/- press inside this window. */
+    const val ZAP_CHANNEL_FILTER_REUSE_MS = 10_000L
+
     const val MAX_RETRY_ATTEMPTS = 3
     const val RETRY_BASE_DELAY_MS = 1_000L
 }

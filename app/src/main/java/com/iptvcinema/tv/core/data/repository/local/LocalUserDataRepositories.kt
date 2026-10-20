@@ -182,6 +182,13 @@ class LocalWatchHistoryRepository @Inject constructor(
         }
     }
 
+    // Local history already lives on the device.
+    override suspend fun getCachedProgress(
+        profileId: String,
+        contentId: String,
+        contentType: WatchHistoryContentType,
+    ): WatchHistoryItem? = getProgress(profileId, contentId, contentType)
+
     override suspend fun upsertProgress(
         profileId: String,
         contentId: String,
