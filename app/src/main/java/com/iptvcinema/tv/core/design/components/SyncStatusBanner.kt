@@ -3,6 +3,8 @@ package com.iptvcinema.tv.core.design.components
 import com.iptvcinema.tv.core.navigation.requestFocusWhenReady
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +20,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
@@ -31,8 +39,6 @@ import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.catalog.CatalogRefreshState
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
-
-private const val REFRESHING_CONTENT_ALPHA = 0.72f
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -54,17 +60,19 @@ fun SyncStatusBanner(
         }
     }
 
-    val contentColor = when {
+    val iconTint = when {
         isFailed -> CinemaColors.Danger
         isSuccess -> CinemaColors.Success
-        isRefreshing -> CinemaColors.GoldSoft.copy(alpha = REFRESHING_CONTENT_ALPHA)
-        else -> CinemaColors.GoldSoft
+        else -> CinemaColors.Accent
     }
     val icon = when {
         isFailed -> Icons.Default.Error
         isSuccess -> Icons.Default.CheckCircle
         else -> Icons.Default.Refresh
     }
+    val showProgress = isRefreshing && progress != null
+    // A pill while it is one line of status; a rounded card once a progress bar sits under it.
+    val shape = if (showProgress) CinemaShapes.Row else CinemaShapes.Pill
 
     FocusableCinemaCard(
         modifier = modifier
@@ -76,53 +84,96 @@ fun SyncStatusBanner(
                 onClick()
             }
         },
-        shape = CinemaShapes.Medium,
+        shape = shape,
+        focusedBorderWidth = 0.dp,
+        focusScale = BANNER_FOCUS_SCALE,
         contentDescription = text,
-    ) { _ ->
+    ) { focused ->
+        val titleColor = if (focused) CinemaColors.Background else CinemaColors.White
+        val subtitleColor = if (focused) SettingsPalette.FocusedSecondaryText else CinemaColors.TextMuted
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CinemaColors.SurfaceGlass, CinemaShapes.Medium)
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .defaultMinSize(minHeight = BannerMinHeight)
+                .background(if (focused) CinemaColors.White else CinemaColors.SurfaceRaised, shape)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = contentColor,
-                    modifier = Modifier.size(18.dp),
-                )
+                if (isRefreshing) {
+                    SyncRing(modifier = Modifier.size(18.dp))
+                } else {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
                 Column(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     Text(
                         text = text,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = contentColor,
-                            fontWeight = FontWeight.Medium,
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            color = titleColor,
+                            fontWeight = FontWeight.ExtraBold,
                         ),
                     )
                     subtitle?.takeIf { it.isNotBlank() }?.let { stepText ->
                         Text(
                             text = stepText,
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                color = contentColor.copy(alpha = 0.85f),
-                            ),
+                            style = MaterialTheme.typography.labelSmall.copy(color = subtitleColor),
                         )
                     }
                 }
             }
-            if (isRefreshing && progress != null) {
-                CinemaProgressBar(fraction = progress)
+            if (showProgress) {
+                CinemaProgressBar(
+                    fraction = progress ?: 0f,
+                    modifier = Modifier.clip(CinemaShapes.Pill),
+                )
             }
         }
     }
 }
+
+/** A static ring with an accent arc, standing in for a spinner without running an animation. */
+@Composable
+private fun SyncRing(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.drawBehind {
+            val strokeWidth = 2.dp.toPx()
+            val inset = strokeWidth / 2
+            val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
+            drawArc(
+                color = SettingsPalette.SwitchTrackOff,
+                startAngle = 0f,
+                sweepAngle = 360f,
+                useCenter = false,
+                topLeft = Offset(inset, inset),
+                size = arcSize,
+                style = Stroke(width = strokeWidth),
+            )
+            drawArc(
+                color = CinemaColors.Accent,
+                startAngle = -90f,
+                sweepAngle = 100f,
+                useCenter = false,
+                topLeft = Offset(inset, inset),
+                size = arcSize,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+            )
+        },
+    )
+}
+
+private const val BANNER_FOCUS_SCALE = 1.03f
+private val BannerMinHeight = 52.dp
 
 @Composable
 fun CatalogRefreshBanner(
@@ -161,7 +212,7 @@ fun AccountDegradedBanner(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(CinemaColors.Surface.copy(alpha = 0.95f))
+            .background(CinemaColors.SurfaceRaised)
             .padding(horizontal = 24.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
@@ -20,6 +21,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -35,6 +37,8 @@ import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.ProfileType
+
+private val DialogShape = RoundedCornerShape(16.dp)
 
 private val EditableTypes = listOf(ProfileType.MAIN, ProfileType.FAMILY, ProfileType.KIDS, ProfileType.GUEST)
 
@@ -77,9 +81,9 @@ fun ProfileEditorDialog(state: ProfileEditorState, actions: ProfileEditorActions
         Column(
             modifier = Modifier
                 .fillMaxWidth(0.55f)
-                .background(CinemaColors.Surface, CinemaShapes.Large)
-                .padding(CinemaSpacing.SectionGap),
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
+                .background(CinemaColors.Surface, DialogShape)
+                .padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
                 text = stringResource(if (state.editingId == null) R.string.profile_add else R.string.profile_edit),
@@ -93,6 +97,7 @@ fun ProfileEditorDialog(state: ProfileEditorState, actions: ProfileEditorActions
                 onValueChange = actions.onNameChange,
                 label = stringResource(R.string.profile_name_label),
                 modifier = Modifier.focusRequester(nameFocus),
+                showLabelAbove = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { actions.onSave() }),
             )
@@ -104,7 +109,10 @@ fun ProfileEditorDialog(state: ProfileEditorState, actions: ProfileEditorActions
             }
             Text(
                 text = stringResource(R.string.profile_type_label),
-                style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    color = CinemaColors.TextMuted,
+                    fontWeight = FontWeight.Bold,
+                ),
             )
             val selectedTypeIndex = EditableTypes.indexOf(state.type).coerceAtLeast(0)
             FilterChipRow(
@@ -119,7 +127,10 @@ fun ProfileEditorDialog(state: ProfileEditorState, actions: ProfileEditorActions
                     style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.Danger),
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
+            Row(
+                modifier = Modifier.padding(top = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 CinemaButton(
                     text = stringResource(R.string.profile_save),
                     variant = CinemaButtonVariant.PrimaryAccent,

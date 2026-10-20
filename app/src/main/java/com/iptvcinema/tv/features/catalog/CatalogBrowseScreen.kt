@@ -22,6 +22,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.catalog.CatalogSortOption
@@ -96,8 +97,10 @@ fun CatalogBrowseContent(
     featuredContent: @Composable () -> Unit = {},
     onRestoreScrollReady: (suspend () -> Unit) -> Unit = {},
     modifier: Modifier = Modifier,
+    contentStart: Dp = catalogContentStart(),
+    columns: Int = CATALOG_GRID_COLUMNS,
 ) {
-    val posterRows = remember(posters) { posters.chunked(CATALOG_GRID_COLUMNS) }
+    val posterRows = remember(posters, columns) { posters.chunked(columns) }
     val sectionIndices = remember(hasFeatured, continueWatchingItems.isNotEmpty(), categories.isNotEmpty()) {
         var index = 1 // featured slot always occupies index 0
         val continueWatching = if (continueWatchingItems.isNotEmpty()) index++ else -1
@@ -117,7 +120,6 @@ fun CatalogBrowseContent(
         initialFirstVisibleItemIndex = focusState.scrollOffset.coerceIn(0, sectionIndices.maxIndex),
     )
     val scope = rememberCoroutineScope()
-    val contentStart = catalogContentStart()
     var lastFocusedGridRow by remember { mutableIntStateOf(-1) }
 
     val scrollToSection: suspend (Int) -> Unit = { sectionIndex ->
@@ -229,16 +231,17 @@ fun CatalogBrowseContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .graphicsLayer { clip = true }
+                    // Room for the focus zoom: the row clips, so the padding must cover it.
                     .padding(
                         start = contentStart,
-                        end = 24.dp,
-                        top = CinemaSpacing.FocusScaleOverflow / 2,
-                        bottom = CinemaSpacing.FocusScaleOverflow / 2,
+                        end = 40.dp,
+                        top = CinemaSpacing.FocusScaleOverflow,
+                        bottom = CinemaSpacing.FocusScaleOverflow,
                     ),
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
             ) {
                 rowItems.forEachIndexed { columnIndex, poster ->
-                    val itemIndex = rowIndex * CATALOG_GRID_COLUMNS + columnIndex
+                    val itemIndex = rowIndex * columns + columnIndex
                     val isRestoreTarget = focusState.sectionId == CatalogBrowseSections.GRID &&
                         poster.contentId == focusState.focusedContentId
                     val isInitialGridTarget = itemIndex == 0 &&
@@ -250,7 +253,6 @@ fun CatalogBrowseContent(
                         onClick = { onPosterClick(poster) },
                         onLongClick = onPosterLongClick?.let { callback -> { callback(poster) } },
                         fixedWidth = null,
-                        focusScale = 1f,
                         modifier = Modifier
                             .weight(1f)
                             .onFocusChanged { focus ->
@@ -283,7 +285,7 @@ fun CatalogBrowseContent(
                             ),
                     )
                 }
-                repeat(CATALOG_GRID_COLUMNS - rowItems.size) {
+                repeat(columns - rowItems.size) {
                     Spacer(Modifier.weight(1f))
                 }
             }

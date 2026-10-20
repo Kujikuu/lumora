@@ -3,11 +3,16 @@ package com.iptvcinema.tv.core.design.theme
 import androidx.compose.ui.graphics.Color
 
 object CinemaColors {
-    val Background = Color(0xFF000000)
-    val BackgroundSoft = Color(0xFF070707)
-    val Surface = Color(0xFF1F1F1F)
-    val SurfaceSoft = Color(0xFF151515)
-    val SurfaceGlass = Color(0xD9151515)
+    // Near-black with a blue tint, so artwork and white text stand out without a flat look.
+    val Background = Color(0xFF05070C)
+    val BackgroundSoft = Color(0xFF0A0D14)
+    val Surface = Color(0xFF121620)
+    val SurfaceSoft = Color(0xFF0D1018)
+    /** Selected-but-not-focused fills (current menu item, selected chip). */
+    val SurfaceRaised = Color(0xFF1B202B)
+    val SurfaceGlass = Color(0xD9121620)
+    /** Translucent fill for secondary buttons and badges over artwork. */
+    val OverlayFill = Color(0x29FFFFFF)
 
     val Accent = Color(0xFFE70302)
     val AccentSoft = Color(0xFFFF5A59)
@@ -27,10 +32,10 @@ object CinemaColors {
 
     val White = Color(0xFFFFFFFF)
     val TextPrimary = Color(0xFFFFFFFF)
-    val TextSecondary = Color(0xFFC8C8C8)
-    val TextMuted = Color(0xFF8D8D8D)
+    val TextSecondary = Color(0xFFC3C7CF)
+    val TextMuted = Color(0xFF8A909C)
 
-    val Border = Color(0xFF2B2B2B)
+    val Border = Color(0xFF2A2F3A)
     val FocusBorder = Color(0xFFFFFFFF)
 
     val LiveRed = Color(0xFFE02424)

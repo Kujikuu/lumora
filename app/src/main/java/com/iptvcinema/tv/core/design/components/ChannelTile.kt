@@ -4,20 +4,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -27,7 +22,6 @@ import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
-import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 
 data class ChannelTileData(
     val id: String? = null,
@@ -40,6 +34,13 @@ data class ChannelTileData(
     val programProgress: Float? = null,
 )
 
+private val TileWidth = 172.dp
+private val FocusedTrack = Color(0xFFD6D8DC)
+
+/**
+ * Compact channel tile: rounded Surface card with the logo tile, name and current
+ * programme. Focused it turns white with dark text, like the channel rows.
+ */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ChannelTile(
@@ -49,94 +50,73 @@ fun ChannelTile(
     onLongClick: (() -> Unit)? = null,
 ) {
     FocusableCinemaCard(
-        modifier = modifier.width(172.dp),
+        modifier = modifier.width(TileWidth),
         onClick = onClick,
         onLongClick = onLongClick,
         shape = CinemaShapes.Card,
         contentDescription = data.channelName,
         defaultBorderWidth = 0.dp,
+        focusedBorderWidth = 0.dp,
     ) { focused ->
+        val contentColor = if (focused) CinemaColors.Background else CinemaColors.White
         Column(
             modifier = Modifier
-                .clip(CinemaShapes.Card)
-                .background(if (focused) CinemaColors.SurfaceSoft else Color.Transparent),
+                .width(TileWidth)
+                .background(if (focused) CinemaColors.White else CinemaColors.Surface, CinemaShapes.Card)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .width(172.dp)
-                    .height(106.dp)
-                    .clip(CinemaShapes.Card)
-                    .background(CinemaColors.SurfaceSoft),
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                CinemaAsyncImage(
-                    imageUrl = data.logoUrl,
-                    contentDescription = data.channelName,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    fallbackLabel = data.channelName,
+                ChannelLogoTile(
+                    logoUrl = data.logoUrl,
+                    name = data.channelName,
+                    size = 32.dp,
+                    shape = CinemaShapes.Large,
                 )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    Color.Transparent,
-                                    CinemaColors.Background.copy(alpha = 0.18f),
-                                    CinemaColors.Background.copy(alpha = 0.7f),
-                                ),
-                            ),
-                        ),
-                )
-
-                if (data.isLive) {
-                    BadgeChip(
-                        text = if (data.isNowPlaying) stringResource(R.string.badge_now) else stringResource(R.string.badge_live),
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(6.dp),
-                    )
-                }
-
-                if (data.programProgress != null && data.programProgress > 0f) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .height(3.dp)
-                            .background(CinemaColors.SurfaceSoft),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(data.programProgress.coerceIn(0f, 1f))
-                                .background(CinemaColors.LiveRed),
-                        )
-                    }
-                }
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = CinemaSpacing.CardGap, end = CinemaSpacing.CardGap, top = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(1.dp),
-            ) {
                 Text(
                     text = data.channelName,
                     style = MaterialTheme.typography.labelMedium.copy(
-                        color = if (focused) CinemaColors.White else CinemaColors.TextPrimary,
-                        fontWeight = if (focused) FontWeight.Bold else FontWeight.Medium,
+                        color = contentColor,
+                        fontWeight = FontWeight.ExtraBold,
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (data.currentProgram != null) {
-                    Text(
-                        text = data.currentProgram,
-                        style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.TextMuted),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+            }
+            // Always laid out, so tiles in a rail keep one height.
+            Text(
+                text = data.currentProgram.orEmpty(),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    color = if (focused) contentColor.copy(alpha = 0.75f) else CinemaColors.TextSecondary,
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (data.isLive) {
+                    LivePill(
+                        text = if (data.isNowPlaying) {
+                            stringResource(R.string.badge_now)
+                        } else {
+                            stringResource(R.string.badge_live)
+                        },
+                    )
+                }
+                if (data.programProgress != null && data.programProgress > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(4.dp)
+                            .roundedProgressTrack(
+                                fraction = data.programProgress,
+                                trackColor = if (focused) FocusedTrack else CinemaColors.Border,
+                            ),
                     )
                 }
             }

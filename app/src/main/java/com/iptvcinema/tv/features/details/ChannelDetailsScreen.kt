@@ -19,7 +19,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
+import com.iptvcinema.tv.core.design.theme.CinemaColors
+import com.iptvcinema.tv.core.epg.GuideLayoutHelper
+import com.iptvcinema.tv.core.model.EpgProgram
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -31,10 +42,14 @@ import com.iptvcinema.tv.core.design.components.ChannelTileData
 import com.iptvcinema.tv.core.design.components.CinemaButton
 import com.iptvcinema.tv.core.design.components.CinemaButtonVariant
 import com.iptvcinema.tv.core.design.components.ContentRail
+import com.iptvcinema.tv.core.design.components.DetailBackdropStyle
 import com.iptvcinema.tv.core.design.components.DetailHero
+import com.iptvcinema.tv.core.design.components.HeroBadge
+import com.iptvcinema.tv.core.design.components.HeroBadgeStyle
 import com.iptvcinema.tv.core.design.components.EmptyState
 import com.iptvcinema.tv.core.design.components.ProgramLineupCard
 import com.iptvcinema.tv.core.design.components.SkeletonDetailHero
+import com.iptvcinema.tv.core.design.components.shellContentStart
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.ChannelItem
 import com.iptvcinema.tv.core.navigation.AppRoute
@@ -107,15 +122,25 @@ fun ChannelDetailsScreen(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
                 ) {
+                    val currentProgram = uiState.currentProgram
                     DetailHero(
                         title = uiState.channelName,
-                        metadata = listOfNotNull(
-                            uiState.category.takeIf { it.isNotBlank() },
-                            stringResource(R.string.badge_live),
-                            stringResource(R.string.catchup_badge).takeIf { uiState.hasCatchup },
+                        badges = listOfNotNull(
+                            uiState.category.takeIf { it.isNotBlank() }?.let { HeroBadge(it) },
+                            HeroBadge(stringResource(R.string.badge_live), HeroBadgeStyle.Live),
+                            HeroBadge(stringResource(R.string.catchup_badge), HeroBadgeStyle.Outline)
+                                .takeIf { uiState.hasCatchup },
                         ),
-                        synopsis = uiState.currentProgram?.description?.takeIf { it.isNotBlank() }
-                            ?: uiState.currentProgram?.title.orEmpty(),
+                        metadata = emptyList(),
+                        // The programme title sits in the Now Playing block; the text below it
+                        // is the description.
+                        synopsis = currentProgram?.description.orEmpty(),
+                        headerContent = currentProgram?.let { program ->
+                            { NowPlayingBlock(program) }
+                        },
+                        backLabel = stringResource(R.string.btn_back),
+                        contentStart = shellContentStart(),
+                        backdropStyle = DetailBackdropStyle.Logo,
                         primaryActionLabel = watchLiveLabel,
                         watchLaterLabel = stringResource(R.string.btn_add_to_favorites),
                         onWatchNow = {
@@ -135,13 +160,13 @@ fun ChannelDetailsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = CinemaSpacing.NavRailWidth + 16.dp),
+                            .padding(start = shellContentStart()),
                         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
                     ) {
                         uiState.startOverProgram?.let { program ->
                             CinemaButton(
                                 text = startOverLabel,
-                                variant = CinemaButtonVariant.Ghost,
+                                variant = CinemaButtonVariant.SecondaryDark,
                                 onClick = {
                                     navController.navigate(
                                         AppRoute.catchup(uiState.channelId, program.startEpochMs, program.endEpochMs),
@@ -151,7 +176,7 @@ fun ChannelDetailsScreen(
                         }
                         CinemaButton(
                             text = openInLiveTvLabel,
-                            variant = CinemaButtonVariant.Ghost,
+                            variant = CinemaButtonVariant.SecondaryDark,
                             onClick = {
                                 navController.navigateToLiveChannel(uiState.channelId)
                             },
@@ -229,5 +254,45 @@ private fun catchupDayLabel(date: LocalDate): String {
         today -> stringResource(R.string.catchup_today)
         today.minusDays(1) -> stringResource(R.string.catchup_yesterday)
         else -> date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault()))
+    }
+}
+
+/** "NOW PLAYING", the programme title and its time slot, inside the channel hero. */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun NowPlayingBlock(program: EpgProgram) {
+    // Letter spacing would pull Arabic letters apart.
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text = stringResource(R.string.channel_now_playing).uppercase(),
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.ExtraBold,
+                color = CinemaColors.AccentSoft,
+                letterSpacing = if (isRtl) 0.sp else 1.sp,
+            ),
+        )
+        Text(
+            text = program.title,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.ExtraBold,
+                color = CinemaColors.White,
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = stringResource(
+                R.string.livetv_program_time,
+                GuideLayoutHelper.formatSlotLabel(program.startEpochMs),
+                GuideLayoutHelper.formatSlotLabel(program.endEpochMs),
+                pluralStringResource(
+                    R.plurals.minutes_remaining,
+                    program.durationMinutes.coerceAtLeast(1),
+                    program.durationMinutes.coerceAtLeast(1),
+                ),
+            ),
+            style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
+        )
     }
 }

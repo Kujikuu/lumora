@@ -21,14 +21,16 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmarks
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LiveTv
-import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.outlined.Bookmarks
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.LiveTv
+import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -85,6 +87,8 @@ private val RailCollapsedWidth = CinemaSpacing.NavRailWidth
 private val RailExpandedWidth = CinemaSpacing.NavRailExpandedWidth
 private val RailHorizontalPadding = 8.dp
 private val RailIconSlotWidth = RailCollapsedWidth - RailHorizontalPadding * 2
+private val RailTileSize = 40.dp
+private val RailTileCorner = 12.dp
 private const val ScrimMaxAlpha = 0.6f
 
 private data class RailEntry(
@@ -128,13 +132,13 @@ fun CinemaNavRail(
     val selectedRequester = remember { FocusRequester() }
 
     val primaryItems = listOf(
-        RailEntry(NavItem.Search, Icons.Default.Search, onSearchClick),
-        RailEntry(NavItem.Home, Icons.Default.Home) { onNavigate(NavItem.Home) },
-        RailEntry(NavItem.Movies, Icons.Default.Movie) { onNavigate(NavItem.Movies) },
-        RailEntry(NavItem.Series, Icons.Default.VideoLibrary) { onNavigate(NavItem.Series) },
-        RailEntry(NavItem.LiveTv, Icons.Default.LiveTv) { onNavigate(NavItem.LiveTv) },
-        RailEntry(NavItem.MyList, Icons.Default.Bookmarks) { onNavigate(NavItem.MyList) },
-        RailEntry(NavItem.Settings, Icons.Default.Settings, onSettingsClick),
+        RailEntry(NavItem.Search, Icons.Outlined.Search, onSearchClick),
+        RailEntry(NavItem.Home, Icons.Outlined.Home) { onNavigate(NavItem.Home) },
+        RailEntry(NavItem.Movies, Icons.Outlined.Movie) { onNavigate(NavItem.Movies) },
+        RailEntry(NavItem.Series, Icons.Outlined.VideoLibrary) { onNavigate(NavItem.Series) },
+        RailEntry(NavItem.LiveTv, Icons.Outlined.LiveTv) { onNavigate(NavItem.LiveTv) },
+        RailEntry(NavItem.MyList, Icons.Outlined.Bookmarks) { onNavigate(NavItem.MyList) },
+        RailEntry(NavItem.Settings, Icons.Outlined.Settings, onSettingsClick),
     )
     val selectedInRail = primaryItems.any { it.navItem == selected }
 
@@ -229,7 +233,7 @@ private fun DrawScope.drawRailPanel(progress: Float, collapsedPx: Float) {
     )
 }
 
-/** Focus pill that grows with the panel so it never pokes out past the background. */
+/** Focus tile that grows with the panel so it never pokes out past the background. */
 private fun DrawScope.drawFocusPill(progress: Float, collapsedPx: Float, color: Color) {
     val pillWidth = collapsedPx + (size.width - collapsedPx).coerceAtLeast(0f) * progress
     val left = if (layoutDirection == LayoutDirection.Rtl) size.width - pillWidth else 0f
@@ -237,7 +241,7 @@ private fun DrawScope.drawFocusPill(progress: Float, collapsedPx: Float, color: 
         color = color,
         topLeft = Offset(left, 0f),
         size = Size(pillWidth, size.height),
-        cornerRadius = CornerRadius(size.height / 2f),
+        cornerRadius = CornerRadius(RailTileCorner.toPx()),
     )
 }
 
@@ -254,7 +258,7 @@ private fun RailLogo(showFull: Boolean, expansion: State<Float>) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp),
+            .height(48.dp),
         contentAlignment = Alignment.CenterStart,
     ) {
         Box(
@@ -266,7 +270,7 @@ private fun RailLogo(showFull: Boolean, expansion: State<Float>) {
             Image(
                 painter = painterResource(R.drawable.nav_sidebar_min),
                 contentDescription = stringResource(R.string.app_name),
-                modifier = Modifier.size(44.dp),
+                modifier = Modifier.size(32.dp),
                 contentScale = ContentScale.Fit,
             )
         }
@@ -325,21 +329,27 @@ private fun RailItemRow(
                 .heightIn(min = CinemaSpacing.NavRailItemMinHeight),
             contentAlignment = Alignment.Center,
         ) {
+            // Current tab: a soft tile behind the icon and an accent bar on the rail's edge.
+            if (selected && !focused) {
+                Box(
+                    modifier = Modifier
+                        .size(RailTileSize)
+                        .background(CinemaColors.OverlayFill, RoundedCornerShape(RailTileCorner)),
+                )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .offset(x = -RailHorizontalPadding + 2.dp)
+                        .size(width = 3.dp, height = CinemaSpacing.NavRailActiveIndicatorHeight)
+                        .background(CinemaColors.Accent, CinemaShapes.Pill),
+                )
+            }
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = contentColor,
                 modifier = Modifier.size(CinemaSpacing.NavRailIconSize),
             )
-            if (selected && !focused) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 6.dp)
-                        .size(width = CinemaSpacing.NavRailActiveIndicatorWidth, height = 3.dp)
-                        .background(CinemaColors.Accent, CinemaShapes.Small),
-                )
-            }
         }
         if (showLabel) {
             Text(

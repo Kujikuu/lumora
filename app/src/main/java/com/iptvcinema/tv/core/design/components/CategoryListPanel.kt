@@ -44,7 +44,7 @@ fun CategoryListPanel(
     Column(
         modifier = modifier
             .width(260.dp)
-            .clip(CinemaShapes.Medium)
+            .clip(CinemaShapes.Row)
             .background(CinemaColors.SurfaceSoft)
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -96,8 +96,10 @@ private fun CategoryListRow(
                 }
             },
         onClick = onClick,
-        shape = CinemaShapes.Small,
+        shape = CinemaShapes.Pill,
         defaultBorderWidth = 0.dp,
+        focusedBorderWidth = 0.dp,
+        focusScale = 1f,
     ) { focused ->
         Text(
             text = label,
@@ -105,16 +107,20 @@ private fun CategoryListRow(
                 .fillMaxWidth()
                 .background(
                     when {
-                        isSelected -> CinemaColors.Accent.copy(alpha = 0.12f)
-                        focused -> CinemaColors.Surface
-                        else -> CinemaColors.Background
+                        focused -> CinemaColors.White
+                        isSelected -> CinemaColors.SurfaceRaised
+                        else -> CinemaColors.SurfaceSoft
                     },
-                    CinemaShapes.Small,
+                    CinemaShapes.Pill,
                 )
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 10.dp),
             style = MaterialTheme.typography.bodyLarge.copy(
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (isSelected) CinemaColors.AccentSoft else CinemaColors.TextPrimary,
+                fontWeight = if (isSelected || focused) FontWeight.ExtraBold else FontWeight.Medium,
+                color = when {
+                    focused -> CinemaColors.Background
+                    isSelected -> CinemaColors.White
+                    else -> CinemaColors.TextSecondary
+                },
             ),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,

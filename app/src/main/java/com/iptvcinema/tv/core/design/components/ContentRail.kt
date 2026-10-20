@@ -57,7 +57,7 @@ fun <T> ContentRail(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     color = CinemaColors.TextPrimary,
                 ),
             )
@@ -72,9 +72,12 @@ fun <T> ContentRail(
         LazyRow(
             state = listState,
             modifier = Modifier.fillMaxWidth(),
+            // Vertical room so the focus scale is not clipped by the row's bounds.
             contentPadding = PaddingValues(
                 start = contentStart,
                 end = CinemaSpacing.ScreenPadding,
+                top = CinemaSpacing.FocusScaleOverflow / 2,
+                bottom = CinemaSpacing.FocusScaleOverflow / 2,
             ),
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.RailGap),
             verticalAlignment = Alignment.CenterVertically,

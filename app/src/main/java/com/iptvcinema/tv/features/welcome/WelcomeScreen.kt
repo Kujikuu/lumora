@@ -66,6 +66,7 @@ import com.iptvcinema.tv.core.data.fake.FakeDataProvider
 import com.iptvcinema.tv.core.design.components.CinemaAsyncImage
 import com.iptvcinema.tv.core.design.components.CinemaButton
 import com.iptvcinema.tv.core.design.components.CinemaButtonVariant
+import com.iptvcinema.tv.core.design.components.CinemaLogo
 import com.iptvcinema.tv.core.design.components.CinemaScreen
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
@@ -73,8 +74,8 @@ import kotlinx.coroutines.delay
 
 private const val WelcomePageCount = 4
 private const val WelcomeNavCooldownMs = 320L
-private val WelcomeBrandLogoWidth = 420.dp
-private val WelcomeBrandLogoHeight = 73.dp
+private val WelcomeMarginStart = 64.dp
+private val WelcomeTitleWidth = 520.dp
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -135,10 +136,10 @@ fun WelcomeScreen(
                 }
             }
 
-            WelcomeBrandLogo(
+            CinemaLogo(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(start = 72.dp, top = 48.dp),
+                    .padding(start = WelcomeMarginStart, top = 32.dp),
             )
 
             WelcomePageIndicator(
@@ -146,15 +147,15 @@ fun WelcomeScreen(
                 pageCount = WelcomePageCount,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .padding(start = 48.dp),
+                    .padding(start = 30.dp),
             )
 
             WelcomeScrollHint(
                 currentPage = currentPage,
                 pageCount = WelcomePageCount,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 40.dp),
+                    .align(Alignment.BottomStart)
+                    .padding(start = WelcomeMarginStart, bottom = 32.dp),
             )
 
             if (currentPage > 0) {
@@ -168,33 +169,20 @@ fun WelcomeScreen(
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowUp,
                         contentDescription = null,
-                        tint = CinemaColors.White,
-                        modifier = Modifier.size(28.dp),
+                        tint = CinemaColors.TextSecondary,
+                        modifier = Modifier.size(24.dp),
                     )
                     Text(
                         text = stringResource(R.string.welcome_go_up),
                         style = MaterialTheme.typography.labelMedium.copy(
-                            color = CinemaColors.White,
-                            fontWeight = FontWeight.Medium,
+                            color = CinemaColors.TextSecondary,
+                            fontWeight = FontWeight.Bold,
                         ),
                     )
                 }
             }
         }
     }
-}
-
-@Composable
-private fun WelcomeBrandLogo(modifier: Modifier = Modifier) {
-    Image(
-        painter = painterResource(R.drawable.nav_sidebar_full),
-        contentDescription = stringResource(R.string.app_name),
-        modifier = modifier
-            .width(WelcomeBrandLogoWidth)
-            .height(WelcomeBrandLogoHeight),
-        contentScale = ContentScale.Fit,
-        alignment = Alignment.CenterStart,
-    )
 }
 
 @Composable
@@ -205,22 +193,18 @@ private fun WelcomePageIndicator(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         repeat(pageCount) { index ->
             val selected = index == currentPage
             Box(
                 modifier = Modifier
-                    .width(5.dp)
-                    .height(if (selected) 32.dp else 5.dp)
-                    .clip(if (selected) CinemaShapes.Pill else CircleShape)
+                    .width(4.dp)
+                    .height(if (selected) 20.dp else 8.dp)
                     .background(
-                        if (selected) {
-                            CinemaColors.White
-                        } else {
-                            CinemaColors.White.copy(alpha = 0.35f)
-                        },
+                        if (selected) CinemaColors.White else CinemaColors.White.copy(alpha = 0.3f),
+                        CinemaShapes.Pill,
                     ),
             )
         }
@@ -241,23 +225,23 @@ private fun WelcomeScrollHint(
         else -> stringResource(R.string.welcome_more)
     }
 
-    Column(
+    Row(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.titleSmall.copy(
-                color = CinemaColors.White,
+            style = MaterialTheme.typography.labelMedium.copy(
+                color = CinemaColors.TextSecondary,
                 fontWeight = FontWeight.Bold,
             ),
         )
         Icon(
             imageVector = Icons.Default.KeyboardArrowDown,
             contentDescription = null,
-            tint = CinemaColors.White,
-            modifier = Modifier.size(28.dp),
+            tint = CinemaColors.TextSecondary,
+            modifier = Modifier.size(18.dp),
         )
     }
 }
@@ -277,30 +261,30 @@ private fun WelcomePageShell(
         Column(
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .padding(start = 168.dp, top = 120.dp, end = 48.dp)
+                .padding(start = WelcomeMarginStart, top = 72.dp, end = 48.dp)
                 .fillMaxHeight(),
             verticalArrangement = Arrangement.Center,
         ) {
             if (eyebrow != null) {
                 Text(
                     text = eyebrow.uppercase(),
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        color = CinemaColors.White,
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        color = CinemaColors.TextSecondary,
                         fontWeight = FontWeight.Bold,
                     ),
                 )
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
             }
             Text(
                 text = title.uppercase(),
-                modifier = Modifier.width(760.dp),
-                style = MaterialTheme.typography.displayMedium.copy(
+                modifier = Modifier.width(WelcomeTitleWidth),
+                style = MaterialTheme.typography.displaySmall.copy(
                     color = CinemaColors.White,
                     fontWeight = FontWeight.Black,
                 ),
-                maxLines = 3,
+                maxLines = 4,
             )
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(22.dp))
             CinemaButton(
                 text = stringResource(R.string.welcome_get_started),
                 variant = CinemaButtonVariant.PrimaryAccent,
@@ -456,23 +440,22 @@ private fun WelcomeBenefitRow(
         Box(
             modifier = Modifier
                 .size(52.dp)
-                .clip(CinemaShapes.Large)
-                .background(CinemaColors.Surface.copy(alpha = 0.72f)),
+                .background(CinemaColors.Surface, CinemaShapes.XLarge),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = CinemaColors.Accent,
+                tint = CinemaColors.White,
                 modifier = Modifier.size(26.dp),
             )
         }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium.copy(
+                style = MaterialTheme.typography.titleSmall.copy(
                     color = CinemaColors.White,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.Black,
                 ),
             )
             Text(
@@ -536,7 +519,7 @@ private fun BoxScope.PosterWall(
                     Box(
                         modifier = Modifier
                             .size(width = 330.dp, height = 190.dp)
-                            .clip(CinemaShapes.Medium)
+                            .clip(CinemaShapes.XLarge)
                             .background(CinemaColors.Surface),
                     ) {
                         CinemaAsyncImage(
@@ -605,7 +588,7 @@ private fun BoxScope.LivePreviewWall(modifier: Modifier = Modifier) {
                         modifier = Modifier
                             .weight(1f)
                             .height(120.dp)
-                            .clip(CinemaShapes.Medium)
+                            .clip(CinemaShapes.Card)
                             .background(CinemaColors.Surface),
                     ) {
                         CinemaAsyncImage(
@@ -629,7 +612,7 @@ private fun PosterTile(
 ) {
     Box(
         modifier = modifier
-            .clip(CinemaShapes.Medium)
+            .clip(CinemaShapes.Card)
             .background(CinemaColors.Surface),
     ) {
         CinemaAsyncImage(

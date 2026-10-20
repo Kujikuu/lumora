@@ -1,6 +1,7 @@
 package com.iptvcinema.tv.features.profiles
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,7 +26,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -41,18 +44,28 @@ import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.components.CinemaButton
 import com.iptvcinema.tv.core.design.components.CinemaButtonVariant
+import com.iptvcinema.tv.core.design.components.CinemaLogo
 import com.iptvcinema.tv.core.design.components.CinemaScreen
 import com.iptvcinema.tv.core.design.components.EmptyState
 import com.iptvcinema.tv.core.design.components.FocusableCinemaCard
 import com.iptvcinema.tv.core.design.components.SkeletonProfileRow
 import com.iptvcinema.tv.core.design.theme.CinemaColors
+import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.model.ProfileType
 import com.iptvcinema.tv.core.model.UserProfile
 import com.iptvcinema.tv.core.navigation.PopBackHandler
 import com.iptvcinema.tv.core.navigation.ProfileSelectionMode
 
-private val AvatarSize = 96.dp
-private val CardWidth = 120.dp
+private val AvatarSize = 104.dp
+/** Gap plus white ring drawn around the focused avatar. */
+private val AvatarRingGap = 3.dp
+private val AvatarRingWidth = 3.dp
+private val AvatarSlotSize = AvatarSize + (AvatarRingGap + AvatarRingWidth) * 2
+private val CardWidth = 128.dp
+private val CardShape = RoundedCornerShape(16.dp)
+private val AddProfileDashColor = Color(0xFF3A3F4B)
+private val AddProfileDashWidth = 2.dp
+private val ProfileNameRest = Color(0xFF9AA0AA)
 
 // Fixed palette so a profile keeps its colour across devices; picked from the id.
 private val AvatarColors = listOf(
@@ -96,6 +109,14 @@ fun ProfileSelectionScreen(
                 .background(CinemaColors.Background),
             contentAlignment = Alignment.Center,
         ) {
+            // The error state brings its own logo.
+            if (profilesUiState != ProfilesUiState.Error) {
+                CinemaLogo(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 32.dp),
+                )
+            }
             when (profilesUiState) {
                 ProfilesUiState.Loading -> SkeletonProfileRow(count = 3)
                 ProfilesUiState.Error -> EmptyState(
@@ -155,11 +176,12 @@ private fun ProfileGrid(
         if (manageMode) {
             Text(
                 text = stringResource(R.string.profile_manage_hint),
+                modifier = Modifier.padding(top = 6.dp),
                 style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextMuted),
             )
         }
-        Spacer(Modifier.height(32.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+        Spacer(Modifier.height(40.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             profiles.forEachIndexed { index, profile ->
                 ProfileCard(
                     profile = profile,
@@ -175,7 +197,7 @@ private fun ProfileGrid(
                 AddProfileCard(onClick = actions.onAddProfile)
             }
         }
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(40.dp))
         CinemaButton(
             text = stringResource(if (manageMode) R.string.profile_done else R.string.profile_manage),
             variant = CinemaButtonVariant.SecondaryDark,
@@ -196,21 +218,21 @@ private fun ProfileCard(
     FocusableCinemaCard(
         modifier = modifier.width(CardWidth),
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
+        shape = CardShape,
         defaultBorderWidth = 0.dp,
+        focusedBorderWidth = 0.dp,
         focusScale = 1.08f,
         contentDescription = profile.name,
     ) { focused ->
         Column(
-            modifier = Modifier.padding(vertical = 10.dp),
+            modifier = Modifier.padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Box(contentAlignment = Alignment.Center) {
+            AvatarSlot(focused = focused) {
                 Box(
                     modifier = Modifier
                         .size(AvatarSize)
-                        .clip(CircleShape)
-                        .background(avatarColor(profile.id)),
+                        .background(avatarColor(profile.id), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -225,8 +247,7 @@ private fun ProfileCard(
                     Box(
                         modifier = Modifier
                             .size(AvatarSize)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.45f)),
+                            .background(Color.Black.copy(alpha = 0.45f), CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -242,8 +263,12 @@ private fun ProfileCard(
             Text(
                 text = profile.name,
                 style = MaterialTheme.typography.titleSmall.copy(
-                    color = if (focused || isCurrent) CinemaColors.White else CinemaColors.TextSecondary,
-                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                    color = if (focused || isCurrent) CinemaColors.White else ProfileNameRest,
+                    fontWeight = when {
+                        focused -> FontWeight.Black
+                        isCurrent -> FontWeight.Bold
+                        else -> FontWeight.SemiBold
+                    },
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -253,17 +278,41 @@ private fun ProfileCard(
                 Text(
                     text = stringResource(R.string.profile_kids_badge),
                     modifier = Modifier
-                        .padding(top = 4.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(CinemaColors.Secondary)
-                        .padding(horizontal = 8.dp, vertical = 1.dp),
+                        .padding(top = 6.dp)
+                        .background(CinemaColors.LumoraYellow, CinemaShapes.Pill)
+                        .padding(horizontal = 9.dp, vertical = 1.dp),
                     style = MaterialTheme.typography.labelSmall.copy(
                         color = CinemaColors.Background,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Black,
                     ),
                 )
             }
         }
+    }
+}
+
+/**
+ * Fixed-size slot around an avatar. Focused, it draws a white ring with a small dark gap,
+ * so focus never shifts the layout.
+ */
+@Composable
+private fun AvatarSlot(
+    focused: Boolean,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(AvatarSlotSize)
+            .then(
+                if (focused) {
+                    Modifier.border(AvatarRingWidth, CinemaColors.White, CircleShape)
+                } else {
+                    Modifier
+                },
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
     }
 }
 
@@ -273,33 +322,49 @@ private fun AddProfileCard(onClick: () -> Unit) {
     FocusableCinemaCard(
         modifier = Modifier.width(CardWidth),
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
+        shape = CardShape,
         defaultBorderWidth = 0.dp,
+        focusedBorderWidth = 0.dp,
         focusScale = 1.08f,
         contentDescription = stringResource(R.string.profile_add),
     ) { focused ->
         Column(
-            modifier = Modifier.padding(vertical = 10.dp),
+            modifier = Modifier.padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(AvatarSize)
-                    .clip(CircleShape)
-                    .background(if (focused) CinemaColors.Surface else CinemaColors.SurfaceSoft),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null,
-                    tint = CinemaColors.TextSecondary,
-                    modifier = Modifier.size(40.dp),
-                )
+            AvatarSlot(focused = focused) {
+                Box(
+                    modifier = Modifier
+                        .size(AvatarSize)
+                        .then(if (focused) Modifier.background(CinemaColors.Surface, CircleShape) else Modifier)
+                        .drawBehind {
+                            val stroke = AddProfileDashWidth.toPx()
+                            drawCircle(
+                                color = AddProfileDashColor,
+                                radius = (size.minDimension - stroke) / 2f,
+                                style = Stroke(
+                                    width = stroke,
+                                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(stroke * 4f, stroke * 3f)),
+                                ),
+                            )
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        tint = if (focused) CinemaColors.White else CinemaColors.TextMuted,
+                        modifier = Modifier.size(36.dp),
+                    )
+                }
             }
             Spacer(Modifier.height(10.dp))
             Text(
                 text = stringResource(R.string.profile_add),
-                style = MaterialTheme.typography.titleSmall.copy(color = CinemaColors.TextSecondary),
+                style = MaterialTheme.typography.titleSmall.copy(
+                    color = if (focused) CinemaColors.White else CinemaColors.TextMuted,
+                    fontWeight = if (focused) FontWeight.Black else FontWeight.SemiBold,
+                ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -107,6 +109,7 @@ fun PlayerBufferingOverlay(modifier: Modifier = Modifier) {
 }
 
 private val PlayerSidebarWidth = 380.dp
+private val PlayerSidebarFill = CinemaColors.Background.copy(alpha = 0.94f)
 
 @Composable
 fun PlayerScrimOverlay(
@@ -145,18 +148,19 @@ fun PlayerIconButton(
         onClick = onClick,
         shape = CircleShape,
         contentDescription = contentDescription,
+        focusedBorderWidth = 0.dp,
         focusScale = 1.08f,
-    ) { _ ->
+    ) { focused ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(CinemaColors.Surface.copy(alpha = 0.35f), CircleShape),
+                .background(if (focused) CinemaColors.White else CinemaColors.OverlayFill, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = tint,
+                tint = if (focused) CinemaColors.Background else tint,
                 modifier = Modifier
                     .size(24.dp)
                     .graphicsLayer(scaleX = if (mirrorIcon) -1f else 1f),
@@ -174,13 +178,72 @@ fun PlayerQualityPill(
     Text(
         text = label,
         modifier = modifier
-            .background(CinemaColors.Surface.copy(alpha = 0.55f), CinemaShapes.Large)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        style = MaterialTheme.typography.labelMedium.copy(
+            .background(CinemaColors.OverlayFill, CinemaShapes.Pill)
+            .padding(horizontal = 9.dp, vertical = 3.dp),
+        style = MaterialTheme.typography.labelSmall.copy(
             color = CinemaColors.White,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.ExtraBold,
         ),
+        maxLines = 1,
     )
+}
+
+/**
+ * One choice in a player sidebar (track, channel). Rounded row: Surface at rest, raised
+ * with an accent dot when selected, white with dark text when focused.
+ */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun PlayerOptionRow(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    FocusableCinemaCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(48.dp),
+        onClick = onClick,
+        shape = CinemaShapes.XLarge,
+        focusedBorderWidth = 0.dp,
+        focusScale = 1.03f,
+        contentDescription = label,
+    ) { focused ->
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    when {
+                        focused -> CinemaColors.White
+                        isSelected -> CinemaColors.SurfaceRaised
+                        else -> CinemaColors.Surface
+                    },
+                    CinemaShapes.XLarge,
+                )
+                .padding(horizontal = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    color = if (focused) CinemaColors.Background else CinemaColors.White,
+                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(CinemaColors.Accent, CircleShape),
+                )
+            }
+        }
+    }
 }
 
 enum class PlayerTrackTab {
@@ -230,16 +293,13 @@ fun PlayerTrackSidebar(
             PlayerTrackTab.Audio -> {
                 LazyColumn(
                     modifier = Modifier.heightIn(max = 420.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(audioTracks, key = { "audio-${it.index}" }) { track ->
-                        CinemaButton(
-                            text = track.label,
-                            variant = if (track.index == selectedAudioIndex) {
-                                CinemaButtonVariant.PrimaryAccent
-                            } else {
-                                CinemaButtonVariant.SecondaryDark
-                            },
+                        PlayerOptionRow(
+                            label = track.label,
+                            isSelected = track.index == selectedAudioIndex,
                             onClick = { onSelectAudio(track.index) },
                         )
                     }
@@ -248,27 +308,20 @@ fun PlayerTrackSidebar(
             PlayerTrackTab.Subtitles -> {
                 LazyColumn(
                     modifier = Modifier.heightIn(max = 420.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     item {
-                        CinemaButton(
-                            text = stringResource(R.string.toggle_off),
-                            variant = if (selectedSubtitleIndex < 0) {
-                                CinemaButtonVariant.PrimaryAccent
-                            } else {
-                                CinemaButtonVariant.SecondaryDark
-                            },
+                        PlayerOptionRow(
+                            label = stringResource(R.string.toggle_off),
+                            isSelected = selectedSubtitleIndex < 0,
                             onClick = onDisableSubtitles,
                         )
                     }
                     items(subtitleTracks, key = { "sub-${it.index}" }) { track ->
-                        CinemaButton(
-                            text = track.label,
-                            variant = if (track.index == selectedSubtitleIndex) {
-                                CinemaButtonVariant.PrimaryAccent
-                            } else {
-                                CinemaButtonVariant.SecondaryDark
-                            },
+                        PlayerOptionRow(
+                            label = track.label,
+                            isSelected = track.index == selectedSubtitleIndex,
                             onClick = { onSelectSubtitle(track.index) },
                         )
                     }
@@ -287,31 +340,32 @@ private fun PlayerSidePanel(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val panelShape = if (isRtl) {
-        RoundedCornerShape(topEnd = 20.dp, bottomEnd = 20.dp)
-    } else {
-        RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp)
-    }
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = if (isRtl) Alignment.CenterStart else Alignment.CenterEnd,
     ) {
+        // Near-opaque solid panel: readable over any frame, no blur cost on slow TVs.
         Column(
             modifier = Modifier
                 .width(PlayerSidebarWidth)
                 .fillMaxSize()
-                .background(CinemaColors.SurfaceGlass, panelShape)
-                .padding(CinemaSpacing.ScreenPadding),
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
+                .background(PlayerSidebarFill)
+                .padding(horizontal = 20.dp, vertical = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 4.dp, bottom = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        color = CinemaColors.White,
+                        fontWeight = FontWeight.Black,
+                    ),
                     modifier = Modifier.weight(1f),
                 )
                 PlayerIconButton(
@@ -351,8 +405,8 @@ fun AutoplayCountdownOverlay(
             modifier = Modifier
                 .padding(CinemaSpacing.ScreenPadding)
                 .width(460.dp)
-                .background(CinemaColors.SurfaceGlass, CinemaShapes.Medium)
-                .padding(16.dp),
+                .background(PlayerSidebarFill, CinemaShapes.Row)
+                .padding(14.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             CinemaAsyncImage(
@@ -361,20 +415,23 @@ fun AutoplayCountdownOverlay(
                 modifier = Modifier
                     .width(150.dp)
                     .aspectRatio(16f / 9f)
-                    .clip(CinemaShapes.Small),
+                    .clip(CinemaShapes.Card),
                 contentScale = ContentScale.Crop,
                 fallbackLabel = nextCode.orEmpty(),
             )
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = stringResource(R.string.player_up_next_in, secondsRemaining),
-                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextSecondary),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        color = CinemaColors.AccentSoft,
+                        fontWeight = FontWeight.ExtraBold,
+                    ),
                 )
                 Text(
                     text = listOfNotNull(nextCode, nextTitle.takeIf { it.isNotBlank() }).joinToString(" · "),
                     style = MaterialTheme.typography.titleSmall.copy(
                         color = CinemaColors.White,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.ExtraBold,
                     ),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -413,11 +470,11 @@ fun ChannelChangeBanner(
         Text(
             text = message,
             modifier = Modifier
-                .background(CinemaColors.SurfaceGlass, CinemaShapes.Medium)
-                .padding(horizontal = 24.dp, vertical = 12.dp),
+                .background(PlayerSidebarFill, CinemaShapes.Pill)
+                .padding(horizontal = 24.dp, vertical = 10.dp),
             style = MaterialTheme.typography.titleMedium.copy(
-                color = CinemaColors.TextSecondary,
-                fontWeight = FontWeight.SemiBold,
+                color = CinemaColors.White,
+                fontWeight = FontWeight.ExtraBold,
             ),
         )
     }
@@ -495,7 +552,7 @@ fun PlayerEpisodeSidebar(
             Box(
                 modifier = Modifier
                     .size(width = 72.dp, height = 108.dp)
-                    .clip(CinemaShapes.Small),
+                    .clip(CinemaShapes.Large),
             ) {
                 CinemaAsyncImage(
                     imageUrl = seriesPosterUrl,
@@ -582,21 +639,82 @@ fun PlayerChannelSidebar(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
+                // Room for the focused row's scale inside the list's clip.
+                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(channels, key = { it.id ?: it.channelName }) { channel ->
                     channel.id?.let { channelId ->
-                        val isCurrent = channelId == currentChannelId
-                        ChannelTile(
+                        PlayerChannelRow(
                             data = channel,
+                            isCurrent = channelId == currentChannelId,
                             onClick = { onChannelClick(channelId) },
-                            modifier = if (isCurrent) {
-                                Modifier.border(1.dp, CinemaColors.Accent, CinemaShapes.Medium)
-                            } else {
-                                Modifier
-                            },
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Channel sidebar row: logo tile, name and current programme. The playing channel has an
+ * accent inset border; the focused row is white with dark text.
+ */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun PlayerChannelRow(
+    data: ChannelTileData,
+    isCurrent: Boolean,
+    onClick: () -> Unit,
+) {
+    FocusableCinemaCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(58.dp),
+        onClick = onClick,
+        shape = CinemaShapes.XLarge,
+        focusedBorderWidth = 0.dp,
+        focusScale = 1.03f,
+        contentDescription = data.channelName,
+    ) { focused ->
+        val contentColor = if (focused) CinemaColors.Background else CinemaColors.White
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(if (focused) CinemaColors.White else CinemaColors.Surface, CinemaShapes.XLarge)
+                .then(
+                    if (isCurrent) {
+                        Modifier.border(2.dp, CinemaColors.Accent, CinemaShapes.XLarge)
+                    } else {
+                        Modifier
+                    },
+                )
+                .padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ChannelLogoTile(logoUrl = data.logoUrl, name = data.channelName, size = 36.dp)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = data.channelName,
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        color = contentColor,
+                        fontWeight = FontWeight.ExtraBold,
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                data.currentProgram?.takeIf { it.isNotBlank() }?.let { program ->
+                    Text(
+                        text = program,
+                        style = MaterialTheme.typography.labelSmall.copy(color = contentColor.copy(alpha = 0.75f)),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
         }
@@ -617,30 +735,20 @@ fun SearchKeyboard(
     firstKeyFocusRequester: FocusRequester? = null,
 ) {
     val rows = SearchKeyboardLayouts.rowsFor(layout)
-    val keyWidth = 34.dp
-    val keyHeight = 44.dp
-    val keyGap = 12.dp
+    val keyGap = 6.dp
     val layoutLabel = when (layout) {
         SearchKeyboardLayout.English -> "EN"
         SearchKeyboardLayout.Arabic -> "ع"
     }
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(keyGap),
     ) {
         rows.forEachIndexed { rowIndex, row ->
             Row(horizontalArrangement = Arrangement.spacedBy(keyGap)) {
                 row.forEachIndexed { keyIndex, key ->
-                    FocusableCinemaCard(
-                        modifier = Modifier
-                            .size(width = keyWidth, height = keyHeight)
-                            .then(
-                                if (rowIndex == 0 && keyIndex == 0 && firstKeyFocusRequester != null) {
-                                    Modifier.focusRequester(firstKeyFocusRequester)
-                                } else {
-                                    Modifier
-                                },
-                            ),
+                    KeyboardKey(
+                        label = key,
                         onClick = {
                             val output = if (layout == SearchKeyboardLayout.English) {
                                 key.lowercase()
@@ -649,46 +757,101 @@ fun SearchKeyboard(
                             }
                             onKeyPress(output)
                         },
-                        shape = CinemaShapes.Pill,
-                        focusScale = 1.02f,
-                    ) { focused ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    if (focused) CinemaColors.White else CinemaColors.Background,
-                                    CinemaShapes.Pill,
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = key,
-                                style = MaterialTheme.typography.titleSmall.copy(
-                                    color = if (focused) CinemaColors.Background else CinemaColors.White,
-                                    fontWeight = FontWeight.Normal,
-                                ),
-                            )
-                        }
-                    }
+                        modifier = Modifier
+                            .size(KeyboardKeySize)
+                            .then(
+                                if (rowIndex == 0 && keyIndex == 0 && firstKeyFocusRequester != null) {
+                                    Modifier.focusRequester(firstKeyFocusRequester)
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                        textStyle = MaterialTheme.typography.titleSmall,
+                    )
                 }
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            CinemaButton(
-                text = layoutLabel,
-                variant = CinemaButtonVariant.PrimaryAccent,
+        Row(horizontalArrangement = Arrangement.spacedBy(keyGap)) {
+            KeyboardKey(
+                label = layoutLabel,
                 onClick = onLayoutToggle,
+                modifier = Modifier.size(width = 56.dp, height = KeyboardKeySize),
+                restColor = CinemaColors.Accent,
             )
             if (showDeviceKeyboard) {
-                CinemaButton(
-                    text = stringResource(R.string.search_device_keyboard),
-                    variant = CinemaButtonVariant.SecondaryDark,
+                KeyboardKey(
+                    label = stringResource(R.string.search_device_keyboard),
                     onClick = onDeviceKeyboard,
+                    modifier = Modifier.size(width = 140.dp, height = KeyboardKeySize),
                 )
             }
-            CinemaButton(text = stringResource(R.string.btn_space), variant = CinemaButtonVariant.SecondaryDark, onClick = { onKeyPress(" ") })
-            CinemaButton(text = stringResource(R.string.btn_clear), variant = CinemaButtonVariant.Ghost, onClick = onClear)
-            CinemaButton(text = stringResource(R.string.btn_backspace), variant = CinemaButtonVariant.Ghost, onClick = onBackspace)
+            KeyboardKey(
+                label = stringResource(R.string.btn_space),
+                onClick = { onKeyPress(" ") },
+                modifier = Modifier.size(width = 160.dp, height = KeyboardKeySize),
+            )
+            KeyboardKey(
+                label = stringResource(R.string.btn_clear),
+                onClick = onClear,
+                modifier = Modifier.size(width = 88.dp, height = KeyboardKeySize),
+            )
+            KeyboardKey(
+                label = stringResource(R.string.btn_backspace),
+                onClick = onBackspace,
+                modifier = Modifier.size(width = 88.dp, height = KeyboardKeySize),
+                icon = Icons.AutoMirrored.Filled.Backspace,
+            )
+        }
+    }
+}
+
+private val KeyboardKeySize = 40.dp
+private val KeyboardKeyShape = RoundedCornerShape(10.dp)
+
+/**
+ * On-screen keyboard key: rounded Surface key, white with dark text when focused. With
+ * an [icon] the label becomes the content description.
+ */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun KeyboardKey(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    restColor: Color = CinemaColors.Surface,
+    textStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.labelLarge,
+    icon: ImageVector? = null,
+) {
+    FocusableCinemaCard(
+        modifier = modifier,
+        onClick = onClick,
+        shape = KeyboardKeyShape,
+        focusedBorderWidth = 0.dp,
+        focusScale = 1.06f,
+        contentDescription = if (icon != null) label else null,
+    ) { focused ->
+        val contentColor = if (focused) CinemaColors.Background else CinemaColors.White
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(if (focused) CinemaColors.White else restColor, KeyboardKeyShape)
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(20.dp),
+                )
+            } else {
+                Text(
+                    text = label,
+                    style = textStyle.copy(color = contentColor, fontWeight = FontWeight.ExtraBold),
+                    maxLines = 1,
+                )
+            }
         }
     }
 }

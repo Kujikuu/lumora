@@ -3,6 +3,13 @@ package com.iptvcinema.tv.features.parental
 import com.iptvcinema.tv.core.navigation.requestFocusWhenReady
 import android.view.KeyEvent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +30,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -32,10 +40,10 @@ import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.components.CinemaButton
 import com.iptvcinema.tv.core.design.components.CinemaButtonVariant
+import com.iptvcinema.tv.core.design.components.FocusableCardSurface
 import com.iptvcinema.tv.core.design.components.FocusableCinemaCard
+import com.iptvcinema.tv.core.design.components.SettingsPalette
 import com.iptvcinema.tv.core.design.theme.CinemaColors
-import com.iptvcinema.tv.core.design.theme.CinemaShapes
-import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 
 enum class PinEntryMode {
     Verify,
@@ -82,9 +90,9 @@ fun PinEntryDialog(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth(0.45f)
-                .background(CinemaColors.Surface, CinemaShapes.Large)
-                .padding(CinemaSpacing.SectionGap)
+                .width(PinPanelWidth)
+                .background(CinemaColors.Surface, PinPanelShape)
+                .padding(horizontal = 28.dp, vertical = 24.dp)
                 .onPreviewKeyEvent { event ->
                     // The remote's number keys type digits directly, without the keypad.
                     if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
@@ -105,29 +113,43 @@ fun PinEntryDialog(
                         else -> false
                     }
                 },
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-            )
-            Text(
-                text = stringResource(R.string.pin_enter_4_digit),
-                style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        color = CinemaColors.White,
+                        fontWeight = FontWeight.Black,
+                    ),
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    text = stringResource(R.string.pin_enter_4_digit),
+                    style = MaterialTheme.typography.bodySmall.copy(color = CinemaColors.TextMuted),
+                    textAlign = TextAlign.Center,
+                )
+            }
+            Row(
+                modifier = Modifier.padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
                 repeat(PIN_LENGTH) { index ->
-                    Text(
-                        text = if (index < digits.length) "●" else "○",
-                        style = MaterialTheme.typography.displaySmall.copy(color = CinemaColors.Gold),
-                    )
+                    PinDot(filled = index < digits.length)
                 }
             }
             if (errorMessage != null) {
                 Text(
                     text = errorMessage,
-                    style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.Danger),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        color = SettingsPalette.DangerText,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    textAlign = TextAlign.Center,
                 )
             }
             PinKeypad(
@@ -170,6 +192,7 @@ private fun PinKeypad(
                     FocusableCinemaCard(
                         modifier = Modifier
                             .weight(1f)
+                            .height(PinKeyHeight)
                             .then(
                                 if (rowIndex == 0 && colIndex == 0) {
                                     Modifier.focusRequester(firstKeyFocus)
@@ -184,18 +207,25 @@ private fun PinKeypad(
                                 else -> onDigit(key)
                             }
                         },
-                        shape = CinemaShapes.Medium,
-                    ) { _ ->
-                        Text(
-                            text = key,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 14.dp),
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                color = CinemaColors.TextPrimary,
-                            ),
-                        )
+                        shape = PinKeyShape,
+                        focusedBorderWidth = 0.dp,
+                        focusScale = PIN_KEY_FOCUS_SCALE,
+                    ) { focused ->
+                        val isDigit = key.length == 1 && key[0].isDigit()
+                        FocusableCardSurface(
+                            backgroundColor = if (focused) CinemaColors.White else CinemaColors.SurfaceRaised,
+                            shape = PinKeyShape,
+                        ) {
+                            Text(
+                                text = key,
+                                style = (if (isDigit) MaterialTheme.typography.titleMedium else MaterialTheme.typography.labelLarge).copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = if (focused) CinemaColors.Background else CinemaColors.TextPrimary,
+                                ),
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                            )
+                        }
                     }
                 }
             }
@@ -203,4 +233,26 @@ private fun PinKeypad(
     }
 }
 
+/** A filled dot per typed digit; an outlined ring for the rest. */
+@Composable
+private fun PinDot(filled: Boolean) {
+    Box(
+        modifier = Modifier
+            .size(PinDotSize)
+            .then(
+                if (filled) {
+                    Modifier.background(CinemaColors.White, CircleShape)
+                } else {
+                    Modifier.border(2.dp, SettingsPalette.PinDotEmpty, CircleShape)
+                },
+            ),
+    )
+}
+
 private const val PIN_LENGTH = 4
+private const val PIN_KEY_FOCUS_SCALE = 1.04f
+private val PinPanelWidth = 360.dp
+private val PinPanelShape = RoundedCornerShape(22.dp)
+private val PinKeyShape = RoundedCornerShape(14.dp)
+private val PinKeyHeight = 48.dp
+private val PinDotSize = 14.dp

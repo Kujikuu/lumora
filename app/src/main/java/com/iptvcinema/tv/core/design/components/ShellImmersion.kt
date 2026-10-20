@@ -1,7 +1,6 @@
 package com.iptvcinema.tv.core.design.components
 
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 
 // The nav rail stays visible in its collapsed form, like YouTube on TV, so content
@@ -9,7 +8,7 @@ import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 // which relayouted the whole screen during vertical D-pad moves.
 
 /** Left inset for shell content rails, clear of the collapsed nav rail. */
-fun shellContentStart(): Dp = CinemaSpacing.NavRailWidth + 16.dp
+fun shellContentStart(): Dp = CinemaSpacing.ContentStart
 
 /** Left inset for hero text and buttons on shell screens. */
 fun shellHeroContentStart(): Dp = CinemaSpacing.ContentStart

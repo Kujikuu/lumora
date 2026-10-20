@@ -11,20 +11,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import com.iptvcinema.tv.core.data.repository.CatalogLoadState
 import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
 import com.iptvcinema.tv.core.design.components.ContinueWatchingMenuDialog
+import com.iptvcinema.tv.core.design.components.ScreenEyebrow
 import com.iptvcinema.tv.core.design.components.shellHeroContentStart
-import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
@@ -34,6 +32,9 @@ import com.iptvcinema.tv.core.navigation.openContinueWatchingDetails
 import com.iptvcinema.tv.core.navigation.rememberCatalogStateCallbacks
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
 import com.iptvcinema.tv.features.home.HomeSection
+
+/** Top inset of the small tab label above the spotlight. */
+internal val OverlayTop = 18.dp
 
 /**
  * A Home-style tab: the shared immersive layout over the rails a [BrowseTabViewModel] builds.
@@ -111,15 +112,11 @@ fun BrowseTabScreen(
                     }
                 },
                 overlay = {
-                    Text(
+                    ScreenEyebrow(
                         text = title,
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(start = shellHeroContentStart(), top = CinemaSpacing.ScreenPaddingVertical),
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = CinemaColors.TextSecondary,
-                        ),
+                            .padding(start = shellHeroContentStart(), top = OverlayTop),
                     )
                     CatalogRefreshBanner(
                         syncBannerText = uiState.syncBannerText,

@@ -11,14 +11,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.design.components.BackPill
 import com.iptvcinema.tv.core.design.components.EmptyState
 import com.iptvcinema.tv.core.design.components.SkeletonHomeContent
 import com.iptvcinema.tv.core.design.components.shellHeroContentStart
@@ -74,7 +71,7 @@ fun RelatedScreen(
                 onCardClick = { _, card -> openBrowseCardDetails(navController, card) },
                 onCardLongClick = { _, card -> viewModel.toggleFavorite(card) },
                 overlay = {
-                    Text(
+                    BackPill(
                         text = stringResource(R.string.related_title, uiState.anchorTitle.isolateDirection()),
                         modifier = Modifier
                             .align(Alignment.TopStart)
@@ -83,12 +80,6 @@ fun RelatedScreen(
                                 top = CinemaSpacing.ScreenPaddingVertical,
                                 end = CinemaSpacing.ScreenPadding,
                             ),
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = CinemaColors.TextSecondary,
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                     )
                 },
             )

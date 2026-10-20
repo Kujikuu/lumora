@@ -13,14 +13,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptvcinema.tv.core.design.theme.CinemaColors
-import com.iptvcinema.tv.core.design.theme.CinemaShapes
-import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 
 /**
  * Yes/no dialog for actions that are hard to undo. Focus starts on Cancel so an accidental
@@ -47,10 +46,10 @@ fun CinemaConfirmDialog(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth(0.5f)
-                .background(CinemaColors.Surface, CinemaShapes.Large)
-                .padding(CinemaSpacing.SectionGap),
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
+                .fillMaxWidth(CONFIRM_DIALOG_WIDTH_FRACTION)
+                .background(CinemaColors.Surface, DialogPanelShape)
+                .padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
                 text = title,
@@ -61,23 +60,30 @@ fun CinemaConfirmDialog(
             )
             Text(
                 text = message,
-                style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
+                style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
-                CinemaButton(
-                    text = cancelLabel,
-                    variant = CinemaButtonVariant.SecondaryDark,
+            Row(
+                modifier = Modifier.padding(top = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                DialogPillAction(
+                    label = cancelLabel,
                     onClick = onDismiss,
                     enabled = !isWorking,
+                    restBackground = CinemaColors.OverlayFill,
                     modifier = Modifier.focusRequester(cancelFocus),
                 )
-                CinemaButton(
-                    text = confirmLabel,
-                    variant = if (destructive) CinemaButtonVariant.Danger else CinemaButtonVariant.PrimaryAccent,
+                DialogPillAction(
+                    label = confirmLabel,
                     onClick = onConfirm,
                     enabled = !isWorking,
+                    restBackground = if (destructive) SettingsPalette.DangerTint else CinemaColors.Accent,
+                    restContent = if (destructive) SettingsPalette.DangerText else CinemaColors.White,
+                    focusedContent = if (destructive) CinemaColors.Danger else CinemaColors.Background,
                 )
             }
         }
     }
 }
+
+private const val CONFIRM_DIALOG_WIDTH_FRACTION = 0.42f

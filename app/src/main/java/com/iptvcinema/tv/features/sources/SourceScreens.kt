@@ -52,6 +52,33 @@ import com.iptvcinema.tv.core.design.components.SkeletonSourceCards
 import com.iptvcinema.tv.core.model.PlaylistSourceItem
 import com.iptvcinema.tv.core.model.SourceStatus
 import com.iptvcinema.tv.core.model.SourceType
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.PlaylistPlay
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.ui.unit.dp
+
+private val ScreenMarginH = 64.dp
+private val ScreenMarginTop = 32.dp
+private val ScreenMarginBottom = 24.dp
+private val FormMarginTop = 36.dp
+private val FormColumnGap = 48.dp
+/** Form column against the status aside, roughly 440:344 as in the design. */
+private const val FormColumnWeight = 1.28f
+private val FormFieldGap = 10.dp
+private val FormButtonGap = 10.dp
+/** Lines the status aside up with the first form field, below the form header. */
+private val FormAsideTop = 76.dp
+private val ManageMarginH = 48.dp
+private val ManageMarginTop = 28.dp
+private val ManageListWidth = 560.dp
+private val SyncPanelWidth = 280.dp
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -79,30 +106,46 @@ fun AddSourceScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = ScreenMarginH, vertical = ScreenMarginTop),
         ) {
             CinemaLogo()
+            Spacer(Modifier.height(44.dp))
             Text(
                 text = stringResource(R.string.source_title),
-                style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Black),
             )
+            Spacer(Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.source_subtitle),
-                style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
+                style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
             )
-            SourceTypeCard(
-                title = stringResource(R.string.source_xtream_title),
-                description = stringResource(R.string.source_xtream_desc),
-                onClick = onXtream,
-                modifier = Modifier.focusRequester(firstCardFocus),
+            Spacer(Modifier.height(28.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                SourceTypeCard(
+                    title = stringResource(R.string.source_xtream_title),
+                    description = stringResource(R.string.source_xtream_desc),
+                    onClick = onXtream,
+                    icon = Icons.Outlined.Dns,
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(firstCardFocus),
+                )
+                SourceTypeCard(
+                    title = stringResource(R.string.source_m3u_title),
+                    description = stringResource(R.string.source_m3u_desc),
+                    onClick = onM3u,
+                    icon = Icons.AutoMirrored.Outlined.PlaylistPlay,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            FooterNote(
+                text = stringResource(R.string.source_footer),
+                modifier = Modifier.padding(top = 18.dp),
             )
-            SourceTypeCard(
-                title = stringResource(R.string.source_m3u_title),
-                description = stringResource(R.string.source_m3u_desc),
-                onClick = onM3u,
-            )
-            FooterNote(stringResource(R.string.source_footer))
         }
     }
 }
@@ -159,32 +202,32 @@ fun XtreamFormScreen(
 
     CinemaScreen(showTopNav = false) {
         Row(
-            modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = ScreenMarginH, end = ScreenMarginH, top = FormMarginTop),
+            horizontalArrangement = Arrangement.spacedBy(FormColumnGap),
         ) {
             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
+                    .weight(FormColumnWeight)
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = ScreenMarginBottom),
+                verticalArrangement = Arrangement.spacedBy(FormFieldGap),
             ) {
-                Text(
-                    text = stringResource(R.string.source_connect_xtream),
-                    style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                )
-                Text(
-                    text = stringResource(R.string.source_connect_xtream_desc),
-                    style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
+                FormHeader(
+                    title = stringResource(R.string.source_connect_xtream),
+                    subtitle = stringResource(R.string.source_connect_xtream_desc),
                 )
                 CinemaTextField(
                     value = serverUrl,
                     onValueChange = { serverUrl = it },
                     label = stringResource(R.string.field_server_url),
                     modifier = Modifier.focusRequester(firstFieldFocus),
+                    showLabelAbove = true,
                 )
-                CinemaTextField(value = username, onValueChange = { username = it }, label = stringResource(R.string.field_username))
-                CinemaTextField(value = password, onValueChange = { password = it }, label = stringResource(R.string.field_password), isPassword = true)
-                CinemaTextField(value = accountName, onValueChange = { accountName = it }, label = stringResource(R.string.field_account_name))
+                CinemaTextField(value = username, onValueChange = { username = it }, label = stringResource(R.string.field_username), showLabelAbove = true)
+                CinemaTextField(value = password, onValueChange = { password = it }, label = stringResource(R.string.field_password), isPassword = true, showLabelAbove = true)
+                CinemaTextField(value = accountName, onValueChange = { accountName = it }, label = stringResource(R.string.field_account_name), showLabelAbove = true)
                 SettingsToggle(
                     label = stringResource(R.string.field_remember_source),
                     isOn = rememberSource,
@@ -193,10 +236,13 @@ fun XtreamFormScreen(
                 connectState.errorMessage?.let { message ->
                     Text(
                         text = message,
-                        style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.Danger),
+                        style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.Danger),
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
+                Row(
+                    modifier = Modifier.padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(FormButtonGap),
+                ) {
                     CinemaButton(
                         text = if (connectState.isConnecting) "Connecting…" else stringResource(R.string.btn_connect),
                         variant = CinemaButtonVariant.PrimaryAccent,
@@ -221,8 +267,10 @@ fun XtreamFormScreen(
                 }
             }
             Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(top = FormAsideTop),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 ImportPreviewPanel(
                     title = stringResource(R.string.source_connection_status),
@@ -230,7 +278,7 @@ fun XtreamFormScreen(
                 )
                 Text(
                     text = stringResource(R.string.source_credentials_note),
-                    style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextMuted),
+                    style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.TextMuted),
                 )
             }
         }
@@ -276,48 +324,52 @@ fun M3uFormScreen(
 
     CinemaScreen(showTopNav = false) {
         Row(
-            modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = ScreenMarginH, end = ScreenMarginH, top = FormMarginTop),
+            horizontalArrangement = Arrangement.spacedBy(FormColumnGap),
         ) {
             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
+                    .weight(FormColumnWeight)
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = ScreenMarginBottom),
+                verticalArrangement = Arrangement.spacedBy(FormFieldGap),
             ) {
-                Text(
-                    text = stringResource(R.string.source_add_m3u),
-                    style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                )
-                Text(
-                    text = stringResource(R.string.source_add_m3u_desc),
-                    style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
+                FormHeader(
+                    title = stringResource(R.string.source_add_m3u),
+                    subtitle = stringResource(R.string.source_add_m3u_desc),
                 )
                 CinemaTextField(
                     value = playlistName,
                     onValueChange = { playlistName = it },
                     label = stringResource(R.string.field_playlist_name),
                     modifier = Modifier.focusRequester(firstFieldFocus),
+                    showLabelAbove = true,
                 )
-                CinemaTextField(value = m3uUrl, onValueChange = { m3uUrl = it }, label = stringResource(R.string.field_m3u_url))
-                CinemaTextField(value = epgUrl, onValueChange = { epgUrl = it }, label = stringResource(R.string.field_epg_url))
+                CinemaTextField(value = m3uUrl, onValueChange = { m3uUrl = it }, label = stringResource(R.string.field_m3u_url), showLabelAbove = true)
+                CinemaTextField(value = epgUrl, onValueChange = { epgUrl = it }, label = stringResource(R.string.field_epg_url), showLabelAbove = true)
                 CinemaButton(
                     text = if (showAdvanced) "Hide Advanced Options" else "Advanced Options",
                     variant = CinemaButtonVariant.Ghost,
+                    icon = if (showAdvanced) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                     onClick = { showAdvanced = !showAdvanced },
                 )
                 if (showAdvanced) {
-                    CinemaTextField(value = userAgent, onValueChange = { userAgent = it }, label = stringResource(R.string.field_user_agent))
-                    CinemaTextField(value = referer, onValueChange = { referer = it }, label = stringResource(R.string.field_referer))
-                    CinemaTextField(value = headers, onValueChange = { headers = it }, label = stringResource(R.string.field_headers))
+                    CinemaTextField(value = userAgent, onValueChange = { userAgent = it }, label = stringResource(R.string.field_user_agent), showLabelAbove = true)
+                    CinemaTextField(value = referer, onValueChange = { referer = it }, label = stringResource(R.string.field_referer), showLabelAbove = true)
+                    CinemaTextField(value = headers, onValueChange = { headers = it }, label = stringResource(R.string.field_headers), showLabelAbove = true)
                 }
                 connectState.errorMessage?.let { message ->
                     Text(
                         text = message,
-                        style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.Danger),
+                        style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.Danger),
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
+                Row(
+                    modifier = Modifier.padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(FormButtonGap),
+                ) {
                     CinemaButton(
                         text = if (connectState.isConnecting) "Importing…" else "Import Playlist",
                         variant = CinemaButtonVariant.PrimaryAccent,
@@ -344,8 +396,10 @@ fun M3uFormScreen(
                 }
             }
             Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(top = FormAsideTop),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 ImportPreviewPanel(
                     title = stringResource(R.string.source_import_status),
@@ -353,7 +407,7 @@ fun M3uFormScreen(
                 )
                 Text(
                     text = stringResource(R.string.source_playlist_note),
-                    style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextMuted),
+                    style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.TextMuted),
                 )
             }
         }
@@ -415,17 +469,21 @@ fun PlaylistManagementScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .padding(start = ManageMarginH, end = ManageMarginH, top = ManageMarginTop),
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.Bottom,
             ) {
-                Column {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     Text(
                         text = stringResource(R.string.source_playlist_sources),
-                        style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Black),
                     )
                     Text(
                         text = when {
@@ -433,18 +491,26 @@ fun PlaylistManagementScreen(
                             sourceType != null -> "Active source: ${sourceType.name.replace('_', ' ')}"
                             else -> "Manage your Xtream Codes accounts and M3U playlists."
                         },
-                        style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
+                        style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextMuted),
                     )
                 }
-                CinemaButton(text = stringResource(R.string.btn_add_source), variant = CinemaButtonVariant.PrimaryAccent, onClick = onAddSource)
+                CinemaButton(
+                    text = stringResource(R.string.btn_add_source),
+                    variant = CinemaButtonVariant.SecondaryDark,
+                    icon = Icons.Default.Add,
+                    onClick = onAddSource,
+                )
             }
             when {
                 sourcesUiState is SourcesUiState.Loading -> {
-                    SkeletonSourceCards(count = 2)
+                    SkeletonSourceCards(count = 2, modifier = Modifier.width(ManageListWidth))
+                    ManageBackButton(onBack)
                 }
                 sourcesUiState is SourcesUiState.Error -> {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
                         contentAlignment = Alignment.Center,
                     ) {
                         ErrorState(
@@ -459,6 +525,7 @@ fun PlaylistManagementScreen(
                             backLabel = stringResource(R.string.btn_back),
                         )
                     }
+                    ManageBackButton(onBack)
                 }
                 sources.isEmpty() -> {
                     EmptyState(
@@ -469,82 +536,117 @@ fun PlaylistManagementScreen(
                         onPrimary = onAddSource,
                         onSecondary = onBack,
                     )
+                    ManageBackButton(onBack)
                 }
                 else -> {
-                    if (syncMessage != null) {
-                        Text(
-                            text = syncMessage,
-                            style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
-                        )
-                    }
-                    sources.forEachIndexed { index, source ->
-                        val isActive = index == activeSourceIndex || source.id == currentSourceId
-                        val needsRecovery = source.status == SourceStatus.EXPIRED ||
-                            (source.status == SourceStatus.FAILED && source.type == SourceType.M3U)
-                        com.iptvcinema.tv.core.design.components.SourceCard(
-                            name = source.name,
-                            type = source.type,
-                            status = source.status,
-                            channelCount = source.channelCount,
-                            lastSynced = source.lastSynced,
-                            onSync = { onResyncSource(source.id) },
-                            onEdit = {
-                                if (needsRecovery) {
-                                    when {
-                                        source.status == SourceStatus.EXPIRED -> onExpiredAccount()
-                                        else -> onInvalidPlaylist()
-                                    }
-                                } else {
-                                    onEditSource(source)
-                                }
-                            },
-                            onRemove = { onDeleteSource(source.id) },
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    ) {
+                        Column(
                             modifier = Modifier
-                                .then(
-                                    if (index == focusIndex) {
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState())
+                                .padding(bottom = ScreenMarginBottom),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            if (syncMessage != null) {
+                                Text(
+                                    text = syncMessage,
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        color = CinemaColors.Success,
+                                        fontWeight = FontWeight.Bold,
+                                    ),
+                                )
+                            }
+                            sources.forEachIndexed { index, source ->
+                                val isActive = index == activeSourceIndex || source.id == currentSourceId
+                                val needsRecovery = source.status == SourceStatus.EXPIRED ||
+                                    (source.status == SourceStatus.FAILED && source.type == SourceType.M3U)
+                                com.iptvcinema.tv.core.design.components.SourceCard(
+                                    name = source.name,
+                                    type = source.type,
+                                    status = source.status,
+                                    channelCount = source.channelCount,
+                                    lastSynced = source.lastSynced,
+                                    onSync = { onResyncSource(source.id) },
+                                    onEdit = {
+                                        if (needsRecovery) {
+                                            when {
+                                                source.status == SourceStatus.EXPIRED -> onExpiredAccount()
+                                                else -> onInvalidPlaylist()
+                                            }
+                                        } else {
+                                            onEditSource(source)
+                                        }
+                                    },
+                                    onRemove = { onDeleteSource(source.id) },
+                                    isActive = isActive,
+                                    modifier = if (index == focusIndex) {
                                         Modifier.focusRequester(sourceFocus)
                                     } else {
                                         Modifier
                                     },
                                 )
-                                .then(
-                                    if (isActive) {
-                                        Modifier.background(CinemaColors.GoldDeep.copy(alpha = 0.08f))
-                                    } else {
-                                        Modifier
-                                    },
-                                ),
-                        )
-                        if (isActive && needsRecovery) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
-                                CinemaButton(
-                                    text = if (source.status == SourceStatus.EXPIRED) {
-                                        stringResource(R.string.btn_reconnect)
-                                    } else {
-                                        stringResource(R.string.btn_edit_playlist)
-                                    },
-                                    variant = CinemaButtonVariant.PrimaryAccent,
-                                    onClick = {
-                                        when {
-                                            source.status == SourceStatus.EXPIRED -> onExpiredAccount()
-                                            else -> onInvalidPlaylist()
-                                        }
-                                    },
-                                )
+                                if (isActive && needsRecovery) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
+                                        CinemaButton(
+                                            text = if (source.status == SourceStatus.EXPIRED) {
+                                                stringResource(R.string.btn_reconnect)
+                                            } else {
+                                                stringResource(R.string.btn_edit_playlist)
+                                            },
+                                            variant = CinemaButtonVariant.PrimaryAccent,
+                                            onClick = {
+                                                when {
+                                                    source.status == SourceStatus.EXPIRED -> onExpiredAccount()
+                                                    else -> onInvalidPlaylist()
+                                                }
+                                            },
+                                        )
+                                    }
+                                }
                             }
+                            ManageBackButton(onBack)
                         }
+                        val activeSource = sources.getOrNull(activeSourceIndex)
+                        com.iptvcinema.tv.core.design.components.SyncStatusPanel(
+                            channels = activeSource?.channelCount ?: 0,
+                            movies = activeSource?.movieCount ?: 0,
+                            series = activeSource?.seriesCount ?: 0,
+                            epgAvailable = activeSource?.epgAvailable ?: false,
+                            lastUpdate = activeSource?.lastSynced ?: stringResource(R.string.source_never_synced),
+                            modifier = Modifier.width(SyncPanelWidth),
+                        )
                     }
-                    val activeSource = sources.getOrNull(activeSourceIndex)
-                    com.iptvcinema.tv.core.design.components.SyncStatusPanel(
-                        channels = activeSource?.channelCount ?: 0,
-                        movies = activeSource?.movieCount ?: 0,
-                        series = activeSource?.seriesCount ?: 0,
-                        epgAvailable = activeSource?.epgAvailable ?: false,
-                        lastUpdate = activeSource?.lastSynced ?: stringResource(R.string.source_never_synced),
-                    )
                 }
             }
-            CinemaButton(text = stringResource(R.string.btn_back), variant = CinemaButtonVariant.Ghost, onClick = onBack)
         }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun ManageBackButton(onBack: () -> Unit) {
+    CinemaButton(text = stringResource(R.string.btn_back), variant = CinemaButtonVariant.Ghost, onClick = onBack)
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun FormHeader(title: String, subtitle: String) {
+    Column(
+        modifier = Modifier.padding(bottom = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Black),
+        )
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextMuted),
+        )
     }
 }

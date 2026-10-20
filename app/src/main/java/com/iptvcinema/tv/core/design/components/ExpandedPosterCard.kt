@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,8 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -210,19 +207,6 @@ private fun LandscapeHomeCard(
                     contentScale = ContentScale.Crop,
                     fallbackLabel = data.title,
                 )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    Color.Transparent,
-                                    Color.Transparent,
-                                    CinemaColors.Background.copy(alpha = 0.62f),
-                                ),
-                            ),
-                        ),
-                )
                 if (data.showTop10Badge) {
                     Top10Badge(
                         modifier = Modifier
@@ -231,20 +215,13 @@ private fun LandscapeHomeCard(
                     )
                 }
                 if (data.progress != null && data.progress > 0f) {
-                    Box(
+                    InsetProgressBar(
+                        fraction = data.progress,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
-                            .height(4.dp)
-                            .background(CinemaColors.SurfaceSoft),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(data.progress.coerceIn(0f, 1f))
-                                .background(CinemaColors.Accent),
-                        )
-                    }
+                            .padding(start = 10.dp, end = 10.dp, bottom = 10.dp),
+                    )
                 }
                 data.remainingTimeLabel?.takeIf { it.isNotBlank() }?.let { remainingLabel ->
                     Text(
@@ -255,9 +232,9 @@ private fun LandscapeHomeCard(
                         ),
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
-                            .padding(end = 8.dp, bottom = 10.dp)
-                            .clip(CinemaShapes.Card)
-                            .background(CinemaColors.Background.copy(alpha = 0.72f))
+                            .padding(end = 8.dp, bottom = 20.dp)
+                            .clip(CinemaShapes.Pill)
+                            .background(CinemaColors.Background.copy(alpha = 0.8f))
                             .padding(horizontal = 6.dp, vertical = 2.dp),
                     )
                 }
@@ -357,19 +334,6 @@ private fun PosterImageBox(
             contentScale = ContentScale.Crop,
             fallbackLabel = data.title,
         )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color.Transparent,
-                            Color.Transparent,
-                            CinemaColors.Background.copy(alpha = 0.68f),
-                        ),
-                    ),
-                ),
-        )
         if (showTop10Badge) {
             Top10Badge(
                 modifier = Modifier
@@ -385,24 +349,19 @@ private fun PosterImageBox(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(6.dp)
-                    .size(18.dp),
+                    .background(CinemaColors.Background.copy(alpha = 0.8f), CinemaShapes.Pill)
+                    .padding(4.dp)
+                    .size(16.dp),
             )
         }
         if (data.progress != null && data.progress > 0f) {
-            Box(
+            InsetProgressBar(
+                fraction = data.progress,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .height(3.dp)
-                    .background(CinemaColors.SurfaceSoft),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(data.progress.coerceIn(0f, 1f))
-                        .background(CinemaColors.Accent),
-                )
-            }
+                    .padding(start = 7.dp, end = 7.dp, bottom = 7.dp),
+            )
         }
     }
 }
@@ -428,7 +387,7 @@ private fun HomeCardInfo(
             Text(
                 text = data.title,
                 style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     color = CinemaColors.White,
                 ),
                 maxLines = titleMaxLines,
@@ -551,8 +510,8 @@ private fun PrimaryActionChip(
 private fun Top10Badge(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
-            .clip(CinemaShapes.Small)
-            .background(CinemaColors.LiveRed)
+            .clip(CinemaShapes.Medium)
+            .background(CinemaColors.Accent)
             .padding(horizontal = 6.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

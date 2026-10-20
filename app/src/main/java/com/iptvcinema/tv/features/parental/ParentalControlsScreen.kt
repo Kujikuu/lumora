@@ -6,6 +6,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -15,32 +21,40 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.data.fake.FakeDataProvider
-import com.iptvcinema.tv.core.design.components.CategoryChip
 import com.iptvcinema.tv.core.design.components.CinemaButton
 import com.iptvcinema.tv.core.design.components.CinemaButtonVariant
 import com.iptvcinema.tv.core.design.components.ProfileChip
 import com.iptvcinema.tv.core.design.components.RatingRestrictionSelector
 import com.iptvcinema.tv.core.design.components.SettingsMenu
 import com.iptvcinema.tv.core.design.components.SettingsMenuItem
+import com.iptvcinema.tv.core.design.components.SettingsChip
+import com.iptvcinema.tv.core.design.components.SettingsChipStyle
+import com.iptvcinema.tv.core.design.components.SettingsPanelHeader
 import com.iptvcinema.tv.core.design.components.SettingsToggle
 import com.iptvcinema.tv.core.design.components.SkeletonProfileRow
 import com.iptvcinema.tv.core.design.theme.CinemaColors
+import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.ParentalControls
 import com.iptvcinema.tv.core.navigation.PopBackHandler
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
 import com.iptvcinema.tv.features.settings.SettingsSection
+
+/** Same width as the menu column on the Settings screen, so switching between them never jumps. */
+private val ParentalMenuWidth = 260.dp
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -127,26 +141,29 @@ fun ParentalControlsScreen(
             .padding(CinemaSpacing.ScreenPadding),
         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap)) {
-            SettingsMenu(
-                items = sections.mapIndexed { index, section ->
-                    SettingsMenuItem(label = sectionLabels[index], icon = section.icon)
-                },
-                selectedIndex = sections.indexOf(SettingsSection.ParentalControls),
-                onSelected = { index ->
-                    if (sections[index] != SettingsSection.ParentalControls) {
-                        navController.popBackStack()
-                    }
-                },
-            )
+        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap * 2)) {
+            Column(
+                modifier = Modifier.width(ParentalMenuWidth),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                SettingsPanelHeader(title = stringResource(R.string.settings_title))
+                SettingsMenu(
+                    items = sections.mapIndexed { index, section ->
+                        SettingsMenuItem(label = sectionLabels[index], icon = section.icon)
+                    },
+                    selectedIndex = sections.indexOf(SettingsSection.ParentalControls),
+                    onSelected = { index ->
+                        if (sections[index] != SettingsSection.ParentalControls) {
+                            navController.popBackStack()
+                        }
+                    },
+                )
+            }
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(
-                    text = stringResource(R.string.parental_title),
-                    style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                )
+                SettingsPanelHeader(title = stringResource(R.string.parental_title))
                 when (uiState) {
                     ParentalUiState.Loading -> SkeletonProfileRow()
                     is ParentalUiState.Error -> {
@@ -253,7 +270,7 @@ private fun ParentalControlsContent(
         )
     }
 
-    Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         uiState.profiles.forEachIndexed { index, profile ->
             ProfileChip(
                 name = profile.name,
@@ -267,11 +284,24 @@ private fun ParentalControlsContent(
             )
         }
     }
-    Text(
-        text = stringResource(if (controls.pinEnabled) R.string.parental_pin_status_on else R.string.parental_pin_status_off),
-        style = MaterialTheme.typography.bodyLarge.copy(color = CinemaColors.TextSecondary),
-    )
-    Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
+    // PIN status and its actions share one row, like a settings value row.
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 50.dp)
+            .background(CinemaColors.Surface, CinemaShapes.Row)
+            .padding(start = 18.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(if (controls.pinEnabled) R.string.parental_pin_status_on else R.string.parental_pin_status_off),
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleSmall.copy(
+                color = CinemaColors.White,
+                fontWeight = FontWeight.ExtraBold,
+            ),
+        )
         CinemaButton(
             text = stringResource(if (controls.pinEnabled) R.string.parental_change_pin else R.string.parental_set_pin),
             variant = CinemaButtonVariant.SecondaryDark,
@@ -280,22 +310,33 @@ private fun ParentalControlsContent(
         if (controls.pinEnabled) {
             CinemaButton(
                 text = stringResource(R.string.parental_remove_pin),
-                variant = CinemaButtonVariant.Ghost,
+                variant = CinemaButtonVariant.SecondaryDark,
                 onClick = onClearPin,
             )
         }
     }
-    Text(text = stringResource(R.string.parental_rating_restrictions), style = MaterialTheme.typography.titleMedium)
-    RatingRestrictionSelector(
-        options = FakeDataProvider.ratingOptions,
-        selectedIndex = selectedRating,
-        onSelected = { index ->
-            selectedRating = index
-            onUpdateControls { current ->
-                current.copy(maxRating = FakeDataProvider.ratingOptions[index])
-            }
-        },
-    )
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.parental_rating_restrictions),
+            style = MaterialTheme.typography.titleSmall.copy(
+                color = CinemaColors.White,
+                fontWeight = FontWeight.ExtraBold,
+            ),
+        )
+        RatingRestrictionSelector(
+            options = FakeDataProvider.ratingOptions,
+            selectedIndex = selectedRating,
+            onSelected = { index ->
+                selectedRating = index
+                onUpdateControls { current ->
+                    current.copy(maxRating = FakeDataProvider.ratingOptions[index])
+                }
+            },
+        )
+    }
     SettingsToggle(
         label = stringResource(R.string.parental_hide_adult),
         isOn = controls.hideAdultCategories,
@@ -340,25 +381,28 @@ private fun BlockedCategoryEditor(
 
     Text(
         text = stringResource(R.string.settings_blocked_categories),
-        style = MaterialTheme.typography.titleMedium.copy(
+        modifier = Modifier.padding(top = 4.dp),
+        style = MaterialTheme.typography.titleSmall.copy(
             color = CinemaColors.White,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
         ),
     )
     if (blocked.isEmpty()) {
         Text(
             text = stringResource(R.string.parental_no_blocked_categories),
-            style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
+            style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextMuted),
         )
     } else {
-        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             blocked.forEach { category ->
-                CategoryChip(
+                SettingsChip(
                     label = category,
                     isSelected = true,
                     onClick = {
                         onUpdateCategories(blocked.filterNot { it.equals(category, ignoreCase = true) })
                     },
+                    style = SettingsChipStyle.Danger,
+                    trailingIcon = Icons.Default.Close,
                 )
             }
         }
@@ -366,16 +410,21 @@ private fun BlockedCategoryEditor(
     if (addableCategories.isNotEmpty()) {
         Text(
             text = stringResource(R.string.parental_add_blocked_category),
-            style = MaterialTheme.typography.titleSmall.copy(color = CinemaColors.TextSecondary),
+            style = MaterialTheme.typography.labelMedium.copy(
+                color = CinemaColors.TextMuted,
+                fontWeight = FontWeight.Bold,
+            ),
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             addableCategories.take(12).forEach { category ->
-                CategoryChip(
+                SettingsChip(
                     label = category,
                     isSelected = false,
                     onClick = {
                         onUpdateCategories((blocked + category).distinctBy { it.lowercase() })
                     },
+                    style = SettingsChipStyle.Filled,
+                    trailingIcon = Icons.Default.Add,
                 )
             }
         }

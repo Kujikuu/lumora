@@ -1,33 +1,40 @@
 package com.iptvcinema.tv.core.design.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.iptvcinema.tv.R
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
@@ -35,6 +42,23 @@ import com.iptvcinema.tv.core.model.SourceStatus
 import com.iptvcinema.tv.core.model.SourceType
 import com.iptvcinema.tv.core.util.encodeQrCode
 
+/** Large onboarding panels (source type cards, status panels). */
+private val PanelShape = RoundedCornerShape(18.dp)
+/** Source rows on the playlist management screen. */
+private val SourceRowShape = RoundedCornerShape(16.dp)
+private val TypeCardHeight = 170.dp
+private val TypeIconTileSize = 44.dp
+private val StatusDotSize = 20.dp
+private val ActiveRingWidth = 2.dp
+private const val TINT_ALPHA = 0.18f
+private val DangerText = Color(0xFFFF6B6B)
+/** Description text on a focused (white) type card. */
+private val OnLightMuted = Color(0xFF4A4F5A)
+
+/**
+ * Source type choice on Add Source: an icon tile, a title and a one-line description.
+ * Focused, the whole card turns white with dark content.
+ */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun SourceTypeCard(
@@ -42,36 +66,66 @@ fun SourceTypeCard(
     description: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
 ) {
     FocusableCinemaCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
+        modifier = modifier.fillMaxWidth(),
         onClick = onClick,
-        shape = CinemaShapes.Card,
-    ) { _ ->
+        shape = PanelShape,
+        focusedBorderWidth = 0.dp,
+        focusScale = 1.03f,
+    ) { focused ->
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CinemaColors.SurfaceSoft, CinemaShapes.Card)
-                .padding(CinemaSpacing.SectionGap),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .defaultMinSize(minHeight = TypeCardHeight)
+                .background(if (focused) CinemaColors.White else CinemaColors.Surface, PanelShape)
+                .padding(24.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = CinemaColors.Gold,
-                ),
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
-            )
+            if (icon != null) {
+                Box(
+                    modifier = Modifier
+                        .size(TypeIconTileSize)
+                        .background(
+                            if (focused) CinemaColors.Background else CinemaColors.SurfaceRaised,
+                            CinemaShapes.XLarge,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = CinemaColors.White,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Black,
+                        color = if (focused) CinemaColors.Background else CinemaColors.White,
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = if (focused) OnLightMuted else CinemaColors.TextMuted,
+                    ),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
 
+/** One connection or import step: a green check when done, a muted empty dot while pending. */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ValidationStatusItem(
@@ -80,21 +134,32 @@ fun ValidationStatusItem(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = if (isSuccess) Icons.Default.Check else Icons.Default.Close,
-            contentDescription = null,
-            tint = if (isSuccess) CinemaColors.Success else CinemaColors.Warning,
-            modifier = Modifier.size(20.dp),
-        )
+        Box(
+            modifier = Modifier
+                .size(StatusDotSize)
+                .background(if (isSuccess) CinemaColors.Success else CinemaColors.SurfaceRaised, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (isSuccess) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = CinemaColors.Background,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
+        }
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextPrimary),
+            style = MaterialTheme.typography.bodyMedium.copy(
+                color = if (isSuccess) CinemaColors.TextPrimary else CinemaColors.TextMuted,
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -108,24 +173,31 @@ fun ImportPreviewPanel(
 ) {
     Column(
         modifier = modifier
-            .clip(CinemaShapes.Card)
-            .background(CinemaColors.SurfaceGlass)
-            .padding(CinemaSpacing.SectionGap),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .fillMaxWidth()
+            .background(CinemaColors.SurfaceSoft, PanelShape)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.SemiBold,
-                color = CinemaColors.Gold,
-            ),
-        )
+        PanelTitle(title)
         items.forEach { (label, success) ->
             ValidationStatusItem(label = label, isSuccess = success)
         }
     }
 }
 
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun PanelTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleSmall.copy(
+            fontWeight = FontWeight.Black,
+            color = CinemaColors.White,
+        ),
+    )
+}
+
+/** Source health pill: tinted fill with text in the status colour. */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun StatusBadge(
@@ -140,9 +212,18 @@ fun StatusBadge(
         SourceStatus.EXPIRED -> CinemaColors.Danger
         SourceStatus.FAILED -> CinemaColors.Danger
     }
-    BadgeChip(text = text, modifier = modifier, backgroundColor = color)
+    BadgeChip(
+        text = text,
+        modifier = modifier,
+        backgroundColor = color.copy(alpha = TINT_ALPHA),
+        textColor = if (color == CinemaColors.Danger) DangerText else color,
+    )
 }
 
+/**
+ * A playlist source row with Sync, Edit and Remove. The active source sits on a raised
+ * surface with an accent ring; the others use the darker row surface.
+ */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun SourceCard(
@@ -155,27 +236,42 @@ fun SourceCard(
     onEdit: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
+    isActive: Boolean = false,
 ) {
     FocusableCinemaCard(
         modifier = modifier.fillMaxWidth(),
         onClick = onEdit,
-        shape = CinemaShapes.Card,
+        shape = SourceRowShape,
+        focusScale = 1.02f,
     ) { _ ->
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CinemaColors.SurfaceSoft, CinemaShapes.Card)
-                .padding(CinemaSpacing.SectionGap),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .background(if (isActive) CinemaColors.Surface else CinemaColors.SurfaceSoft, SourceRowShape)
+                .then(
+                    if (isActive) {
+                        Modifier.border(ActiveRingWidth, CinemaColors.Accent, SourceRowShape)
+                    } else {
+                        Modifier
+                    },
+                )
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = name,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.Black,
+                        color = CinemaColors.White,
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 StatusBadge(
                     text = status.name.replace('_', ' '),
@@ -188,13 +284,63 @@ fun SourceCard(
                     channelCount?.let { append(" · $it channels") }
                     append(" · Last synced $lastSynced")
                 },
-                style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
+                style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextSecondary),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap)) {
-                CinemaButton(text = stringResource(R.string.btn_sync), variant = CinemaButtonVariant.SecondaryDark, onClick = onSync)
-                CinemaButton(text = stringResource(R.string.btn_edit), variant = CinemaButtonVariant.Ghost, onClick = onEdit)
-                CinemaButton(text = stringResource(R.string.btn_remove), variant = CinemaButtonVariant.Danger, onClick = onRemove)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SourceActionButton(
+                    text = stringResource(R.string.btn_sync),
+                    restColor = CinemaColors.OverlayFill,
+                    restTextColor = CinemaColors.White,
+                    onClick = onSync,
+                )
+                SourceActionButton(
+                    text = stringResource(R.string.btn_edit),
+                    restColor = CinemaColors.White.copy(alpha = 0.10f),
+                    restTextColor = CinemaColors.White,
+                    onClick = onEdit,
+                )
+                SourceActionButton(
+                    text = stringResource(R.string.btn_remove),
+                    restColor = CinemaColors.Danger.copy(alpha = 0.16f),
+                    restTextColor = DangerText,
+                    onClick = onRemove,
+                )
             }
+        }
+    }
+}
+
+/** Compact pill used inside source rows; white with dark text when focused. */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun SourceActionButton(
+    text: String,
+    restColor: Color,
+    restTextColor: Color,
+    onClick: () -> Unit,
+) {
+    FocusableCinemaCard(
+        onClick = onClick,
+        shape = CinemaShapes.Pill,
+        focusedBorderWidth = 0.dp,
+        focusScale = 1.04f,
+    ) { focused ->
+        Box(
+            modifier = Modifier
+                .defaultMinSize(minHeight = 34.dp)
+                .background(if (focused) CinemaColors.White else restColor, CinemaShapes.Pill)
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.Black,
+                    color = if (focused) CinemaColors.Background else restTextColor,
+                ),
+            )
         }
     }
 }
@@ -209,27 +355,24 @@ fun SyncStatusPanel(
     lastUpdate: String,
     modifier: Modifier = Modifier,
 ) {
+    val lineStyle = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary)
     Column(
         modifier = modifier
-            .clip(CinemaShapes.Card)
-            .background(CinemaColors.SurfaceGlass)
-            .padding(CinemaSpacing.SectionGap),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .background(CinemaColors.SurfaceSoft, SourceRowShape)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text(
-            text = stringResource(R.string.sync_status_title),
-            style = MaterialTheme.typography.titleMedium.copy(color = CinemaColors.Gold),
-        )
-        Text(text = stringResource(R.string.sync_channels, channels), style = MaterialTheme.typography.bodyMedium)
-        Text(text = stringResource(R.string.sync_movies, movies), style = MaterialTheme.typography.bodyMedium)
-        Text(text = stringResource(R.string.sync_series, series), style = MaterialTheme.typography.bodyMedium)
+        PanelTitle(stringResource(R.string.sync_status_title))
+        Text(text = stringResource(R.string.sync_channels, channels), style = lineStyle)
+        Text(text = stringResource(R.string.sync_movies, movies), style = lineStyle)
+        Text(text = stringResource(R.string.sync_series, series), style = lineStyle)
         Text(
             text = if (epgAvailable) {
                 stringResource(R.string.sync_epg_available)
             } else {
                 stringResource(R.string.sync_epg_missing)
             },
-            style = MaterialTheme.typography.bodyMedium,
+            style = lineStyle.copy(color = if (epgAvailable) CinemaColors.Success else CinemaColors.TextMuted),
         )
         Text(
             text = stringResource(R.string.sync_last_update, lastUpdate),
@@ -300,9 +443,9 @@ fun QrActivationPanel(
     Box(
         modifier = modifier
             .size(size)
-            .clip(CinemaShapes.Large)
+            .clip(PanelShape)
             .background(CinemaColors.White)
-            .padding(18.dp),
+            .padding(16.dp),
         contentAlignment = Alignment.Center,
     ) {
         if (qrBitmap != null) {
@@ -316,7 +459,7 @@ fun QrActivationPanel(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(CinemaShapes.Medium)
+                    .clip(CinemaShapes.XLarge)
                     .background(CinemaColors.Background.copy(alpha = 0.06f)),
                 contentAlignment = Alignment.Center,
             ) {

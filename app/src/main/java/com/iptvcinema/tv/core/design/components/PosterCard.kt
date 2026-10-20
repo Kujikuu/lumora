@@ -12,13 +12,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -62,7 +59,7 @@ fun PosterCard(
     modifier: Modifier = Modifier,
     fixedWidth: Dp? = CinemaSpacing.PosterCardWidth,
     onLongClick: (() -> Unit)? = null,
-    focusScale: Float = 1.04f,
+    focusScale: Float = 1.06f,
     focusedBorderWidth: Dp = 2.dp,
 ) {
     val imageAspectRatio = when (variant) {
@@ -101,27 +98,13 @@ fun PosterCard(
                     contentScale = ContentScale.Crop,
                     fallbackLabel = data.title,
                 )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    Color.Transparent,
-                                    Color.Transparent,
-                                    CinemaColors.Background.copy(alpha = 0.62f),
-                                ),
-                            ),
-                        ),
-                )
-
                 if (data.is4K) {
                     BadgeChip(
                         text = stringResource(R.string.badge_4k),
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(6.dp),
-                        backgroundColor = CinemaColors.AccentDeep,
+                        backgroundColor = CinemaColors.SurfaceGlass,
                     )
                 }
                 if (data.hasNewEpisode) {
@@ -146,15 +129,17 @@ fun PosterCard(
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
+                            .padding(start = 7.dp, end = 7.dp, bottom = 7.dp)
                             .fillMaxWidth()
-                            .height(3.dp)
-                            .background(CinemaColors.SurfaceSoft),
+                            .height(4.dp)
+                            .clip(CinemaShapes.Pill)
+                            .background(CinemaColors.White.copy(alpha = 0.3f)),
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .fillMaxWidth(data.progress.coerceIn(0f, 1f))
-                                .background(CinemaColors.Accent),
+                                .background(CinemaColors.Accent, CinemaShapes.Pill),
                         )
                     }
                 }
@@ -164,7 +149,7 @@ fun PosterCard(
             text = data.title,
             style = MaterialTheme.typography.labelSmall.copy(
                 color = CinemaColors.TextPrimary,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
             ),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -187,9 +172,9 @@ fun BadgeChip(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(2.dp))
+            .clip(CinemaShapes.Pill)
             .background(backgroundColor)
-            .padding(horizontal = 5.dp, vertical = 1.dp),
+            .padding(horizontal = 8.dp, vertical = 2.dp),
     ) {
         Text(
             text = text,

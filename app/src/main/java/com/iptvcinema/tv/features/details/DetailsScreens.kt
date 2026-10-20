@@ -19,10 +19,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.util.RatingFormatter
 import com.iptvcinema.tv.core.data.fake.FakeDataProvider
 import com.iptvcinema.tv.core.model.FavoriteContentType
 import com.iptvcinema.tv.core.design.components.DetailHero
 import com.iptvcinema.tv.core.design.components.EmptyState
+import com.iptvcinema.tv.core.design.components.HeroBadge
+import com.iptvcinema.tv.core.design.components.HeroBadgeStyle
 import com.iptvcinema.tv.core.design.components.SkeletonDetailHero
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.navigation.AppRoute
@@ -107,17 +110,24 @@ fun MovieDetailsScreen(
                     .fillMaxSize()
                     .background(CinemaColors.Background),
                 title = movie.title,
+                badges = listOf(
+                    HeroBadge(stringResource(R.string.home_kind_movie).uppercase()),
+                    qualityBadge(movie.is4K),
+                ),
                 metadata = listOfNotNull(
                     movie.year.takeIf { it > 0 }?.toString(),
                     movie.runtimeMinutes.takeIf { it > 0 }?.let {
                         stringResource(R.string.details_runtime_hours_minutes, it / 60, it % 60)
                     },
-                    if (movie.is4K) stringResource(R.string.badge_4k) else "HD",
-                    movie.rating.takeIf { it.isNotBlank() }?.let {
+                    displayRating(movie.rating)?.let {
                         stringResource(R.string.details_rating, it)
                     },
-                    movie.genres.joinToString(" ").takeIf { it.isNotBlank() },
+                    movie.genres.joinToString(", ").takeIf { it.isNotBlank() },
                 ),
+                primaryProgress = continueWatching?.let { resume ->
+                    watchedFraction(resume.resumePositionMs, movie.runtimeMinutes) ?: movie.progress
+                },
+                backLabel = stringResource(R.string.btn_back),
                 synopsis = movie.plot,
                 primaryActionLabel = primaryActionLabel,
                 onWatchNow = {
@@ -248,6 +258,12 @@ fun SeriesDetailsScreen(
                     .fillMaxSize()
                     .background(CinemaColors.Background),
                 title = series.title,
+                badges = listOfNotNull(
+                    HeroBadge(stringResource(R.string.badge_new_episode).uppercase(), HeroBadgeStyle.Accent)
+                        .takeIf { series.hasNewEpisode },
+                    HeroBadge(stringResource(R.string.home_kind_series).uppercase()),
+                    qualityBadge(series.is4K),
+                ),
                 metadata = listOfNotNull(
                     series.year.takeIf { it > 0 }?.toString(),
                     if (series.seasonCount > 0) {
@@ -259,10 +275,21 @@ fun SeriesDetailsScreen(
                     } else {
                         null
                     },
-                    if (series.is4K) stringResource(R.string.badge_4k) else "HD",
-                    series.rating.takeIf { it.isNotBlank() }?.let { stringResource(R.string.details_rating, it) },
-                    series.genres.joinToString(" ").takeIf { it.isNotBlank() },
+                    displayRating(series.rating)?.let { stringResource(R.string.details_rating, it) },
+                    series.genres.joinToString(", ").takeIf { it.isNotBlank() },
                 ),
+                // Remembered: scanning every episode on each recomposition is wasted work on a slow TV.
+                primaryProgress = remember(seasons, continueWatching) {
+                    continueWatching?.let { resume ->
+                        seasons.asSequence()
+                            .flatMap { it.episodes.asSequence() }
+                            .firstOrNull { it.id == resume.contentId }
+                            ?.let { episode ->
+                                episode.progress ?: watchedFraction(resume.resumePositionMs, episode.durationMinutes)
+                            }
+                    }
+                },
+                backLabel = stringResource(R.string.btn_back),
                 synopsis = series.plot,
                 primaryActionLabel = primaryActionLabel,
                 onWatchNow = {
@@ -317,3 +344,22 @@ fun SeriesDetailsScreen(
         }
     }
 }
+
+/** 4K in the accent colour, otherwise an outlined HD, as in the details mockups. */
+@Composable
+private fun qualityBadge(is4K: Boolean): HeroBadge =
+    if (is4K) {
+        HeroBadge(stringResource(R.string.badge_4k), HeroBadgeStyle.Accent)
+    } else {
+        HeroBadge("HD", HeroBadgeStyle.Outline)
+    }
+
+/** Share of a title already watched, for the bar inside the Continue button; null if unknown. */
+private fun watchedFraction(resumePositionMs: Long, durationMinutes: Int): Float? {
+    if (resumePositionMs <= 0L || durationMinutes <= 0) return null
+    return (resumePositionMs / (durationMinutes * 60_000f)).coerceIn(0f, 1f)
+}
+
+/** Providers send "0" or "0.0" for unrated titles; those show no rating at all, as on Home. */
+private fun displayRating(rating: String): String? =
+    RatingFormatter.formatForDisplay(rating)?.takeUnless { (it.toDoubleOrNull() ?: 1.0) <= 0.0 }

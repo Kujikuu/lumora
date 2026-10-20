@@ -15,16 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.design.components.BackPill
 import com.iptvcinema.tv.core.design.components.EmptyState
 import com.iptvcinema.tv.core.design.components.SkeletonHomeContent
 import com.iptvcinema.tv.core.design.components.shellHeroContentStart
@@ -97,7 +94,7 @@ fun SeriesEpisodesScreen(
                     }
                 },
                 overlay = {
-                    Text(
+                    BackPill(
                         text = uiState.seriesTitle.isolateDirection(),
                         modifier = Modifier
                             .align(Alignment.TopStart)
@@ -106,12 +103,6 @@ fun SeriesEpisodesScreen(
                                 top = CinemaSpacing.ScreenPaddingVertical,
                                 end = CinemaSpacing.ScreenPadding,
                             ),
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = CinemaColors.TextSecondary,
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                     )
                 },
             )

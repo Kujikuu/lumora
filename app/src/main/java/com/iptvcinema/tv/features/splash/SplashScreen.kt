@@ -63,7 +63,7 @@ private object SplashTimeline {
 }
 
 private val OvershootEasing = CubicBezierEasing(0.34f, 1.56f, 0.64f, 1f)
-private val LogoGap = 28.dp
+private val LogoGap = 22.dp
 
 private class SplashAnimations(startValue: Float) {
     val bands = LumoraBand.entries.associateWith { Animatable(startValue) }
@@ -175,20 +175,22 @@ private fun SplashWordmark(
             style = TextStyle(
                 color = CinemaColors.TextPrimary,
                 fontFamily = GraphikArabicFontFamily,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Black,
                 fontSize = 56.sp,
-                letterSpacing = 3.sp,
+                letterSpacing = 1.sp,
             ),
         )
         Spacer(modifier = Modifier.height(2.dp))
+        val tagline = stringResource(R.string.splash_lockup_tagline)
         Text(
-            text = stringResource(R.string.splash_lockup_tagline),
+            text = tagline,
             style = TextStyle(
-                color = CinemaColors.TextSecondary,
+                color = CinemaColors.TextMuted,
                 fontFamily = GraphikArabicFontFamily,
-                fontWeight = FontWeight.Medium,
-                fontSize = 16.sp,
-                letterSpacing = 2.sp,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                // The splash is forced LTR, so check the text itself: tracking breaks Arabic joins.
+                letterSpacing = if (tagline.any { it in '؀'..'ۿ' }) 0.sp else 4.sp,
             ),
         )
     }

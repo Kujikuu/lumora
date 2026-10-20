@@ -94,7 +94,7 @@ fun FocusAwareContentRail(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     color = CinemaColors.TextPrimary,
                 ),
             )

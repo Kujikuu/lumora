@@ -288,7 +288,7 @@ interface MovieDao {
     )
     suspend fun getLargestCategoryNames(sourceId: String, limit: Int): List<String>
 
-    /** Categories by size, each with one sample backdrop and poster for its tile. */
+    /** Categories in the provider's order (as in the catalog), each with sample artwork for its tile. */
     // Starts from the categories table, the list the catalog grid opens by name, so a tile always
     // names a category the grid can show.
     @Query(
@@ -300,7 +300,7 @@ interface MovieDao {
         JOIN movies t ON t.sourceId = c.sourceId AND t.categoryId = c.id
         WHERE c.sourceId = :sourceId AND c.contentType = 'VOD' AND TRIM(c.name) != ''
         GROUP BY c.id
-        ORDER BY itemCount DESC, c.sortOrder, c.name
+        ORDER BY c.sortOrder, c.name
         LIMIT :limit
         """,
     )
@@ -456,7 +456,7 @@ interface SeriesDao {
         JOIN series t ON t.sourceId = c.sourceId AND t.categoryId = c.id
         WHERE c.sourceId = :sourceId AND c.contentType = 'SERIES' AND TRIM(c.name) != ''
         GROUP BY c.id
-        ORDER BY itemCount DESC, c.sortOrder, c.name
+        ORDER BY c.sortOrder, c.name
         LIMIT :limit
         """,
     )

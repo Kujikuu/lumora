@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Shadow
@@ -69,7 +70,7 @@ fun HomeCard(
         modifier = modifier.size(width = style.width(), height = style.height()),
         onClick = onClick,
         onLongClick = onLongClick,
-        shape = CinemaShapes.Medium,
+        shape = CinemaShapes.Card,
         contentDescription = card.title,
     ) { _ ->
         when (style) {
@@ -151,17 +152,25 @@ private fun CategoryTile(card: HomeContentCard) {
     }
 }
 
+/** Rounded bar inset from the card edges, drawn in one pass. */
 @Composable
 private fun CardProgress(progress: Float, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
+            .padding(start = 8.dp, end = 8.dp, bottom = 8.dp)
             .fillMaxWidth()
             .height(4.dp)
             .drawBehind {
-                drawRect(CinemaColors.Background.copy(alpha = 0.6f))
+                val radius = CornerRadius(size.height / 2f)
+                drawRoundRect(CinemaColors.White.copy(alpha = 0.3f), cornerRadius = radius)
                 val fillWidth = size.width * progress.coerceIn(0f, 1f)
                 val left = if (layoutDirection == LayoutDirection.Rtl) size.width - fillWidth else 0f
-                drawRect(CinemaColors.Accent, topLeft = Offset(left, 0f), size = Size(fillWidth, size.height))
+                drawRoundRect(
+                    CinemaColors.Accent,
+                    topLeft = Offset(left, 0f),
+                    size = Size(fillWidth, size.height),
+                    cornerRadius = radius,
+                )
             },
     )
 }

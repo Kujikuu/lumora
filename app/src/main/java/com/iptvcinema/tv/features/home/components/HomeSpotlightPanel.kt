@@ -142,15 +142,26 @@ fun HomeSpotlightPanel(
 @Composable
 private fun SpotlightText(spotlight: HomeSpotlight) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Badge row: what it is, then quality and rating, like a streaming store front.
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BadgeChip(
+                text = stringResource(spotlight.kind.labelRes()).uppercase(),
+                backgroundColor = if (spotlight.kind == HomeSpotlightKind.Channel) {
+                    CinemaColors.LiveRed
+                } else {
+                    CinemaColors.OverlayFill
+                },
+            )
+            if (spotlight.is4K) {
+                BadgeChip(text = stringResource(R.string.badge_4k), backgroundColor = CinemaColors.Accent)
+            }
+            spotlight.ratingBadge?.let { BadgeChip(text = it, backgroundColor = CinemaColors.SurfaceGlass) }
+        }
         Text(
-            text = stringResource(spotlight.kind.labelRes()),
-            style = MaterialTheme.typography.labelLarge.copy(
-                color = if (spotlight.kind == HomeSpotlightKind.Channel) CinemaColors.LiveRed else CinemaColors.Secondary,
-                fontWeight = FontWeight.Bold,
-            ),
-        )
-        Text(
-            text = spotlight.title.isolateDirection(),
+            text = spotlight.title.uppercase().isolateDirection(),
             style = MaterialTheme.typography.displaySmall.copy(
                 fontWeight = FontWeight.Black,
                 color = CinemaColors.White,
@@ -159,16 +170,7 @@ private fun SpotlightText(spotlight: HomeSpotlight) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (spotlight.is4K) {
-                BadgeChip(text = stringResource(R.string.badge_4k), backgroundColor = CinemaColors.AccentDeep)
-            }
-            spotlight.ratingBadge?.let { BadgeChip(text = it, backgroundColor = CinemaColors.SurfaceGlass) }
-            MetadataRow(items = spotlight.metadata)
-        }
+        MetadataRow(items = spotlight.metadata)
         spotlight.progress?.let { progress -> SpotlightProgress(progress) }
         spotlight.plot?.let { plot ->
             Text(

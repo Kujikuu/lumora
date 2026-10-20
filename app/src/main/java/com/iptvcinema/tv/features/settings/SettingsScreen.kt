@@ -33,7 +33,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -47,7 +50,6 @@ import com.iptvcinema.tv.core.design.components.CinemaButton
 import com.iptvcinema.tv.core.design.components.CinemaConfirmDialog
 import com.iptvcinema.tv.core.design.components.CinemaScreen
 import com.iptvcinema.tv.core.design.components.FilterChipRow
-import com.iptvcinema.tv.core.design.components.SettingsHintText
 import com.iptvcinema.tv.core.design.components.SettingsMenu
 import com.iptvcinema.tv.core.design.components.SettingsMenuItem
 import com.iptvcinema.tv.core.design.components.SettingsPanelHeader
@@ -67,6 +69,9 @@ import com.iptvcinema.tv.core.navigation.navigateOnboardingClearingStack
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
 import com.iptvcinema.tv.core.platform.AppLocaleHelper
 import com.iptvcinema.tv.core.player.StreamingQualityOption
+
+/** Width of the section menu column; the parental controls screen uses the same width. */
+private val SettingsMenuWidth = 260.dp
 
 private enum class SignOutRequest {
     SignOut,
@@ -250,8 +255,8 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap * 2),
             ) {
                 Column(
-                    modifier = Modifier.width(300.dp),
-                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                    modifier = Modifier.width(SettingsMenuWidth),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     SettingsPanelHeader(title = stringResource(R.string.settings_title))
                     // Only the menu scrolls, so the header stays put on a 960x540dp screen.
@@ -278,7 +283,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .weight(1f)
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     when (playbackSubPanel) {
                         PlaybackSubPanel.Audio -> PlaybackAudioSubPanel(
@@ -417,24 +422,19 @@ private fun PlaybackSettingsPanel(
         subtitle = stringResource(R.string.settings_playback_desc),
     )
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SettingsToggle(
-            label = stringResource(R.string.settings_autoplay_next),
-            isOn = autoplayNext,
-            onToggle = { onToggleAutoplay(!autoplayNext) },
-            modifier = Modifier.focusRequester(firstItemFocusRequester),
-        )
-        SettingsHintText(text = stringResource(R.string.settings_autoplay_desc))
-    }
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SettingsToggle(
-            label = stringResource(R.string.settings_continue_watching),
-            isOn = continueWatching,
-            onToggle = { onToggleContinueWatching(!continueWatching) },
-        )
-        SettingsHintText(text = stringResource(R.string.settings_continue_watching_desc))
-    }
+    SettingsToggle(
+        label = stringResource(R.string.settings_autoplay_next),
+        isOn = autoplayNext,
+        onToggle = { onToggleAutoplay(!autoplayNext) },
+        modifier = Modifier.focusRequester(firstItemFocusRequester),
+        description = stringResource(R.string.settings_autoplay_desc),
+    )
+    SettingsToggle(
+        label = stringResource(R.string.settings_continue_watching),
+        isOn = continueWatching,
+        onToggle = { onToggleContinueWatching(!continueWatching) },
+        description = stringResource(R.string.settings_continue_watching_desc),
+    )
 
     SettingsGroupTitle(text = stringResource(R.string.settings_in_player))
     SettingsRow(
@@ -442,18 +442,21 @@ private fun PlaybackSettingsPanel(
         isSelected = false,
         onClick = onOpenAudio,
         trailing = playbackAudioSummary(userSettings?.defaultAudioLanguage),
+        showChevron = true,
     )
     SettingsRow(
         label = stringResource(R.string.settings_subtitles),
         isSelected = false,
         onClick = onOpenSubtitles,
         trailing = subtitlesSummary(userSettings),
+        showChevron = true,
     )
     SettingsRow(
         label = stringResource(R.string.settings_streaming_quality),
         isSelected = false,
         onClick = onOpenQuality,
         trailing = streamingQualitySummary(userSettings?.streamingQuality),
+        showChevron = true,
     )
 }
 
@@ -608,6 +611,7 @@ private fun DeviceSettingsPanel(
             isSelected = false,
             onClick = onOpenPlaylistSources,
             trailing = connectedSource,
+            showChevron = true,
         )
         SettingsRow(
             label = stringResource(R.string.btn_refresh_catalog),
@@ -657,14 +661,17 @@ private fun DeviceSettingsPanel(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun SettingsGroupTitle(text: String) {
+    // Tracking breaks the joins between Arabic letters, so only LTR gets it.
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Text(
-        text = text,
+        text = text.uppercase(),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp),
-        style = MaterialTheme.typography.titleLarge.copy(
-            color = CinemaColors.White,
-            fontWeight = FontWeight.Black,
+            .padding(start = 6.dp, top = 12.dp, bottom = 2.dp),
+        style = MaterialTheme.typography.labelMedium.copy(
+            color = CinemaColors.TextMuted,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = if (isRtl) 0.sp else 1.5.sp,
         ),
     )
 }

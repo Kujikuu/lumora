@@ -21,7 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -63,7 +62,7 @@ fun MoodCategoryRow(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.ExtraBold,
                 color = CinemaColors.TextPrimary,
             ),
             modifier = Modifier.padding(
@@ -105,18 +104,14 @@ fun MoodCategoryRow(
                     Box(
                         modifier = Modifier
                             .size(CinemaSpacing.MoodTileSize)
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(Color(category.gradientStartArgb), Color(category.gradientEndArgb)),
-                                ),
-                                CinemaShapes.Card,
-                            ),
+                            // Flat tone instead of a per-tile gradient: cheaper on weak TVs.
+                            .background(Color(category.gradientStartArgb), CinemaShapes.Card),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = stringResource(category.labelRes),
                             style = MaterialTheme.typography.titleSmall.copy(
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.Black,
                                 color = CinemaColors.White,
                             ),
                         )

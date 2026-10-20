@@ -36,9 +36,16 @@ import com.iptvcinema.tv.core.design.components.CinemaButton
 import com.iptvcinema.tv.core.design.components.CinemaButtonVariant
 import com.iptvcinema.tv.core.design.components.CinemaLogo
 import com.iptvcinema.tv.core.design.components.CinemaScreen
+import com.iptvcinema.tv.core.design.components.StatusDangerTone
+import com.iptvcinema.tv.core.design.components.StatusMessage
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Dns
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.navigation.AppRoute
+
+private val StateMarginStart = 64.dp
+private val StateTitleWidth = 520.dp
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -73,22 +80,26 @@ fun EmptyStateScreen(
                         ),
                     ),
             )
+            CinemaLogo(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = StateMarginStart, top = 32.dp),
+            )
             Column(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .padding(start = 154.dp),
-                verticalArrangement = Arrangement.spacedBy(40.dp),
+                    .padding(start = StateMarginStart),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
             ) {
-                CinemaLogo()
                 Text(
                     text = stringResource(R.string.reload_title),
-                    modifier = Modifier.width(960.dp),
-                    style = MaterialTheme.typography.displayLarge.copy(
+                    modifier = Modifier.width(StateTitleWidth),
+                    style = MaterialTheme.typography.displaySmall.copy(
                         color = CinemaColors.White,
                         fontWeight = FontWeight.Black,
                     ),
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     CinemaButton(
                         text = stringResource(R.string.btn_reload),
                         variant = CinemaButtonVariant.PrimaryAccent,
@@ -104,9 +115,9 @@ fun EmptyStateScreen(
             }
             AccountAvatar(
                 modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 376.dp, top = 232.dp),
-                size = 56.dp,
+                    .align(Alignment.TopEnd)
+                    .padding(top = 30.dp, end = 40.dp),
+                size = 32.dp,
             )
         }
     }
@@ -124,27 +135,15 @@ fun ErrorStateScreen(
             .fillMaxSize()
             .background(CinemaColors.Background),
     ) {
-        Column(
+        StatusMessage(
+            icon = Icons.Outlined.Dns,
+            tone = StatusDangerTone,
+            title = stringResource(R.string.error_server_not_responding),
+            description = stringResource(R.string.error_reload_page),
+            primaryAction = stringResource(R.string.btn_close),
+            onPrimary = { navController.popBackStack() },
             modifier = Modifier.align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(28.dp),
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = stringResource(R.string.error_server_not_responding),
-                    style = MaterialTheme.typography.titleLarge.copy(color = CinemaColors.TextSecondary),
-                )
-                Text(
-                    text = stringResource(R.string.error_reload_page),
-                    style = MaterialTheme.typography.titleLarge.copy(color = CinemaColors.TextSecondary),
-                )
-            }
-            CinemaButton(
-                text = stringResource(R.string.btn_close),
-                variant = CinemaButtonVariant.PrimaryAccent,
-                onClick = { navController.popBackStack() },
-            )
-        }
+        )
     }
 }
 
@@ -170,7 +169,7 @@ private fun ReloadPosterWall(
                     Box(
                         modifier = Modifier
                             .size(width = 430.dp, height = 238.dp)
-                            .clip(CinemaShapes.Medium)
+                            .clip(CinemaShapes.XLarge)
                             .background(CinemaColors.SurfaceSoft),
                     ) {
                         CinemaAsyncImage(

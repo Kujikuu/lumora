@@ -7,40 +7,26 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.ViewAgenda
-import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
@@ -57,210 +43,8 @@ import com.iptvcinema.tv.core.player.EpisodeWatchProgress
 import com.iptvcinema.tv.core.player.EpisodeWatchVisualState
 import com.iptvcinema.tv.core.util.isolateDirection
 
-private val DetailPosterInsetWidth = 120.dp
 private val EpisodeLandscapeCardWidth = 220.dp
 private val EpisodeLandscapeImageHeight = 124.dp
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-fun DetailHero(
-    title: String,
-    metadata: List<String>,
-    synopsis: String,
-    onWatchNow: () -> Unit,
-    onFavorite: () -> Unit,
-    isFavorite: Boolean = false,
-    modifier: Modifier = Modifier,
-    primaryActionLabel: String = "",
-    watchLaterLabel: String = "",
-    showTrailer: Boolean = false,
-    onTrailer: (() -> Unit)? = null,
-    onChooseEpisode: (() -> Unit)? = null,
-    onMoreLikeThis: (() -> Unit)? = null,
-    showScrollHint: Boolean = false,
-    backdropUrl: String? = null,
-    posterUrl: String? = null,
-    showPosterInset: Boolean = false,
-    watchNowFocusRequester: FocusRequester? = null,
-) {
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val sideGradientColors = if (isRtl) {
-        listOf(
-            Color.Transparent,
-            CinemaColors.Background.copy(alpha = 0.25f),
-            CinemaColors.Background.copy(alpha = 0.86f),
-        )
-    } else {
-        listOf(
-            CinemaColors.Background.copy(alpha = 0.86f),
-            CinemaColors.Background.copy(alpha = 0.25f),
-            Color.Transparent,
-        )
-    }
-    val resolvedPrimaryActionLabel = primaryActionLabel.ifBlank {
-        stringResource(R.string.btn_watch_now)
-    }
-    val resolvedWatchLaterLabel = watchLaterLabel.ifBlank {
-        stringResource(R.string.btn_watch_later)
-    }
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = CinemaSpacing.HeroMinHeight),
-    ) {
-        CinemaAsyncImage(
-            imageUrl = backdropUrl,
-            contentDescription = title,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
-            fallbackLabel = title,
-        )
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color.Transparent,
-                            CinemaColors.Background.copy(alpha = 0.6f),
-                            CinemaColors.Background,
-                        ),
-                    ),
-                ),
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.horizontalGradient(
-                        sideGradientColors,
-                    ),
-                ),
-        )
-
-        if (showPosterInset && !posterUrl.isNullOrBlank()) {
-            Box(
-                modifier = Modifier
-                    .align(if (isRtl) Alignment.BottomEnd else Alignment.BottomStart)
-                    .padding(
-                        start = if (isRtl) 0.dp else CinemaSpacing.ScreenPadding,
-                        end = if (isRtl) CinemaSpacing.ScreenPadding else 0.dp,
-                        bottom = 20.dp,
-                    )
-                    .width(DetailPosterInsetWidth)
-                    .height(DetailPosterInsetWidth * 1.5f)
-                    .clip(CinemaShapes.Card)
-                    .background(CinemaColors.Surface),
-            ) {
-                CinemaAsyncImage(
-                    imageUrl = posterUrl,
-                    contentDescription = title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    fallbackLabel = title,
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .fillMaxWidth(0.62f)
-                .padding(
-                    start = CinemaSpacing.ScreenPadding +
-                        if (showPosterInset && !posterUrl.isNullOrBlank() && !isRtl) {
-                            DetailPosterInsetWidth + 16.dp
-                        } else {
-                            0.dp
-                        },
-                    end = if (showPosterInset && !posterUrl.isNullOrBlank() && isRtl) {
-                        DetailPosterInsetWidth + 16.dp
-                    } else {
-                        0.dp
-                    },
-                    bottom = if (showScrollHint) 36.dp else 28.dp,
-                ),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = title.isolateDirection(),
-                style = MaterialTheme.typography.displaySmall.copy(
-                    fontWeight = FontWeight.Black,
-                    color = CinemaColors.White,
-                ),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (metadata.isNotEmpty()) {
-                MetadataRow(items = metadata.take(5))
-            }
-            if (synopsis.isNotBlank()) {
-                Text(
-                    text = synopsis.isolateDirection(),
-                    style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextPrimary),
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Row(
-                modifier = Modifier.padding(top = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.ButtonGap),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                CinemaButton(
-                    text = resolvedPrimaryActionLabel,
-                    variant = CinemaButtonVariant.PrimaryAccent,
-                    icon = Icons.Default.PlayArrow,
-                    onClick = onWatchNow,
-                    modifier = watchNowFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
-                )
-                if (onChooseEpisode != null) {
-                    CinemaButton(
-                        text = stringResource(R.string.btn_choose_episode),
-                        variant = CinemaButtonVariant.SecondaryDark,
-                        icon = Icons.Default.ViewAgenda,
-                        onClick = onChooseEpisode,
-                    )
-                }
-                if (onMoreLikeThis != null) {
-                    CinemaButton(
-                        text = stringResource(R.string.btn_more_like_this),
-                        variant = CinemaButtonVariant.SecondaryDark,
-                        icon = Icons.Default.ViewCarousel,
-                        onClick = onMoreLikeThis,
-                    )
-                }
-                if (showTrailer && onTrailer != null) {
-                    CinemaButton(
-                        text = "",
-                        variant = CinemaButtonVariant.Icon,
-                        icon = Icons.Default.Videocam,
-                        onClick = onTrailer,
-                    )
-                }
-                CinemaButton(
-                    text = resolvedWatchLaterLabel,
-                    variant = CinemaButtonVariant.SecondaryDark,
-                    icon = if (isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                    onClick = onFavorite,
-                )
-            }
-        }
-        if (showScrollHint) {
-            androidx.tv.material3.Icon(
-                imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = null,
-                tint = CinemaColors.White,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 10.dp)
-                    .size(28.dp),
-            )
-        }
-    }
-}
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -272,13 +56,15 @@ fun EpisodeLandscapeCard(
     fallbackImageUrl: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    progress: Float? = null,
 ) {
     val episodeLabel = title.ifBlank {
         stringResource(R.string.details_episode_label, episodeNumber)
     }
+    val watchState = EpisodeWatchProgress.visualState(progress)
     Column(
         modifier = modifier.width(EpisodeLandscapeCardWidth),
-        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.CardTitleTopGap),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         FocusableCinemaCard(
             modifier = Modifier
@@ -287,9 +73,8 @@ fun EpisodeLandscapeCard(
             onClick = onClick,
             shape = CinemaShapes.Card,
             defaultBorderWidth = 0.dp,
-            focusScale = 1.02f,
             contentDescription = episodeLabel,
-        ) { focused ->
+        ) { _ ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -303,60 +88,85 @@ fun EpisodeLandscapeCard(
                     contentScale = ContentScale.Crop,
                     fallbackLabel = episodeLabel,
                 )
-                if (focused) {
-                    Box(
+                ArtworkPillLabel(
+                    text = stringResource(R.string.details_episode_number, episodeNumber),
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(7.dp),
+                )
+                if (watchState == EpisodeWatchVisualState.WATCHED) {
+                    WatchedMark(
                         modifier = Modifier
-                            .align(Alignment.Center)
-                            .size(46.dp)
-                            .clip(CircleShape)
-                            .background(CinemaColors.Accent),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        androidx.tv.material3.Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            tint = CinemaColors.White,
-                            modifier = Modifier.size(28.dp),
-                        )
-                    }
+                            .align(Alignment.TopEnd)
+                            .padding(7.dp),
+                    )
                 }
-                if (durationMinutes > 0) {
-                    Text(
-                        text = stringResource(R.string.details_episode_duration_minutes, durationMinutes),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Medium,
-                            color = CinemaColors.White,
-                        ),
+                if (watchState == EpisodeWatchVisualState.PARTIAL && progress != null) {
+                    InsetProgressBar(
+                        fraction = progress,
                         modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(end = 8.dp, bottom = 8.dp)
-                            .clip(CinemaShapes.Card)
-                            .background(CinemaColors.Background.copy(alpha = 0.72f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
                     )
                 }
             }
         }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(CinemaColors.Accent),
-            )
+        Text(
+            text = episodeLabel.isolateDirection(),
+            modifier = Modifier.padding(top = 6.dp),
+            style = MaterialTheme.typography.labelLarge.copy(
+                fontWeight = FontWeight.ExtraBold,
+                color = CinemaColors.White,
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (durationMinutes > 0) {
             Text(
-                text = episodeLabel,
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = FontWeight.Medium,
-                    color = CinemaColors.White,
-                ),
+                text = stringResource(R.string.details_episode_duration_minutes, durationMinutes),
+                style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.TextMuted),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
         }
+    }
+}
+
+/** Small dark pill over artwork, for episode numbers and similar short labels. */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun ArtworkPillLabel(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = text,
+        modifier = modifier
+            .background(CinemaColors.Background.copy(alpha = 0.8f), CinemaShapes.Pill)
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+        style = MaterialTheme.typography.labelSmall.copy(
+            fontWeight = FontWeight.Black,
+            color = CinemaColors.White,
+        ),
+        maxLines = 1,
+    )
+}
+
+/** Check mark in a dark circle, for watched episodes. */
+@Composable
+private fun WatchedMark(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(24.dp)
+            .background(CinemaColors.Background.copy(alpha = 0.8f), CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Default.Check,
+            contentDescription = stringResource(R.string.player_episode_watched),
+            tint = CinemaColors.White,
+            modifier = Modifier.size(16.dp),
+        )
     }
 }
 
@@ -377,8 +187,8 @@ fun ChannelProgramPanel(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = CinemaSpacing.NavRailWidth + 16.dp),
-        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.SectionGap),
+            .padding(start = shellContentStart(), end = CinemaSpacing.ScreenPadding),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         SectionHeader(title = stringResource(R.string.channel_now_playing))
         if (currentProgram != null) {
@@ -429,15 +239,18 @@ fun ProgramLineupCard(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    if (focused) CinemaColors.Surface else CinemaColors.SurfaceSoft,
+                    when {
+                        isNowPlaying -> CinemaColors.SurfaceRaised
+                        focused -> CinemaColors.Surface
+                        else -> CinemaColors.SurfaceSoft
+                    },
                     CinemaShapes.Card,
                 )
-                .padding(12.dp),
+                .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -452,26 +265,18 @@ fun ProgramLineupCard(
                 text = program.title,
                 style = MaterialTheme.typography.labelLarge.copy(
                     color = CinemaColors.White,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.ExtraBold,
                 ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             if (isNowPlaying) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(3.dp)
-                        .clip(CinemaShapes.Card)
-                        .background(CinemaColors.Surface),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(programProgress(program, nowMs).coerceIn(0f, 1f))
-                            .background(CinemaColors.Accent),
-                    )
-                }
+                Spacer(modifier = Modifier.weight(1f))
+                InsetProgressBar(
+                    fraction = programProgress(program, nowMs),
+                    modifier = Modifier.fillMaxWidth(),
+                    trackColor = CinemaColors.Border,
+                )
             }
         }
     }
@@ -488,16 +293,16 @@ private fun ChannelProgramRow(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(CinemaShapes.Card)
-            .background(CinemaColors.SurfaceSoft, CinemaShapes.Card)
-            .padding(14.dp),
+            .clip(CinemaShapes.Row)
+            .background(if (showProgress) CinemaColors.SurfaceRaised else CinemaColors.SurfaceSoft, CinemaShapes.Row)
+            .padding(horizontal = 18.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
             text = program.title,
             style = MaterialTheme.typography.titleMedium.copy(
                 color = CinemaColors.White,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.ExtraBold,
             ),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -524,20 +329,13 @@ private fun ChannelProgramRow(
             )
         }
         if (showProgress) {
-            Box(
+            InsetProgressBar(
+                fraction = programProgress(program, nowMs),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(4.dp)
-                    .clip(CinemaShapes.Card)
-                    .background(CinemaColors.Surface),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(programProgress(program, nowMs).coerceIn(0f, 1f))
-                        .background(CinemaColors.Accent),
-                )
-            }
+                    .padding(top = 2.dp),
+                trackColor = CinemaColors.Border,
+            )
         }
     }
 }
@@ -553,30 +351,34 @@ fun CastCard(
         onClick = {},
         shape = CinemaShapes.Card,
         defaultBorderWidth = 0.dp,
-    ) { _ ->
+        focusedBorderWidth = 0.dp,
+    ) { focused ->
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.padding(6.dp),
         ) {
+            // Round avatar; focus turns it white, like a focused button.
             Box(
                 modifier = Modifier
                     .size(56.dp)
-                    .clip(CinemaShapes.XLarge)
-                    .background(CinemaColors.Surface),
+                    .background(if (focused) CinemaColors.White else CinemaColors.SurfaceRaised, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = member.name.take(1),
                     style = MaterialTheme.typography.titleLarge.copy(
-                        color = CinemaColors.White,
-                        fontWeight = FontWeight.Bold,
+                        color = if (focused) CinemaColors.Background else CinemaColors.TextSecondary,
+                        fontWeight = FontWeight.ExtraBold,
                     ),
                 )
             }
             Text(
                 text = member.name,
-                style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.TextPrimary),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    color = if (focused) CinemaColors.White else CinemaColors.TextSecondary,
+                    fontWeight = if (focused) FontWeight.Bold else FontWeight.Medium,
+                ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -633,34 +435,43 @@ fun EpisodeCard(
     ) { focused ->
         Row(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .background(
-                    if (focused) CinemaColors.Surface else CinemaColors.SurfaceSoft,
+                    when {
+                        focused -> CinemaColors.Surface
+                        isPlaying -> CinemaColors.SurfaceRaised
+                        else -> CinemaColors.SurfaceSoft
+                    },
                     CinemaShapes.Card,
                 )
                 .padding(10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
                     .size(width = 64.dp, height = 64.dp)
-                    .clip(CinemaShapes.Card)
-                    .background(CinemaColors.Background),
+                    .background(CinemaColors.Background, CinemaShapes.Card),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = stringResource(R.string.details_episode_number, episodeNumber),
                     style = MaterialTheme.typography.labelLarge.copy(
-                        color = CinemaColors.White,
-                        fontWeight = FontWeight.Bold,
+                        color = if (isPlaying) CinemaColors.AccentSoft else CinemaColors.White,
+                        fontWeight = FontWeight.Black,
                     ),
                 )
             }
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
                 Text(
                     text = title.isolateDirection(),
-                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.White),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        color = CinemaColors.White,
+                        fontWeight = FontWeight.ExtraBold,
+                    ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -669,20 +480,13 @@ fun EpisodeCard(
                     style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.TextMuted),
                 )
                 if (progress != null && progress > 0f) {
-                    Box(
+                    InsetProgressBar(
+                        fraction = progress,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 4.dp)
-                            .height(3.dp)
-                            .background(CinemaColors.Background),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(progress.coerceIn(0f, 1f))
-                                .height(3.dp)
-                                .background(CinemaColors.Accent),
-                        )
-                    }
+                            .padding(top = 4.dp),
+                        trackColor = CinemaColors.Border,
+                    )
                 }
             }
         }
@@ -703,7 +507,6 @@ fun PlayerEpisodeSidebarRow(
     modifier: Modifier = Modifier,
 ) {
     val watchState = EpisodeWatchProgress.visualState(progress)
-    val watchedDescription = stringResource(R.string.player_episode_watched)
 
     FocusableCinemaCard(
         modifier = modifier
@@ -719,8 +522,8 @@ fun PlayerEpisodeSidebarRow(
                 .background(
                     when {
                         focused -> CinemaColors.Surface
-                        isPlaying -> CinemaColors.SurfaceSoft.copy(alpha = 0.85f)
-                        else -> CinemaColors.Background.copy(alpha = 0.5f)
+                        isPlaying -> CinemaColors.SurfaceRaised
+                        else -> CinemaColors.SurfaceSoft.copy(alpha = 0.7f)
                     },
                     CinemaShapes.Card,
                 )
@@ -732,13 +535,16 @@ fun PlayerEpisodeSidebarRow(
                 Text(
                     text = stringResource(R.string.details_episode_number, episodeNumber),
                     style = MaterialTheme.typography.labelMedium.copy(
-                        color = if (isPlaying) CinemaColors.Accent else CinemaColors.TextSecondary,
+                        color = if (isPlaying) CinemaColors.AccentSoft else CinemaColors.TextSecondary,
                         fontWeight = FontWeight.SemiBold,
                     ),
                 )
                 Text(
                     text = title.isolateDirection(),
-                    style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.White),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        color = CinemaColors.White,
+                        fontWeight = FontWeight.ExtraBold,
+                    ),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -760,37 +566,28 @@ fun PlayerEpisodeSidebarRow(
                     fallbackLabel = episodeNumber.toString(),
                 )
                 if (watchState == EpisodeWatchVisualState.PARTIAL) {
-                    Box(
+                    InsetProgressBar(
+                        fraction = progress ?: 0f,
                         modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .fillMaxWidth(progress?.coerceIn(0f, 1f) ?: 0f)
-                            .height(4.dp)
-                            .background(CinemaColors.Accent),
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(start = 6.dp, end = 6.dp, bottom = 5.dp),
+                        height = 3.dp,
                     )
                 }
                 if (watchState == EpisodeWatchVisualState.WATCHED) {
-                    Box(
+                    WatchedMark(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(6.dp)
-                            .size(26.dp)
-                            .background(CinemaColors.Success, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = watchedDescription,
-                            tint = CinemaColors.White,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
+                            .padding(5.dp),
+                    )
                 }
                 Box(
                     modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(bottom = if (watchState == EpisodeWatchVisualState.PARTIAL) 4.dp else 0.dp)
-                        .background(CinemaColors.Background.copy(alpha = 0.75f), CinemaShapes.Card)
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                        .align(Alignment.TopStart)
+                        .padding(5.dp)
+                        .background(CinemaColors.Background.copy(alpha = 0.8f), CinemaShapes.Pill)
+                        .padding(horizontal = 7.dp, vertical = 1.dp),
                 ) {
                     Text(
                         text = stringResource(R.string.details_episode_duration, durationMinutes),

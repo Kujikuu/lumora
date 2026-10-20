@@ -1,7 +1,7 @@
 package com.iptvcinema.tv.features.mylist
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -16,7 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -31,9 +31,11 @@ import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
 import com.iptvcinema.tv.core.design.components.ContinueWatchingMenuDialog
 import com.iptvcinema.tv.core.design.components.EmptyState
 import com.iptvcinema.tv.core.design.components.ErrorState
+import com.iptvcinema.tv.core.design.components.ScreenEyebrow
 import com.iptvcinema.tv.core.design.components.SkeletonHomeContent
 import com.iptvcinema.tv.core.design.components.shellHeroContentStart
 import com.iptvcinema.tv.core.design.theme.CinemaColors
+import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.navigation.AppRoute
@@ -44,6 +46,7 @@ import com.iptvcinema.tv.core.navigation.navigateMainShellTab
 import com.iptvcinema.tv.core.navigation.openContinueWatchingDetails
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
 import com.iptvcinema.tv.features.browse.ImmersiveBrowse
+import com.iptvcinema.tv.features.browse.OverlayTop
 import com.iptvcinema.tv.features.browse.openBrowseCard
 import com.iptvcinema.tv.features.browse.openBrowseCardDetails
 import com.iptvcinema.tv.features.browse.playBrowseCard
@@ -149,19 +152,24 @@ fun MyListScreen(
                     if (section is HomeSection.ContinueWatching) continueMenuCard = card else menuCard = card
                 },
                 overlay = {
-                    Box(
+                    ScreenEyebrow(
+                        text = stringResource(R.string.mylist_title),
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(start = shellHeroContentStart(), top = CinemaSpacing.ScreenPaddingVertical),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.mylist_title),
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = CinemaColors.TextSecondary,
-                            ),
-                        )
-                    }
+                            .padding(start = shellHeroContentStart(), top = OverlayTop),
+                    )
+                    // The long-press hint from the empty state, kept in view while browsing.
+                    Text(
+                        text = stringResource(R.string.mylist_remove_tip),
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = OverlayTop, end = CinemaSpacing.ScreenPadding)
+                            // Sits over bright artwork, so it gets its own dark pill to stay readable.
+                            .background(CinemaColors.SurfaceGlass, CinemaShapes.Pill)
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.TextSecondary),
+                        maxLines = 1,
+                    )
                 },
             )
         }

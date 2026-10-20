@@ -1,6 +1,10 @@
 package com.iptvcinema.tv.features.search
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,6 +39,7 @@ import com.iptvcinema.tv.core.design.components.SearchKeyboardLayout
 import com.iptvcinema.tv.core.design.components.shellContentStart
 import com.iptvcinema.tv.core.design.components.shellHeroContentStart
 import com.iptvcinema.tv.core.design.theme.CinemaColors
+import com.iptvcinema.tv.core.design.theme.CinemaShapes
 import com.iptvcinema.tv.core.model.home.BrowseCardTypes
 import com.iptvcinema.tv.core.navigation.MainShellBackHandler
 import com.iptvcinema.tv.core.navigation.MainShellScaffold
@@ -146,15 +151,10 @@ fun SearchScreen(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = uiState.query.ifBlank { stringResource(R.string.search_hint) }.isolateDirection(),
+                        SearchQueryField(
+                            query = uiState.query,
+                            hint = stringResource(R.string.search_hint),
                             modifier = Modifier.weight(1f, fill = false),
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = if (uiState.query.isBlank()) CinemaColors.TextMuted else CinemaColors.White,
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
                         )
                         if (uiState.isSearching) CinemaSpinner(size = 24.dp, strokeWidth = 3.dp)
                     }
@@ -200,3 +200,41 @@ fun SearchScreen(
         )
     }
 }
+
+/** The typed query in a rounded field with a static accent caret (no blink, to save redraws). */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun SearchQueryField(
+    query: String,
+    hint: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .widthIn(min = SearchFieldMinWidth)
+            .background(CinemaColors.Surface, CinemaShapes.Pill)
+            .padding(horizontal = 22.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = query.ifBlank { hint }.isolateDirection(),
+            modifier = Modifier.weight(1f, fill = false),
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontWeight = FontWeight.ExtraBold,
+                color = if (query.isBlank()) CinemaColors.TextMuted else CinemaColors.White,
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (query.isNotBlank()) {
+            Box(
+                modifier = Modifier
+                    .size(width = 2.dp, height = 28.dp)
+                    .background(CinemaColors.Accent),
+            )
+        }
+    }
+}
+
+private val SearchFieldMinWidth = 360.dp

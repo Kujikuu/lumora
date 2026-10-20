@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -40,8 +41,8 @@ fun BrowseFooter(
         modifier = modifier
             .fillMaxWidth()
             .height(40.dp)
-            .background(CinemaColors.SurfaceGlass, CinemaShapes.Medium)
-            .padding(horizontal = 16.dp),
+            .background(CinemaColors.SurfaceSoft, CinemaShapes.Row)
+            .padding(horizontal = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -82,29 +83,30 @@ private fun BrowseFooterLink(
     FocusableCinemaCard(
         onClick = onClick,
         shape = CinemaShapes.Pill,
-        focusScale = 1.02f,
+        focusedBorderWidth = 0.dp,
+        focusScale = 1.04f,
     ) { focused ->
         Row(
             modifier = Modifier
                 .background(
-                    if (focused) CinemaColors.Surface else CinemaColors.SurfaceGlass,
+                    if (focused) CinemaColors.White else Color.Transparent,
                     CinemaShapes.Pill,
                 )
-                .padding(horizontal = 10.dp, vertical = 6.dp),
+                .padding(horizontal = 12.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (focused) CinemaColors.Gold else CinemaColors.TextMuted,
+                tint = if (focused) CinemaColors.Background else CinemaColors.TextMuted,
                 modifier = Modifier.size(16.dp),
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium.copy(
-                    fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (focused) CinemaColors.GoldSoft else CinemaColors.TextSecondary,
+                    fontWeight = if (focused) FontWeight.Black else FontWeight.Bold,
+                    color = if (focused) CinemaColors.Background else CinemaColors.TextSecondary,
                 ),
             )
         }

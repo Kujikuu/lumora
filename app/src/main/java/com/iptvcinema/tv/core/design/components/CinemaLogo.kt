@@ -1,11 +1,13 @@
 package com.iptvcinema.tv.core.design.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -13,9 +15,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.iptvcinema.tv.R
@@ -24,6 +27,10 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 
+/**
+ * Brand lockup used at the top of onboarding and state screens: the Lumora mark beside the
+ * app name. [navBar] shows the mark alone; [compact] uses a smaller lockup.
+ */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun CinemaLogo(
@@ -31,28 +38,32 @@ fun CinemaLogo(
     compact: Boolean = false,
     navBar: Boolean = false,
 ) {
-    val width = when {
+    val markSize = when {
         navBar -> 32.dp
-        compact -> 52.dp
-        else -> 105.dp
+        compact -> 28.dp
+        else -> 36.dp
     }
-    val textStyle = when {
-        navBar -> MaterialTheme.typography.labelMedium
-        compact -> MaterialTheme.typography.titleLarge
-        else -> MaterialTheme.typography.displaySmall
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Image(
+            painter = painterResource(R.drawable.nav_sidebar_min),
+            contentDescription = if (navBar) stringResource(R.string.app_name) else null,
+            modifier = Modifier.size(markSize),
+            contentScale = ContentScale.Fit,
+        )
+        if (!navBar) {
+            Text(
+                text = stringResource(R.string.app_name),
+                style = (if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium)
+                    .copy(fontWeight = FontWeight.Black, color = CinemaColors.White),
+                maxLines = 1,
+                softWrap = false,
+            )
+        }
     }
-    Text(
-        text = stringResource(R.string.app_name).uppercase().replace(" ", "\n"),
-        modifier = modifier.width(width),
-        style = textStyle.copy(
-            fontWeight = FontWeight.Black,
-            color = CinemaColors.White,
-            textAlign = TextAlign.Start,
-        ),
-        lineHeight = textStyle.fontSize,
-        maxLines = 2,
-        softWrap = false,
-    )
 }
 
 @Composable
@@ -123,9 +134,9 @@ fun LoadingIndicator(
 ) {
     Box(
         modifier = modifier
-            .clip(com.iptvcinema.tv.core.design.theme.CinemaShapes.Medium)
-            .background(CinemaColors.SurfaceSoft)
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+            .clip(com.iptvcinema.tv.core.design.theme.CinemaShapes.Pill)
+            .background(CinemaColors.Surface)
+            .padding(horizontal = 22.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(

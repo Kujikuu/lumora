@@ -25,17 +25,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.ChildCare
-import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.LiveTv
-import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Nightlight
-import androidx.compose.material.icons.filled.Sports
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.foundation.focusGroup
@@ -55,9 +46,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -91,6 +79,8 @@ import com.iptvcinema.tv.core.design.components.animateToFocusedItem
 import com.iptvcinema.tv.core.design.components.CinemaScreen
 import com.iptvcinema.tv.core.design.components.FocusableCinemaCard
 import com.iptvcinema.tv.core.design.components.KeepScreenOn
+import com.iptvcinema.tv.core.design.components.LivePill
+import com.iptvcinema.tv.core.design.components.roundedProgressTrack
 import com.iptvcinema.tv.core.design.components.PlayerBufferingOverlay
 import com.iptvcinema.tv.core.design.components.PlayerRebufferOverlay
 import com.iptvcinema.tv.core.design.theme.CinemaColors
@@ -486,7 +476,7 @@ private fun LiveChannelStrip(
 ) {
     FocusableCinemaCard(
         modifier = modifier
-            .height(148.dp)
+            .height(160.dp)
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 onInteraction()
@@ -513,16 +503,17 @@ private fun LiveChannelStrip(
         // Channels with an archive open their details page, where past programmes can be replayed.
         onClick = if (channel.hasCatchup) onOpenCatchup else onInteraction,
         onLongClick = onToggleFavorite,
-        shape = CinemaShapes.Card,
+        shape = CinemaShapes.XLarge,
         focusScale = 1.01f,
         contentDescription = channel.name,
     ) { focused ->
+        // Solid panel (no blur or gradient) so it stays cheap over live video.
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    if (focused) CinemaColors.Surface else CinemaColors.SurfaceSoft.copy(alpha = 0.92f),
-                    CinemaShapes.Card,
+                    if (focused) CinemaColors.SurfaceRaised else CinemaColors.Background.copy(alpha = 0.92f),
+                    CinemaShapes.XLarge,
                 ),
         ) {
             if (isFavorite) {
@@ -532,139 +523,144 @@ private fun LiveChannelStrip(
                     tint = CinemaColors.Accent,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(10.dp)
+                        .padding(12.dp)
                         .size(18.dp),
                 )
             }
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 18.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                    .padding(horizontal = 18.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(58.dp)
-                        .clip(CircleShape)
-                        .background(CinemaColors.SurfaceSoft),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CinemaAsyncImage(
-                        imageUrl = channel.logoUrl,
-                        contentDescription = channel.name,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        fallbackLabel = channel.name,
-                    )
-                }
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = channel.name,
-                            style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextSecondary),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                        if (channel.hasCatchup) {
-                            BadgeChip(
-                                text = stringResource(R.string.catchup_badge),
-                                backgroundColor = CinemaColors.Surface,
-                            )
-                        }
-                    }
-                    Text(
-                        text = channel.currentProgram.ifBlank { channel.name },
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            color = CinemaColors.White,
-                            fontWeight = FontWeight.Black,
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Column(
-                    modifier = Modifier.width(190.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    horizontalAlignment = Alignment.End,
-                ) {
-                    Text(
-                        text = stringResource(R.string.livetv_next_at, nextProgramTime),
-                        style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextSecondary),
-                        maxLines = 1,
-                    )
-                    Text(
-                        text = nextProgramTitle ?: channel.programDescription.ifBlank { channel.category },
-                        style = MaterialTheme.typography.titleSmall.copy(color = CinemaColors.White),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(4.dp)
-                        .clip(CinemaShapes.XLarge)
-                        .background(CinemaColors.Background),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(channel.programProgress.coerceIn(0f, 1f))
-                            .background(CinemaColors.TextSecondary),
-                    )
-                }
-                if (minutesLeft != null) {
-                    Text(
-                        text = stringResource(R.string.livetv_minutes_left, minutesLeft),
-                        style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextSecondary),
-                    )
-                }
-            }
+                LiveStripInfoRow(
+                    channel = channel,
+                    nextProgramTitle = nextProgramTitle,
+                    nextProgramTime = nextProgramTime,
+                )
+                LiveStripProgressRow(progress = channel.programProgress, minutesLeft = minutesLeft)
             }
         }
     }
 }
 
-private val LiveCategoryColors = listOf(
-    listOf(Color(0xFFB8FF2C), Color(0xFF00D6FF), Color(0xFFFF7AE8)),
-    listOf(Color(0xFFFF1E64), Color(0xFFFF8A00)),
-    listOf(Color(0xFFFF77B7), Color(0xFFC767E8)),
-    listOf(Color(0xFF13B8E8), Color(0xFF2ED0C3)),
-    listOf(Color(0xFFA72BFF), Color(0xFF7E57FF)),
-    listOf(Color(0xFFFF3E36), Color(0xFFFF7659)),
-    listOf(Color(0xFF18BFAE), Color(0xFF6FDEA6)),
-    listOf(Color(0xFF6B7BFF), Color(0xFF90B2FF)),
-)
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun LiveStripInfoRow(
+    channel: ChannelItem,
+    nextProgramTitle: String?,
+    nextProgramTime: String,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(60.dp)
+                .clip(CinemaShapes.XLarge)
+                .background(CinemaColors.SurfaceRaised),
+            contentAlignment = Alignment.Center,
+        ) {
+            CinemaAsyncImage(
+                imageUrl = channel.logoUrl,
+                contentDescription = channel.name,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(6.dp),
+                contentScale = ContentScale.Fit,
+                fallbackLabel = channel.name,
+            )
+        }
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                LivePill()
+                Text(
+                    text = channel.name,
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        color = CinemaColors.TextSecondary,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (channel.hasCatchup) {
+                    BadgeChip(
+                        text = stringResource(R.string.catchup_badge),
+                        backgroundColor = CinemaColors.OverlayFill,
+                    )
+                }
+            }
+            Text(
+                text = stringResource(R.string.livetv_on_now),
+                style = MaterialTheme.typography.labelMedium.copy(
+                    color = CinemaColors.AccentSoft,
+                    fontWeight = FontWeight.ExtraBold,
+                ),
+                maxLines = 1,
+            )
+            Text(
+                text = channel.currentProgram.ifBlank { channel.name },
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    color = CinemaColors.White,
+                    fontWeight = FontWeight.Black,
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Column(
+            modifier = Modifier.width(190.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalAlignment = Alignment.End,
+        ) {
+            Text(
+                text = stringResource(R.string.livetv_next_at, nextProgramTime),
+                style = MaterialTheme.typography.labelLarge.copy(color = CinemaColors.TextMuted),
+                maxLines = 1,
+            )
+            Text(
+                text = nextProgramTitle ?: channel.programDescription.ifBlank { channel.category },
+                style = MaterialTheme.typography.titleSmall.copy(
+                    color = CinemaColors.TextSecondary,
+                    fontWeight = FontWeight.Bold,
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
 
-private fun liveCategoryIcon(label: String, index: Int): ImageVector = when {
-    index == 0 || label.contains("all", ignoreCase = true) -> Icons.Default.Apps
-    label.contains("entertain", ignoreCase = true) -> Icons.Default.EmojiEmotions
-    label.contains("movie", ignoreCase = true) -> Icons.Default.Movie
-    label.contains("music", ignoreCase = true) -> Icons.Default.MusicNote
-    label.contains("kid", ignoreCase = true) -> Icons.Default.ChildCare
-    label.contains("news", ignoreCase = true) -> Icons.Default.Campaign
-    label.contains("islam", ignoreCase = true) -> Icons.Default.Nightlight
-    label.contains("doc", ignoreCase = true) -> Icons.Default.Lightbulb
-    label.contains("sport", ignoreCase = true) -> Icons.Default.Sports
-    else -> Icons.Default.LiveTv
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun LiveStripProgressRow(progress: Float, minutesLeft: Int?) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(4.dp)
+                .roundedProgressTrack(fraction = progress, trackColor = CinemaColors.Border),
+        )
+        if (minutesLeft != null) {
+            Text(
+                text = stringResource(R.string.livetv_minutes_left, minutesLeft),
+                style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
@@ -705,98 +701,83 @@ private fun LiveCategoryRow(
                     focusedIndex = -1
                 }
             }
-            .clip(CinemaShapes.XLarge)
-            .background(CinemaColors.SurfaceSoft.copy(alpha = 0.86f))
-            .padding(horizontal = 17.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(18.dp),
+            // Room for the focus scale; the pills are solid, so no backing panel over the video.
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(horizontal = 4.dp),
     ) {
         itemsIndexed(items) { index, label ->
             val selected = index == selectedIndex
-            val focused = index == focusedIndex
-            val colors = LiveCategoryColors[index % LiveCategoryColors.size]
             if (selected) {
                 DisposableEffect(Unit) {
                     selectedChipComposed = true
                     onDispose { selectedChipComposed = false }
                 }
             }
-            Column(
-                modifier = Modifier.width(100.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(7.dp),
-            ) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        color = when {
-                            focused -> CinemaColors.Accent
-                            selected -> CinemaColors.White
-                            else -> CinemaColors.TextSecondary
-                        },
-                        fontWeight = if (focused || selected) FontWeight.Bold else FontWeight.Medium,
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                FocusableCinemaCard(
-                    modifier = Modifier
-                        .size(63.dp)
-                        .then(if (selected) Modifier.focusRequester(selectedRequester) else Modifier)
-                        .onFocusChanged { focusState ->
-                            if (focusState.isFocused) {
-                                focusedIndex = index
-                                scope.launch {
-                                    hadFocusInRow = true
-                                    listState.animateToFocusedItem(index)
-                                }
+            FocusableCinemaCard(
+                modifier = Modifier
+                    .height(38.dp)
+                    .widthIn(max = 240.dp)
+                    .then(if (selected) Modifier.focusRequester(selectedRequester) else Modifier)
+                    .onFocusChanged { focusState ->
+                        if (focusState.isFocused) {
+                            focusedIndex = index
+                            scope.launch {
+                                hadFocusInRow = true
+                                listState.animateToFocusedItem(index)
                             }
-                        },
-                    onClick = { onSelected(index) },
-                    shape = CircleShape,
-                    focusedBorderWidth = 3.dp,
-                    focusScale = 1.08f,
-                    contentDescription = label,
-                ) { chipFocused ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.linearGradient(colors),
-                                CircleShape,
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = liveCategoryIcon(label, index),
-                            contentDescription = null,
-                            tint = CinemaColors.White,
-                            modifier = Modifier.size(28.dp),
-                        )
-                        if (selected) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .padding(bottom = 4.dp)
-                                    .width(10.dp)
-                                    .height(4.dp)
-                                    .clip(CinemaShapes.XLarge)
-                                    .background(CinemaColors.White),
-                            )
                         }
-                        if (chipFocused && !selected) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        CinemaColors.Background.copy(alpha = 0.18f),
-                                        CircleShape,
-                                    ),
-                            )
-                        }
-                    }
-                }
+                    },
+                onClick = { onSelected(index) },
+                shape = CinemaShapes.Pill,
+                focusedBorderWidth = 0.dp,
+                focusScale = 1.04f,
+                contentDescription = label,
+            ) { chipFocused ->
+                LiveCategoryPill(label = label, selected = selected, focused = chipFocused)
             }
         }
+    }
+}
+
+/** Category pill: Surface at rest, raised with an accent dot when selected, white when focused. */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun LiveCategoryPill(label: String, selected: Boolean, focused: Boolean) {
+    Row(
+        modifier = Modifier
+            .fillMaxHeight()
+            .background(
+                when {
+                    focused -> CinemaColors.White
+                    selected -> CinemaColors.SurfaceRaised
+                    else -> CinemaColors.Surface
+                },
+                CinemaShapes.Pill,
+            )
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (selected && !focused) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .background(CinemaColors.Accent, CircleShape),
+            )
+        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge.copy(
+                color = when {
+                    focused -> CinemaColors.Background
+                    selected -> CinemaColors.White
+                    else -> CinemaColors.TextSecondary
+                },
+                fontWeight = if (focused || selected) FontWeight.ExtraBold else FontWeight.Bold,
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }

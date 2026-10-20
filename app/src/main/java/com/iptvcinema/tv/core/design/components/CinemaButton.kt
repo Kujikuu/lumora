@@ -40,14 +40,16 @@ fun CinemaButton(
     icon: ImageVector? = null,
     enabled: Boolean = true,
     fullWidth: Boolean = false,
+    /** Spoken label; needed for icon-only buttons, defaults to [text]. */
+    contentDescription: String? = text.ifEmpty { null },
 ) {
-    val (backgroundColor, contentColor) = when (variant) {
+    val (restBackground, restContent) = when (variant) {
         CinemaButtonVariant.PrimaryAccent -> Pair(
             CinemaColors.Accent,
             CinemaColors.White,
         )
         CinemaButtonVariant.SecondaryDark -> Pair(
-            CinemaColors.SurfaceGlass,
+            CinemaColors.OverlayFill,
             CinemaColors.White,
         )
         CinemaButtonVariant.Danger -> Pair(
@@ -59,14 +61,14 @@ fun CinemaButton(
             CinemaColors.White,
         )
         CinemaButtonVariant.Icon -> Pair(
-            CinemaColors.SurfaceGlass,
+            CinemaColors.OverlayFill,
             CinemaColors.White,
         )
     }
 
     val shape = CinemaShapes.Pill
-    val horizontalPadding = if (variant == CinemaButtonVariant.Icon) 0.dp else 20.dp
-    val minSize = 46.dp
+    val horizontalPadding = if (variant == CinemaButtonVariant.Icon) 0.dp else 22.dp
+    val minSize = 44.dp
 
     FocusableCinemaCard(
         modifier = modifier.then(if (fullWidth) Modifier.fillMaxWidth() else Modifier),
@@ -74,8 +76,13 @@ fun CinemaButton(
         enabled = enabled,
         shape = shape,
         defaultBorderWidth = 0.dp,
-        focusScale = 1.02f,
-    ) { _ ->
+        focusScale = 1.04f,
+        contentDescription = contentDescription,
+    ) { focused ->
+        // Every focused button is a white pill with dark content, so focus reads the same
+        // on any screen and over any artwork.
+        val backgroundColor = if (focused) CinemaColors.White else restBackground
+        val contentColor = if (focused) CinemaColors.Background else restContent
         Row(
             modifier = Modifier
                 .then(if (fullWidth) Modifier.fillMaxWidth() else Modifier)
@@ -102,6 +109,9 @@ fun CinemaButton(
             if (variant != CinemaButtonVariant.Icon || text.isNotEmpty()) {
                 Text(
                     text = text,
+                    // A button label never wraps: a wrapped label makes a tall, broken-looking pill.
+                    maxLines = 1,
+                    softWrap = false,
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.Black,
                         color = contentColor,

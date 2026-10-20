@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Forward10
@@ -32,7 +34,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -48,12 +49,12 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -197,32 +198,23 @@ private fun PlayerInfoHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (isLive && !channelLogoUrl.isNullOrBlank()) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CinemaShapes.Medium)
-                    .background(CinemaColors.Surface.copy(alpha = 0.55f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                CinemaAsyncImage(
-                    imageUrl = channelLogoUrl,
-                    contentDescription = title,
-                    modifier = Modifier.size(44.dp),
-                    contentScale = ContentScale.Fit,
-                    fallbackLabel = title,
-                )
-            }
+            ChannelLogoTile(
+                logoUrl = channelLogoUrl,
+                name = title,
+                size = 56.dp,
+                shape = CinemaShapes.XLarge,
+            )
         }
         Column(
             modifier = Modifier.widthIn(max = 720.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (isLive) {
-                    BadgeChip(text = stringResource(R.string.badge_live), backgroundColor = CinemaColors.LiveRed)
+                    LivePill()
                 }
                 qualityLabel?.let { PlayerQualityPill(label = it) }
             }
@@ -230,7 +222,7 @@ private fun PlayerInfoHeader(
                 text = title.isolateDirection(),
                 style = MaterialTheme.typography.headlineSmall.copy(
                     color = CinemaColors.White,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.Black,
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -286,7 +278,7 @@ private fun PlayerScrubber(
     val scrubbing = previewMs != null
     val seekLabel = stringResource(R.string.player_seek_hint)
 
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .onFocusChanged { focused = it.isFocused }
@@ -305,14 +297,20 @@ private fun PlayerScrubber(
             }
             .focusable()
             .semantics { contentDescription = seekLabel },
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        TimeLabel(
+            text = PlayerScrubLogic.format(shownMs),
+            color = if (scrubbing) CinemaColors.AccentSoft else CinemaColors.White,
+            bold = true,
+        )
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(16.dp)
+                .weight(1f)
+                .height(20.dp)
                 .drawBehind {
-                    val trackHeight = if (focused) 8.dp.toPx() else 4.dp.toPx()
+                    val trackHeight = if (focused) 7.dp.toPx() else 5.dp.toPx()
                     val top = (size.height - trackHeight) / 2f
                     val rtl = layoutDirection == LayoutDirection.Rtl
                     val radius = CornerRadius(trackHeight / 2f)
@@ -329,30 +327,20 @@ private fun PlayerScrubber(
                         size = Size(fillWidth, trackHeight),
                         cornerRadius = radius,
                     )
-                    if (focused) {
-                        val thumbX = if (rtl) size.width - fillWidth else fillWidth
-                        drawCircle(
-                            color = CinemaColors.White,
-                            radius = size.height / 2f,
-                            center = Offset(thumbX, size.height / 2f),
-                        )
-                    }
+                    // White knob at the playhead; it grows while the timeline has focus.
+                    val thumbX = if (rtl) size.width - fillWidth else fillWidth
+                    drawCircle(
+                        color = CinemaColors.White,
+                        radius = if (focused) size.height / 2f else 7.5.dp.toPx(),
+                        center = Offset(thumbX, size.height / 2f),
+                    )
                 },
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            TimeLabel(
-                text = PlayerScrubLogic.format(shownMs),
-                color = if (scrubbing) CinemaColors.AccentSoft else CinemaColors.White,
-                bold = scrubbing,
-            )
-            TimeLabel(
-                text = "-" + PlayerScrubLogic.format((durationMs - shownMs).coerceAtLeast(0L)),
-                color = CinemaColors.TextSecondary,
-            )
-        }
+        TimeLabel(
+            text = "-" + PlayerScrubLogic.format((durationMs - shownMs).coerceAtLeast(0L)),
+            color = CinemaColors.TextSecondary,
+            bold = true,
+        )
     }
 }
 
@@ -360,6 +348,8 @@ private fun PlayerScrubber(
  * Times always read left to right ("-1:26:43"), even in Arabic. Without an explicit LTR
  * direction the RTL paragraph moved the minus sign to the end and wrapped the label.
  */
+private val TimeLabelMinWidth = 84.dp
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun TimeLabel(text: String, color: Color, bold: Boolean = false) {
@@ -367,10 +357,13 @@ private fun TimeLabel(text: String, color: Color, bold: Boolean = false) {
         text = text,
         maxLines = 1,
         softWrap = false,
+        // A fixed minimum width keeps the seek bar from resizing as the digits tick.
+        modifier = Modifier.widthIn(min = TimeLabelMinWidth),
         style = MaterialTheme.typography.labelLarge.copy(
             color = color,
             fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium,
             textDirection = TextDirection.Ltr,
+            textAlign = TextAlign.Center,
         ),
     )
 }
@@ -381,45 +374,36 @@ private fun PlayerLiveNowNext(
     current: PlayerLiveProgramDisplay?,
     next: PlayerLiveProgramDisplay?,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.player_on_now),
-                style = MaterialTheme.typography.labelLarge.copy(
-                    color = CinemaColors.AccentSoft,
-                    fontWeight = FontWeight.Bold,
-                ),
-            )
-            Text(
-                text = current?.title?.takeIf { it.isNotBlank() } ?: stringResource(R.string.msg_no_program_info),
-                style = MaterialTheme.typography.titleMedium.copy(
-                    color = CinemaColors.White,
-                    fontWeight = FontWeight.SemiBold,
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+    Column(
+        modifier = Modifier.widthIn(max = 600.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.player_on_now),
+            style = MaterialTheme.typography.labelMedium.copy(
+                color = CinemaColors.AccentSoft,
+                fontWeight = FontWeight.ExtraBold,
+            ),
+            maxLines = 1,
+        )
+        Text(
+            text = current?.title?.takeIf { it.isNotBlank() } ?: stringResource(R.string.msg_no_program_info),
+            style = MaterialTheme.typography.titleLarge.copy(
+                color = CinemaColors.White,
+                fontWeight = FontWeight.Black,
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         current?.progress?.takeIf { it > 0f }?.let { progress ->
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(4.dp)
-                    .drawBehind {
-                        val rtl = layoutDirection == LayoutDirection.Rtl
-                        val radius = CornerRadius(size.height / 2f)
-                        drawRoundRect(CinemaColors.White.copy(alpha = 0.25f), cornerRadius = radius)
-                        val fillWidth = size.width * progress.coerceIn(0f, 1f)
-                        drawRoundRect(
-                            color = CinemaColors.LiveRed,
-                            topLeft = Offset(if (rtl) size.width - fillWidth else 0f, 0f),
-                            size = Size(fillWidth, size.height),
-                            cornerRadius = radius,
-                        )
-                    },
+                    .roundedProgressTrack(
+                        fraction = progress,
+                        trackColor = CinemaColors.White.copy(alpha = 0.25f),
+                    ),
             )
         }
         next?.title?.takeIf { it.isNotBlank() }?.let { nextTitle ->
@@ -450,12 +434,13 @@ private fun PlayerControlRow(
     playPauseFocusRequester: FocusRequester?,
 ) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    // One centred row of equal slots, in the same order as before.
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.Top,
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
             if (!isLive) {
                 ControlButton(
                     icon = Icons.Default.Replay10,
@@ -468,7 +453,6 @@ private fun PlayerControlRow(
                 icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                 label = stringResource(if (isPlaying) R.string.player_btn_pause else R.string.player_btn_play),
                 onClick = onPlayPause,
-                size = 60.dp,
                 focusRequester = playPauseFocusRequester,
             )
             if (!isLive) {
@@ -480,7 +464,7 @@ private fun PlayerControlRow(
                 )
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
             if (showNextEpisode) {
                 ControlButton(
                     icon = Icons.Default.SkipNext,
@@ -517,7 +501,8 @@ private const val SeekStepMs = 10_000L
 
 /**
  * Round control. Focused it turns white with a dark icon and shows its label underneath.
- * The label slot is always reserved and only faded, so focus moves never shift the row.
+ * Every control sits in the same fixed-width slot; the label may overflow the slot, and
+ * it is always laid out and only faded, so focus moves never shift the row.
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -525,14 +510,15 @@ private fun ControlButton(
     icon: ImageVector,
     label: String,
     onClick: () -> Unit,
-    size: Dp = 52.dp,
+    size: Dp = 48.dp,
     mirrorIcon: Boolean = false,
     focusRequester: FocusRequester? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
     Column(
+        modifier = Modifier.width(ControlSlotWidth),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         FocusableCinemaCard(
             modifier = Modifier
@@ -542,14 +528,14 @@ private fun ControlButton(
             onClick = onClick,
             shape = CircleShape,
             focusedBorderWidth = 0.dp,
-            focusScale = 1.08f,
+            focusScale = 1.1f,
             contentDescription = label,
         ) { isFocused ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
-                        if (isFocused) CinemaColors.White else CinemaColors.White.copy(alpha = 0.14f),
+                        if (isFocused) CinemaColors.White else CinemaColors.OverlayFill,
                         CircleShape,
                     ),
                 contentAlignment = Alignment.Center,
@@ -559,16 +545,24 @@ private fun ControlButton(
                     contentDescription = null,
                     tint = if (isFocused) CinemaColors.Background else CinemaColors.White,
                     modifier = Modifier
-                        .size(size * 0.5f)
+                        .size(size * 0.46f)
                         .graphicsLayer { scaleX = if (mirrorIcon) -1f else 1f },
                 )
             }
         }
         Text(
             text = label,
-            modifier = Modifier.graphicsLayer { alpha = if (focused) 1f else 0f },
-            style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.White),
+            modifier = Modifier
+                .wrapContentWidth(unbounded = true)
+                .graphicsLayer { alpha = if (focused) 1f else 0f },
+            style = MaterialTheme.typography.labelMedium.copy(
+                color = CinemaColors.White,
+                fontWeight = FontWeight.ExtraBold,
+            ),
             maxLines = 1,
+            softWrap = false,
         )
     }
 }
+
+private val ControlSlotWidth = 64.dp

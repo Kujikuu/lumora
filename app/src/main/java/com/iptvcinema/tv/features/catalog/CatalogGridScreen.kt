@@ -1,6 +1,8 @@
 package com.iptvcinema.tv.features.catalog
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,25 +15,30 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
+import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.design.theme.CinemaColors
 import androidx.navigation.NavController
 import com.iptvcinema.tv.core.data.repository.CatalogLoadState
+import com.iptvcinema.tv.core.design.components.BackPill
 import com.iptvcinema.tv.core.design.components.CatalogRefreshBanner
 import com.iptvcinema.tv.core.design.components.CatalogSkeletonStyle
 import com.iptvcinema.tv.core.design.components.CatalogStateContent
-import com.iptvcinema.tv.core.design.components.CinemaSerifTitle
-import com.iptvcinema.tv.core.design.components.catalogContentStart
-import com.iptvcinema.tv.core.navigation.MainShellScaffold
 import com.iptvcinema.tv.core.navigation.NavItem
 import com.iptvcinema.tv.core.navigation.PopBackHandler
 import com.iptvcinema.tv.core.navigation.rememberCatalogStateCallbacks
 import com.iptvcinema.tv.core.navigation.rememberScreenFocusState
-import kotlinx.coroutines.launch
 
 /**
  * The full catalog grid behind a browse tab's category tiles: category chips, sort, and every
@@ -57,10 +64,12 @@ fun CatalogGridScreen(
     val unusedWatchNowFocus = remember { FocusRequester() }
     val focusState = rememberScreenFocusState(focusKey)
     val categories = uiState.categories
+    // Opened from a category tile: the page is that one category, with no chip row to wander
+    // into. Opened without one, the viewer picks a category from the chips.
+    val singleCategory = initialCategory.isNotBlank()
     val sortOptions = rememberCatalogSortOptions()
-    val scope = rememberCoroutineScope()
     var restoreCatalogScroll by remember { mutableStateOf<suspend () -> Unit>({}) }
-    val contentStart = catalogContentStart()
+    val contentStart = 40.dp
 
     PopBackHandler(onBack = { navController.popBackStack() })
 
@@ -76,10 +85,11 @@ fun CatalogGridScreen(
         )
     }
 
-    LaunchedEffect(categories.getOrNull(selectedFilter)) {
-        // Before the chips load, ask for the requested category directly so the grid does not
-        // flash the provider's first category.
-        viewModel.selectCategory(categories.getOrNull(selectedFilter) ?: initialCategory.takeIf { it.isNotBlank() })
+    // A single-category page always shows the tile's category, by name, so it can never fall
+    // back to the provider's first category when the names differ in case or spacing.
+    val requestedCategory = if (singleCategory) initialCategory else categories.getOrNull(selectedFilter)
+    LaunchedEffect(requestedCategory) {
+        viewModel.selectCategory(requestedCategory)
     }
 
     // Per visit, not saved: coming back from details must place focus again (on the poster
@@ -91,7 +101,7 @@ fun CatalogGridScreen(
         focusPlaced = true
         val target = when {
             focusState.sectionId == CatalogBrowseSections.GRID && focusState.focusedContentId.isNotBlank() -> gridFocus
-            categories.isNotEmpty() -> categoryFocus
+            !singleCategory && categories.isNotEmpty() -> categoryFocus
             else -> gridFocus
         }
         if (focusState.hasSavedFocus) {
@@ -108,25 +118,31 @@ fun CatalogGridScreen(
         onRetry = viewModel::refreshCurrentSource,
     )
 
-    MainShellScaffold(
-        navController = navController,
-        selectedNavItem = navItem,
-        onRailExitRight = {
-            scope.launch { runCatching { (if (categories.isNotEmpty()) categoryFocus else gridFocus).requestFocus() } }
-        },
+    // A focused, full-width page like the details screens: no side rail, so Left from the first
+    // column cannot fall into the menu, and Back returns to the tab's landing.
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CinemaColors.Background),
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = contentStart, end = 24.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                    .padding(start = contentStart, end = CatalogEndPadding, top = 22.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CinemaSerifTitle(text = title)
+                BackPill(text = stringResource(navItem.labelRes))
+                CatalogGridHeader(
+                    // The category being browsed names the page; the tab name sits in the Back pill.
+                    title = if (singleCategory) initialCategory else categories.getOrNull(selectedFilter) ?: title,
+                    count = uiState.posters.size.takeIf { uiState.loadState == CatalogLoadState.Ready && it > 0 },
+                    modifier = Modifier.weight(1f),
+                )
                 CatalogRefreshBanner(
                     syncBannerText = uiState.syncBannerText,
                     refreshState = uiState.refreshState,
@@ -152,7 +168,7 @@ fun CatalogGridScreen(
                     focusState = focusState,
                     hasFeatured = false,
                     continueWatchingItems = emptyList(),
-                    categories = categories,
+                    categories = if (singleCategory) emptyList() else categories,
                     selectedFilter = selectedFilter,
                     onCategorySelected = {
                         selectedFilter = it
@@ -173,8 +189,47 @@ fun CatalogGridScreen(
                     categoryFocus = categoryFocus,
                     gridFocus = gridFocus,
                     onRestoreScrollReady = { restoreCatalogScroll = it },
+                    contentStart = contentStart,
+                    columns = CatalogGridColumns,
                 )
             }
+        }
+    }
+}
+
+/** Without the rail the grid uses the full width, so it fits more, smaller posters per row. */
+private const val CatalogGridColumns = 7
+private val CatalogEndPadding = 40.dp
+
+/** Screen title with the number of titles beside it, both on one baseline. */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun CatalogGridHeader(
+    title: String,
+    count: Int?,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Text(
+            text = title,
+            modifier = Modifier.alignByBaseline(),
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontWeight = FontWeight.Black,
+                color = CinemaColors.White,
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (count != null) {
+            Text(
+                text = pluralStringResource(R.plurals.browse_title_count, count, count),
+                modifier = Modifier.alignByBaseline(),
+                style = MaterialTheme.typography.labelMedium.copy(color = CinemaColors.TextMuted),
+                maxLines = 1,
+            )
         }
     }
 }

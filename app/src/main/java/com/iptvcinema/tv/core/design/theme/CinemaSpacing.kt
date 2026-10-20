@@ -20,21 +20,22 @@ object CinemaSpacing {
     val HeroFeaturedMinHeight = 300.dp
     val HeroMaxHeight = 440.dp
 
-    val NavRailWidth = 92.dp
-    val NavRailExpandedWidth = 250.dp
+    /** Slim icon rail; it expands over the content, so content never moves. */
+    val NavRailWidth = 64.dp
+    val NavRailExpandedWidth = 220.dp
     /** Icon column width inside the rail (rail width minus horizontal padding). */
-    val NavRailIconSlotWidth = 80.dp
-    /** Nav icons at ~70% of the previous 28dp size; same in collapsed and expanded. */
+    val NavRailIconSlotWidth = 48.dp
     val NavRailIconSize = 20.dp
-    val NavRailActiveIndicatorWidth = 24.dp
-    val NavRailProfileAvatarSize = 24.dp
-    val NavRailItemMinHeight = 48.dp
+    /** Accent bar on the start edge of the current tab. */
+    val NavRailActiveIndicatorHeight = 16.dp
+    val NavRailProfileAvatarSize = 28.dp
+    val NavRailItemMinHeight = 44.dp
 
     /** Standard portrait poster width in horizontal rails (2:3 aspect). */
     val PosterCardWidth = 90.dp
 
     /** Left padding for non-hero content that must clear the nav rail. */
-    val ContentStart = NavRailWidth + 8.dp
+    val ContentStart = NavRailWidth + 24.dp
 
     val ExpandedPosterCardWidth = 260.dp
     val ExpandedPosterCardHeight = 186.dp

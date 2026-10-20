@@ -5,12 +5,32 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.PlaylistRemove
+import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
+import com.iptvcinema.tv.core.design.theme.CinemaColors
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.iptvcinema.tv.R
@@ -197,14 +217,15 @@ fun ExpiredAccountState(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        EmptyState(
+        StatusMessage(
+            icon = Icons.Outlined.Timer,
+            tone = CinemaColors.Warning,
             title = stringResource(R.string.error_subscription_expired),
             description = stringResource(R.string.error_subscription_expired_desc),
             primaryAction = stringResource(R.string.btn_reconnect),
-            secondaryAction = stringResource(R.string.btn_manage_sources),
             onPrimary = onReconnect,
+            secondaryAction = stringResource(R.string.btn_manage_sources),
             onSecondary = onManageSources,
-            footerNote = null,
         )
     }
 }
@@ -219,14 +240,15 @@ fun InvalidPlaylistState(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        EmptyState(
+        StatusMessage(
+            icon = Icons.Outlined.PlaylistRemove,
+            tone = StatusDangerTone,
             title = stringResource(R.string.error_invalid_playlist),
             description = stringResource(R.string.error_invalid_playlist_desc),
             primaryAction = stringResource(R.string.btn_edit_playlist),
-            secondaryAction = stringResource(R.string.btn_manage_sources),
             onPrimary = onEditSource,
+            secondaryAction = stringResource(R.string.btn_manage_sources),
             onSecondary = onManageSources,
-            footerNote = null,
         )
     }
 }
@@ -247,4 +269,72 @@ private fun CatalogErrorState(
         onBack = onManageSources,
         modifier = modifier,
     )
+}
+
+/** Lighter red used for icons and text on dark tinted fills. */
+val StatusDangerTone = Color(0xFFFF6B6B)
+private val StatusIconCircleSize = 72.dp
+private val StatusIconSize = 32.dp
+private val StatusMessageWidth = 520.dp
+private const val STATUS_TINT_ALPHA = 0.16f
+
+/**
+ * Centered full-screen message: a tinted icon circle, a title, one line of explanation and
+ * up to two actions. Used for expired accounts, invalid playlists and server errors.
+ */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun StatusMessage(
+    icon: ImageVector,
+    tone: Color,
+    title: String,
+    description: String,
+    primaryAction: String,
+    onPrimary: () -> Unit,
+    modifier: Modifier = Modifier,
+    secondaryAction: String? = null,
+    onSecondary: (() -> Unit)? = null,
+) {
+    Column(
+        modifier = modifier.widthIn(max = StatusMessageWidth),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(bottom = 6.dp)
+                .size(StatusIconCircleSize)
+                .background(tone.copy(alpha = STATUS_TINT_ALPHA), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tone,
+                modifier = Modifier.size(StatusIconSize),
+            )
+        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontWeight = FontWeight.Black,
+                color = CinemaColors.White,
+            ),
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
+            textAlign = TextAlign.Center,
+        )
+        Row(
+            modifier = Modifier.padding(top = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            CinemaButton(text = primaryAction, variant = CinemaButtonVariant.PrimaryAccent, onClick = onPrimary)
+            if (secondaryAction != null && onSecondary != null) {
+                CinemaButton(text = secondaryAction, variant = CinemaButtonVariant.SecondaryDark, onClick = onSecondary)
+            }
+        }
+    }
 }

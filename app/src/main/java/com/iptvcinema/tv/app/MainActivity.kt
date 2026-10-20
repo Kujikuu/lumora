@@ -1,16 +1,20 @@
 package com.iptvcinema.tv.app
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
+import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.iptvcinema.tv.core.design.theme.CinemaTheme
 import com.iptvcinema.tv.core.navigation.AppNavGraph
 import com.iptvcinema.tv.core.platform.AppLocaleHelper
+import com.iptvcinema.tv.core.player.PlayerCommand
 import com.iptvcinema.tv.core.player.PlayerManager
 import com.iptvcinema.tv.core.tvhome.PendingDeepLinkStore
 import dagger.hilt.android.AndroidEntryPoint
@@ -23,6 +27,14 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var pendingDeepLinkStore: PendingDeepLinkStore
+
+    // Many TVs (the Haier test set among them) go to standby without stopping the activity, so
+    // the screen-off broadcast is the only signal that nobody is watching any more.
+    private val screenOffReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == Intent.ACTION_SCREEN_OFF) pausePlayback()
+        }
+    }
 
     // Applies the language chosen in Settings; the system per-app language service is
     // missing on many TVs, so it cannot be relied on.
@@ -39,6 +51,23 @@ class MainActivity : ComponentActivity() {
         setContent {
             IptvCinemaAppContent()
         }
+        ContextCompat.registerReceiver(
+            this,
+            screenOffReceiver,
+            IntentFilter(Intent.ACTION_SCREEN_OFF),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+    }
+
+    override fun onStop() {
+        // Home button, another app, or standby on TVs that do stop the activity.
+        pausePlayback()
+        super.onStop()
+    }
+
+    /** Pauses rather than stops, so the viewer can resume where they were when they come back. */
+    private fun pausePlayback() {
+        playerManager.handleCommand(PlayerCommand.Pause)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -48,6 +77,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        unregisterReceiver(screenOffReceiver)
         // Screens only stop the shared player; decoders are freed once the UI is gone.
         playerManager.release()
         super.onDestroy()

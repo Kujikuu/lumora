@@ -38,7 +38,8 @@ import androidx.compose.ui.zIndex
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 
-private const val FOCUSED_SCALE = 1.04f
+// Fits inside the rails' focus overflow padding, so a focused card never clips.
+private const val FOCUSED_SCALE = 1.06f
 private const val PRESSED_SCALE = 0.97f
 private const val DISABLED_ALPHA = 0.4f
 
