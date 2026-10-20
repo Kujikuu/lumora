@@ -1,9 +1,9 @@
 package com.iptvcinema.tv.core.design.components
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -12,19 +12,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
-import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
+import com.iptvcinema.tv.core.util.isolateDirection
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+/**
+ * Static loading fill drawn by Coil itself while the image loads. A painter instead of a
+ * modifier toggled from load callbacks, so a finished load never recomposes the card.
+ */
+private val LoadingPlaceholder = ColorPainter(SkeletonFill)
+
 @Composable
 fun CinemaAsyncImage(
     imageUrl: String?,
@@ -46,7 +53,6 @@ fun CinemaAsyncImage(
     }
 
     var loadFailed by remember(imageUrl) { mutableStateOf(false) }
-    var isLoading by remember(imageUrl) { mutableStateOf(showLoadingSkeleton) }
     if (loadFailed) {
         ImageFallback(
             label = fallbackLabel,
@@ -56,36 +62,49 @@ fun CinemaAsyncImage(
         return
     }
 
-    // Shimmer sits behind the image and the image crossfades in over it.
-    Box(modifier = modifier.then(if (isLoading) Modifier.shimmer(RectangleShape) else Modifier)) {
-        AsyncImage(
-            model = imageUrl,
-            contentDescription = contentDescription,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = contentScale,
-            alignment = alignment,
-            onError = {
-                loadFailed = true
-                isLoading = false
-            },
-            onSuccess = { isLoading = false },
-            onLoading = { isLoading = showLoadingSkeleton },
-        )
-    }
+    // The composable is sized by its caller, so Coil decodes at the card's size, not the source's.
+    AsyncImage(
+        model = imageUrl,
+        contentDescription = contentDescription,
+        modifier = modifier.fillMaxSize(),
+        placeholder = if (showLoadingSkeleton) LoadingPlaceholder else null,
+        contentScale = contentScale,
+        alignment = alignment,
+        onError = { loadFailed = true },
+    )
 }
 
+/**
+ * Shown for a missing or dead image: a surface tile with the title. Dead links are common in
+ * IPTV, so this must stay cheap; it allocates no bitmap, unlike the full-size banner it replaces.
+ * [contentScale] is kept so callers stay unchanged; a text tile has nothing to scale.
+ */
+@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ImageFallback(
     label: String,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
 ) {
-    Image(
-        painter = painterResource(R.drawable.tv_banner_src),
-        contentDescription = label.takeIf { it.isNotBlank() },
-        modifier = modifier.fillMaxSize(),
-        contentScale = contentScale,
-    )
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(CinemaColors.Surface),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (label.isNotBlank()) {
+            Text(
+                text = label.isolateDirection(),
+                modifier = Modifier.padding(horizontal = 10.dp),
+                style = MaterialTheme.typography.labelMedium.copy(
+                    color = CinemaColors.TextSecondary,
+                    textAlign = TextAlign.Center,
+                ),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -97,12 +116,7 @@ fun ChannelImageFallback(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(CinemaColors.GoldDeep.copy(alpha = 0.22f), CinemaColors.SurfaceSoft),
-                ),
-                CinemaShapes.Medium,
-            ),
+            .background(ChannelFallbackBrush, CinemaShapes.Medium),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -114,3 +128,8 @@ fun ChannelImageFallback(
         )
     }
 }
+
+/** Shared so each channel tile does not build its own gradient on every composition. */
+private val ChannelFallbackBrush = Brush.verticalGradient(
+    listOf(CinemaColors.GoldDeep.copy(alpha = 0.22f), CinemaColors.SurfaceSoft),
+)

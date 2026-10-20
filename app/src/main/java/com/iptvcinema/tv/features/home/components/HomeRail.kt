@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -63,8 +64,10 @@ fun HomeRail(
 ) {
     val style = section.cardStyle()
     val lastIndex = (section.items.size - 1).coerceAtLeast(0)
-    var entryIndex by remember(section.id) { mutableIntStateOf(initialFocusIndex.coerceIn(0, lastIndex)) }
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = entryIndex)
+    val initialIndex = initialFocusIndex.coerceIn(0, lastIndex)
+    var entryIndex by remember(section.id) { mutableIntStateOf(initialIndex) }
+    // Not read from entryIndex: reading it here would recompose the whole rail on every move.
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex)
     val scope = rememberCoroutineScope()
     val contentStart = shellContentStart()
 
@@ -96,6 +99,11 @@ fun HomeRail(
             horizontalArrangement = Arrangement.spacedBy(HomeDimens.CardGap),
         ) {
             itemsIndexed(section.items, key = { _, card -> "${card.contentType}:${card.contentId}" }) { index, card ->
+                // Each card reads only whether it is the entry card, so a focus move recomposes
+                // the two cards whose answer changed, not every composed card in the rail.
+                val isEntry by remember(index, lastIndex) {
+                    derivedStateOf { isRailEntry(index, entryIndex, lastIndex) }
+                }
                 HomeCard(
                     card = card,
                     style = style,
@@ -103,7 +111,7 @@ fun HomeRail(
                     onLongClick = onCardLongClick?.let { callback -> { callback(card) } },
                     modifier = Modifier
                         .then(
-                            if (index == entryIndex.coerceAtMost(lastIndex)) {
+                            if (isEntry) {
                                 Modifier.focusRequester(entryRequester)
                             } else {
                                 Modifier
@@ -121,6 +129,10 @@ fun HomeRail(
         }
     }
 }
+
+/** Whether the card at [index] holds the rail's entry requester; out of range falls back to the last card. */
+internal fun isRailEntry(index: Int, entryIndex: Int, lastIndex: Int): Boolean =
+    index == entryIndex.coerceAtMost(lastIndex)
 
 @Composable
 private fun HomeRailTitle.resolve(): String =
