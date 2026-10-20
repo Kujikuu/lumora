@@ -166,14 +166,14 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE sourceId = :sourceId ORDER BY sortOrder LIMIT :limit")
     fun observeFeatured(sourceId: String, limit: Int): Flow<List<LocalMovieEntity>>
 
+    // "Newest" order: dated movies first, newest first, then undated ones. SQLite sorts NULL last
+    // under DESC, so plain "addedAt DESC" gives that order and idx_movies_added serves it with no
+    // sort (the old CASE expression forced a full scan). Same for the other newest queries below.
     @Query(
         """
         SELECT * FROM movies
         WHERE sourceId = :sourceId
-        ORDER BY
-            CASE WHEN addedAt IS NULL THEN 0 ELSE 1 END DESC,
-            addedAt DESC,
-            sortOrder DESC
+        ORDER BY addedAt DESC, sortOrder DESC
         LIMIT :limit
         """,
     )
@@ -222,10 +222,7 @@ interface MovieDao {
         """
         SELECT * FROM movies
         WHERE sourceId = :sourceId
-        ORDER BY
-            CASE WHEN addedAt IS NULL THEN 0 ELSE 1 END DESC,
-            addedAt DESC,
-            sortOrder DESC
+        ORDER BY addedAt DESC, sortOrder DESC
         LIMIT :limit
         """,
     )
@@ -238,23 +235,19 @@ interface MovieDao {
         WHERE sourceId = :sourceId
             AND backdropUrl IS NOT NULL AND TRIM(backdropUrl) != ''
             AND plot IS NOT NULL AND TRIM(plot) != ''
-        ORDER BY
-            CASE WHEN addedAt IS NULL THEN 0 ELSE 1 END DESC,
-            addedAt DESC,
-            sortOrder DESC
+        ORDER BY addedAt DESC, sortOrder DESC
         LIMIT :limit
         """,
     )
     suspend fun getNewestWithArtwork(sourceId: String, limit: Int): List<LocalMovieEntity>
 
-    // CAST reads the leading number, so "7.5" and "7.5/10" both rank as 7.5.
+    // ratingValue is CAST(rating AS REAL) stored up front (so "7.5/10" ranks as 7.5) and is NULL
+    // only when rating is, so the >= filter still drops unrated rows. idx_movies_rating serves it.
     @Query(
         """
         SELECT * FROM movies
-        WHERE sourceId = :sourceId
-            AND rating IS NOT NULL
-            AND CAST(rating AS REAL) >= :minRating
-        ORDER BY CAST(rating AS REAL) DESC, year DESC
+        WHERE sourceId = :sourceId AND ratingValue >= :minRating
+        ORDER BY ratingValue DESC, year DESC
         LIMIT :limit
         """,
     )
@@ -264,10 +257,7 @@ interface MovieDao {
         """
         SELECT * FROM movies
         WHERE sourceId = :sourceId AND categoryName = :categoryName
-        ORDER BY
-            CASE WHEN addedAt IS NULL THEN 0 ELSE 1 END DESC,
-            addedAt DESC,
-            sortOrder DESC
+        ORDER BY addedAt DESC, sortOrder DESC
         LIMIT :limit
         """,
     )
@@ -402,27 +392,25 @@ interface SeriesDao {
     @Query("SELECT * FROM series WHERE sourceId = :sourceId AND id IN (:ids)")
     suspend fun getByIds(sourceId: String, ids: List<String>): List<LocalSeriesEntity>
 
+    // Same as MovieDao.getTopRated; idx_series_rating serves it.
     @Query(
         """
         SELECT * FROM series
-        WHERE sourceId = :sourceId
-            AND rating IS NOT NULL
-            AND CAST(rating AS REAL) >= :minRating
-        ORDER BY CAST(rating AS REAL) DESC, year DESC
+        WHERE sourceId = :sourceId AND ratingValue >= :minRating
+        ORDER BY ratingValue DESC, year DESC
         LIMIT :limit
         """,
     )
     suspend fun getTopRated(sourceId: String, minRating: Double, limit: Int): List<LocalSeriesEntity>
 
     // Series have no "added" date; the release year, then the provider's order, stands in for it.
+    // DESC already puts NULL years last and 0/negative years after real ones, so this matches the
+    // old CASE-based order while letting idx_series_year serve it without a sort.
     @Query(
         """
         SELECT * FROM series
         WHERE sourceId = :sourceId
-        ORDER BY
-            CASE WHEN year IS NULL OR year <= 0 THEN 0 ELSE 1 END DESC,
-            year DESC,
-            sortOrder DESC
+        ORDER BY year DESC, sortOrder DESC
         LIMIT :limit
         """,
     )
@@ -432,10 +420,7 @@ interface SeriesDao {
         """
         SELECT * FROM series
         WHERE sourceId = :sourceId AND categoryName = :categoryName
-        ORDER BY
-            CASE WHEN year IS NULL OR year <= 0 THEN 0 ELSE 1 END DESC,
-            year DESC,
-            sortOrder DESC
+        ORDER BY year DESC, sortOrder DESC
         LIMIT :limit
         """,
     )
