@@ -22,7 +22,6 @@ import com.iptvcinema.tv.core.model.ParentalControls
 import com.iptvcinema.tv.core.model.SourceStatus
 import com.iptvcinema.tv.core.model.SourceType
 import com.iptvcinema.tv.core.model.WatchHistoryItem
-import com.iptvcinema.tv.core.model.catalog.FeaturedCatalogContent
 import com.iptvcinema.tv.core.model.home.HomeCatalogSnapshot
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.model.home.HomePersonalSnapshot
@@ -36,6 +35,7 @@ import com.iptvcinema.tv.core.util.safeSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onStart
@@ -92,6 +93,8 @@ class HomeViewModel @Inject constructor(
         }
         viewModelScope.launch {
             combine(observeHome(), hiddenContinueKeys) { state, hidden -> state.withoutContinueWatching(hidden) }
+                // Mapping rows and building sections is real work on a weak TV; keep it off Main.
+                .flowOn(Dispatchers.Default)
                 .collect { next ->
                 val current = _uiState.value
                 _uiState.value = next.copy(
@@ -128,9 +131,10 @@ class HomeViewModel @Inject constructor(
                 flowOf(emptyList())
             }
             val favoritesFlow = profileId?.let { favoritesRepository.observeFavorites(it) } ?: flowOf(emptyList())
-            // A sync writes in batches and the gate re-emits on each; let those settle so the
-            // catalog queries run once per burst instead of being cancelled over and over.
-            val catalogFlow = catalogRepository.observeHomeContent()
+            // The gate is a cheap "is there anything" check; the rails load once, here. A sync
+            // writes in batches and the gate re-emits on each; let those settle so the catalog
+            // queries run once per burst instead of being cancelled over and over.
+            val catalogFlow = catalogRepository.observeHomeAvailability()
                 .withIndex()
                 .debounce { if (it.index == 0) 0L else CATALOG_SETTLE_MS }
                 .map { it.value }
@@ -142,6 +146,8 @@ class HomeViewModel @Inject constructor(
                     }
                     gate to snapshot
                 }
+                // A write that did not change what Home shows must not rebuild the rails.
+                .distinctUntilChanged()
             val personalFlow = combine(historyFlow, controlsFlow) { history, controls -> history to controls }
                 .mapLatest { (history, controls) ->
                     homeContentRepository.loadPersonal(
@@ -286,7 +292,7 @@ class HomeViewModel @Inject constructor(
         any { it.contentId == contentId && it.contentType == contentType }
 
     private data class HomeInputs(
-        val gate: CatalogBrowseState<FeaturedCatalogContent>,
+        val gate: CatalogBrowseState<Unit>,
         val session: HomeSessionKey,
         val catalog: HomeCatalogSnapshot,
         val personal: HomePersonalSnapshot,

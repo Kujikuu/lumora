@@ -1,6 +1,7 @@
 package com.iptvcinema.tv.core.data.repository
 
 import com.iptvcinema.tv.core.data.fake.FakeDataProvider
+import com.iptvcinema.tv.core.data.local.CloudUserDataCache
 import com.iptvcinema.tv.core.data.mapper.CatalogEntityMapper.toDomain
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper
 import com.iptvcinema.tv.core.data.mapper.CatalogUiMapper.toEpgPrograms
@@ -11,6 +12,7 @@ import com.iptvcinema.tv.core.model.ChannelItem
 import com.iptvcinema.tv.core.model.EpgProgram
 import com.iptvcinema.tv.core.model.MovieItem
 import com.iptvcinema.tv.core.model.SeriesItem
+import com.iptvcinema.tv.core.model.PlaylistSourceRecord
 import com.iptvcinema.tv.core.model.SourceStatus
 import com.iptvcinema.tv.core.model.SourceType
 import com.iptvcinema.tv.core.model.WatchHistoryContentType
@@ -24,16 +26,17 @@ import com.iptvcinema.tv.core.model.catalog.CatalogEpisode
 import com.iptvcinema.tv.core.model.catalog.CatalogMovie
 import com.iptvcinema.tv.core.model.catalog.CatalogSeries
 import com.iptvcinema.tv.core.model.catalog.CatalogSyncState
-import com.iptvcinema.tv.core.model.catalog.FeaturedCatalogContent
 import com.iptvcinema.tv.core.player.ChannelDirection
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.util.AppStrings
 import javax.inject.Inject
 import javax.inject.Provider
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -84,6 +87,8 @@ class CatalogRepository @Inject constructor(
     private val appStrings: AppStrings,
     private val epgSyncRepository: EpgSyncRepository,
     private val catalogSyncCoordinator: Provider<CatalogSyncCoordinator>,
+    private val authRepository: AuthRepository,
+    private val cloudUserDataCache: CloudUserDataCache,
 ) {
     fun observeSyncState(): Flow<CatalogSyncState?> =
         appSessionRepository.sessionState.flatMapLatest { session ->
@@ -105,73 +110,63 @@ class CatalogRepository @Inject constructor(
         catalogDaoFacade.series.getTopIds(sourceId, limit)
 
     fun observeSourceMeta(): Flow<Pair<SourceStatus?, SourceType?>> =
-        appSessionRepository.sessionState.flatMapLatest { session ->
-            flow {
+        appSessionRepository.sessionState
+            // A profile switch does not change the source; only refetch when the source or
+            // the account does.
+            .distinctUntilChangedBy { listOf(it.isDemoMode, it.currentSourceId, it.userId, it.isAuthenticated) }
+            .flatMapLatest { session ->
+                val sourceId = session.currentSourceId
                 when {
-                    session.isDemoMode -> emit(null to SourceType.DEMO)
-                    session.currentSourceId == null -> emit(null to null)
-                    else -> {
-                        // Network call: must not crash the UI flow if auth/JWT is
-                        // expired or the device is offline. Browsing uses the Room
-                        // cache, so fall back to unknown source metadata instead.
-                        val source = runCatching {
-                            playlistSourcesRepository.getSources()
-                                .find { it.id == session.currentSourceId }
-                        }.getOrNull()
-                        emit(source?.status to source?.type)
-                    }
+                    session.isDemoMode -> flowOf(null to SourceType.DEMO)
+                    sourceId == null -> flowOf(null to null)
+                    // Network call inside: must not crash the UI flow if auth/JWT is expired or
+                    // the device is offline. Browsing uses the Room cache, so the cached (or
+                    // unknown) metadata stays when the server cannot be reached.
+                    else -> sourceMetaFlow(
+                        sourceId = sourceId,
+                        loadCached = { cachedSource(session.userId, sourceId) },
+                        fetchRemote = ::fetchSourcesOrNull,
+                    )
                 }
+            }.distinctUntilChanged()
+
+    private suspend fun cachedSource(userId: String?, sourceId: String): PlaylistSourceRecord? {
+        userId ?: return null
+        return try {
+            cloudUserDataCache.getPlaylistSources(userId)?.find { it.id == sourceId }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            null
+        }
+    }
+
+    private suspend fun fetchSourcesOrNull(): List<PlaylistSourceRecord>? = try {
+        // Startup no longer waits for auth before opening Home, so wait here instead; without
+        // a session the sources query fails rather than returning this account's sources.
+        authRepository.awaitAuthInitialization()
+        playlistSourcesRepository.getSources()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (error: Exception) {
+        null
+    }
+
+    /**
+     * Whether Home has anything to show, without loading it: three one-row queries instead of
+     * the catalog itself. Room re-emits on every write to these tables (a sync batch, say),
+     * which Home uses as its signal to reload the rails.
+     */
+    fun observeHomeAvailability(): Flow<CatalogBrowseState<Unit>> =
+        observeAvailability(R.string.msg_no_content_synced) { sourceId ->
+            combine(
+                catalogDaoFacade.movies.observeFeatured(sourceId, 1),
+                catalogDaoFacade.series.observeFeatured(sourceId, 1),
+                catalogDaoFacade.channels.observeFeatured(sourceId, 1),
+            ) { movies, series, channels ->
+                movies.isNotEmpty() || series.isNotEmpty() || channels.isNotEmpty()
             }
         }
-
-    fun observeHomeContent(): Flow<CatalogBrowseState<FeaturedCatalogContent>> =
-        appSessionRepository.sessionState.flatMapLatest { session ->
-            if (session.isDemoMode) {
-                flowOf(
-                    CatalogBrowseState(
-                        loadState = CatalogLoadState.Ready,
-                        items = listOf(buildDemoFeatured()),
-                    ),
-                )
-            } else {
-                val sourceId = session.currentSourceId
-                if (sourceId == null) {
-                    flowOf(CatalogBrowseState(CatalogLoadState.Empty, message = appStrings.get(R.string.msg_no_source_connected)))
-                } else {
-                    combine(
-                        catalogDaoFacade.movies.observeFeatured(sourceId, 12),
-                        catalogDaoFacade.movies.observeRecentlyAdded(sourceId, 12),
-                        catalogDaoFacade.series.observeFeatured(sourceId, 8),
-                        catalogDaoFacade.channels.observeFeatured(sourceId, 8),
-                    ) { movies, heroMovies, series, channels ->
-                        if (movies.isEmpty() && heroMovies.isEmpty() && series.isEmpty() &&
-                            channels.isEmpty()
-                        ) {
-                            CatalogBrowseState(CatalogLoadState.Empty, message = appStrings.get(R.string.msg_no_content_synced))
-                        } else {
-                            val domainMovies = movies.map { it.toDomain() }
-                            val domainHeroMovies = heroMovies.map { it.toDomain() }
-                            val domainSeries = series.map { it.toDomain() }
-                            val domainChannels = channels.map { it.toDomain() }
-                            CatalogBrowseState(
-                                loadState = CatalogLoadState.Ready,
-                                items = listOf(
-                                    FeaturedCatalogContent(
-                                        heroMovies = domainHeroMovies.take(5),
-                                        continueWatchingMovies = domainMovies.take(6),
-                                        popularMovies = domainMovies.take(8),
-                                        trendingMovies = domainMovies.drop(1).take(10).ifEmpty { domainMovies.take(10) },
-                                        liveChannels = domainChannels,
-                                        newReleaseMovies = domainHeroMovies.ifEmpty { domainMovies.take(12) },
-                                        featuredSeries = domainSeries,
-                                    ),
-                                ),
-                            )
-                        }
-                    }
-                }
-            }
-        }.distinctUntilChanged().withSourceContext()
 
     /**
      * Whether the Movies tab has anything to show, without loading the catalog. Re-emits whenever
@@ -763,121 +758,6 @@ class CatalogRepository @Inject constructor(
             }
         }
     }
-
-    private fun buildDemoFeatured(): FeaturedCatalogContent = FeaturedCatalogContent(
-        heroMovies = FakeDataProvider.movies.take(5).map { movie ->
-            CatalogMovie(
-                id = movie.id,
-                sourceId = "demo",
-                title = movie.title,
-                streamUrl = "",
-                posterUrl = movie.imageUrl,
-                backdropUrl = movie.backdropUrl,
-                categoryId = null,
-                categoryName = null,
-                year = movie.year,
-                durationMinutes = movie.runtimeMinutes,
-                rating = movie.rating,
-                plot = movie.plot,
-                genres = movie.genres,
-            )
-        },
-        continueWatchingMovies = FakeDataProvider.continueWatchingMovies().map { movie ->
-            CatalogMovie(
-                id = movie.id,
-                sourceId = "demo",
-                title = movie.title,
-                streamUrl = "",
-                posterUrl = movie.imageUrl,
-                backdropUrl = movie.backdropUrl,
-                categoryId = null,
-                categoryName = null,
-                year = movie.year,
-                durationMinutes = movie.runtimeMinutes,
-                rating = movie.rating,
-                plot = movie.plot,
-                genres = movie.genres,
-            )
-        },
-        popularMovies = FakeDataProvider.movies.take(8).map { movie ->
-            CatalogMovie(
-                id = movie.id,
-                sourceId = "demo",
-                title = movie.title,
-                streamUrl = "",
-                posterUrl = movie.imageUrl,
-                backdropUrl = movie.backdropUrl,
-                categoryId = null,
-                categoryName = null,
-                year = movie.year,
-                durationMinutes = movie.runtimeMinutes,
-                rating = movie.rating,
-                plot = movie.plot,
-                genres = movie.genres,
-            )
-        },
-        trendingMovies = FakeDataProvider.movies.take(10).map { movie ->
-            com.iptvcinema.tv.core.model.catalog.CatalogMovie(
-                id = movie.id,
-                sourceId = "demo",
-                title = movie.title,
-                streamUrl = "",
-                posterUrl = movie.imageUrl,
-                backdropUrl = movie.backdropUrl,
-                categoryId = null,
-                categoryName = null,
-                year = movie.year,
-                durationMinutes = movie.runtimeMinutes,
-                rating = movie.rating,
-                plot = movie.plot,
-                genres = movie.genres,
-            )
-        },
-        liveChannels = FakeDataProvider.channels.take(8).map { channel ->
-            CatalogChannel(
-                id = channel.id,
-                sourceId = "demo",
-                name = channel.name,
-                streamUrl = "",
-                logoUrl = channel.logoUrl,
-                categoryId = null,
-                categoryName = channel.category,
-                tvgId = null,
-                channelNumber = channel.channelNumber,
-            )
-        },
-        newReleaseMovies = FakeDataProvider.movies.takeLast(6).map { movie ->
-            com.iptvcinema.tv.core.model.catalog.CatalogMovie(
-                id = movie.id,
-                sourceId = "demo",
-                title = movie.title,
-                streamUrl = "",
-                posterUrl = movie.imageUrl,
-                backdropUrl = movie.backdropUrl,
-                categoryId = null,
-                categoryName = null,
-                year = movie.year,
-                durationMinutes = movie.runtimeMinutes,
-                rating = movie.rating,
-                plot = movie.plot,
-                genres = movie.genres,
-            )
-        },
-        featuredSeries = FakeDataProvider.seriesList.take(8).map { series ->
-            CatalogSeries(
-                id = series.id,
-                sourceId = "demo",
-                title = series.title,
-                posterUrl = series.imageUrl,
-                backdropUrl = series.backdropUrl,
-                categoryId = null,
-                categoryName = series.genres.firstOrNull(),
-                plot = series.plot,
-                rating = series.rating,
-                year = series.year,
-            )
-        },
-    )
 
     /** This flow's rows, or [fallback]'s while this one has none; [fallback] is only read then. */
     private fun <T> Flow<List<T>>.orWhenEmpty(fallback: Flow<List<T>>): Flow<List<T>> =
