@@ -71,7 +71,9 @@ fun <T> ContentRail(
 
         LazyRow(
             state = listState,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .clipUnderNavRail()
+                .fillMaxWidth(),
             // Vertical room so the focus scale is not clipped by the row's bounds.
             contentPadding = PaddingValues(
                 start = contentStart,

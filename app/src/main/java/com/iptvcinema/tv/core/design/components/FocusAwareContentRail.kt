@@ -109,6 +109,7 @@ fun FocusAwareContentRail(
         LazyRow(
             state = listState,
             modifier = Modifier
+                .clipUnderNavRail()
                 .fillMaxWidth()
                 .height(railHeight + focusOverflow)
                 .graphicsLayer { clip = true }

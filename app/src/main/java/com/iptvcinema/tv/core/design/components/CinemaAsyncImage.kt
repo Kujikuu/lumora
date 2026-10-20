@@ -33,6 +33,8 @@ fun CinemaAsyncImage(
     contentScale: ContentScale = ContentScale.Crop,
     fallbackLabel: String = contentDescription.orEmpty(),
     showLoadingSkeleton: Boolean = true,
+    /** Where a cropped image anchors; backdrops use top center so faces and titles stay in view. */
+    alignment: Alignment = Alignment.Center,
 ) {
     if (imageUrl.isNullOrBlank()) {
         ImageFallback(
@@ -61,6 +63,7 @@ fun CinemaAsyncImage(
             contentDescription = contentDescription,
             modifier = Modifier.fillMaxSize(),
             contentScale = contentScale,
+            alignment = alignment,
             onError = {
                 loadFailed = true
                 isLoading = false

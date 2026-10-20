@@ -81,6 +81,7 @@ fun FocusAwareChannelRail(
         LazyRow(
             state = listState,
             modifier = Modifier
+                .clipUnderNavRail()
                 .fillMaxWidth()
                 .onFocusChanged { if (!it.hasFocus) hadFocusInRail = false },
             // Vertical room so the focus scale is not clipped by the row's bounds.

@@ -106,6 +106,7 @@ fun HeroBanner(
                 contentDescription = title,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
+                alignment = Alignment.TopCenter,
                 fallbackLabel = title,
                 showLoadingSkeleton = true,
             )
