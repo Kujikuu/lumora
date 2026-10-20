@@ -1,13 +1,12 @@
 package com.iptvcinema.tv.features.home.components
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +21,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -64,8 +64,9 @@ import com.iptvcinema.tv.features.home.HeroCarouselLogic
 import com.iptvcinema.tv.features.home.HomeSpotlight
 import com.iptvcinema.tv.features.home.HomeSpotlightKind
 import com.iptvcinema.tv.core.util.isolateDirection
+import kotlinx.coroutines.delay
 
-private const val SLIDE_DURATION_MS = 8_000
+private const val SLIDE_DURATION_MS = 8_000L
 private const val TEXT_FADE_IN_MS = 180
 private const val TEXT_FADE_OUT_MS = 90
 private const val BUTTON_COUNT = 3
@@ -89,10 +90,12 @@ fun HomeSpotlightPanel(
     onMoveDown: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val spotlight = state.current(hero)
+    val spotlight = rememberSettledSpotlight(state, hero)
     val heroMovie = hero.getOrNull(state.heroIndex.coerceIn(0, (hero.size - 1).coerceAtLeast(0)))
+    // Derived, so moving between cards (focusedCard changes, isOnHero does not) skips this panel.
+    val isOnHero by remember(state) { derivedStateOf { state.isOnHero } }
     val buttonsAlpha by animateFloatAsState(
-        targetValue = if (state.isOnHero && heroMovie != null) 1f else 0f,
+        targetValue = if (isOnHero && heroMovie != null) 1f else 0f,
         animationSpec = tween(TEXT_FADE_IN_MS),
         label = "heroButtonsAlpha",
     )
@@ -217,7 +220,6 @@ private fun HeroButtons(
     modifier: Modifier = Modifier,
 ) {
     val canRotate = hero.size > 1
-    val slideProgress = remember { Animatable(0f) }
     var focusedButton by remember { mutableIntStateOf(-1) }
     var interactionTick by remember { mutableIntStateOf(0) }
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -229,10 +231,11 @@ private fun HeroButtons(
         state.heroIndex = HeroCarouselLogic.nextIndex(state.heroIndex, hero.size)
     }
 
+    // A plain timer, not an animation: an 8 s animation woke a frame every vsync just to fill
+    // the slide indicator, which on a low-end TV meant redrawing the whole screen for nothing.
     LaunchedEffect(state.heroIndex, state.heroFocused, interactionTick, canRotate) {
-        slideProgress.snapTo(0f)
         if (!canRotate || !state.heroFocused) return@LaunchedEffect
-        slideProgress.animateTo(1f, tween(durationMillis = SLIDE_DURATION_MS, easing = LinearEasing))
+        delay(SLIDE_DURATION_MS)
         advance()
     }
 
@@ -297,14 +300,14 @@ private fun HeroButtons(
             )
         }
         if (canRotate) {
-            SlideIndicators(count = hero.size, selected = state.heroIndex, progress = { slideProgress.value })
+            SlideIndicators(count = hero.size, selected = state.heroIndex)
         }
     }
 }
 
-/** The active dot is a pill filled by time to the next slide; [progress] is read only while drawing. */
+/** The active dot is a static pill; it does not animate, so idling on the hero draws no frames. */
 @Composable
-private fun SlideIndicators(count: Int, selected: Int, progress: () -> Float) {
+private fun SlideIndicators(count: Int, selected: Int) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -314,21 +317,13 @@ private fun SlideIndicators(count: Int, selected: Int, progress: () -> Float) {
             Box(
                 modifier = Modifier
                     .size(width = if (active) 32.dp else 8.dp, height = 4.dp)
-                    .clip(CinemaShapes.Small)
-                    .drawBehind {
-                        if (!active) {
-                            drawRect(CinemaColors.TextMuted.copy(alpha = 0.5f))
-                            return@drawBehind
-                        }
-                        drawRect(CinemaColors.White.copy(alpha = 0.3f))
-                        val fillWidth = size.width * progress().coerceIn(0f, 1f)
-                        val left = if (layoutDirection == LayoutDirection.Rtl) size.width - fillWidth else 0f
-                        drawRect(CinemaColors.White, topLeft = Offset(left, 0f), size = Size(fillWidth, size.height))
-                    },
+                    .background(if (active) CinemaColors.White else InactiveIndicatorColor, CinemaShapes.Small),
             )
         }
     }
 }
+
+private val InactiveIndicatorColor = CinemaColors.TextMuted.copy(alpha = 0.5f)
 
 private fun HomeSpotlightKind.labelRes(): Int = when (this) {
     HomeSpotlightKind.Movie -> R.string.home_kind_movie

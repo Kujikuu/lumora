@@ -10,14 +10,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -28,9 +29,11 @@ import coil.request.ImageRequest
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.model.MovieItem
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 
 private const val BACKDROP_SETTLE_MS = 300L
-private const val BACKDROP_FADE_MS = 450
+// Short, so only a few frames draw two full-screen images at once.
+private const val BACKDROP_FADE_MS = 250
 // Half of 1080p: the backdrop sits under dark scrims, so the lost detail is invisible, and it
 // halves decode time, bitmap memory and texture bandwidth on low-end TVs.
 private const val BACKDROP_DECODE_WIDTH = 960
@@ -50,12 +53,19 @@ fun HomeBackdrop(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val targetUrl = state.current(hero)?.backdropUrl
-    var settledUrl by remember { mutableStateOf(targetUrl) }
+    val currentHero by rememberUpdatedState(hero)
+    var settledUrl by remember(state) {
+        mutableStateOf(Snapshot.withoutReadObservation { state.current(hero)?.backdropUrl })
+    }
 
-    LaunchedEffect(targetUrl) {
-        if (settledUrl != null) delay(BACKDROP_SETTLE_MS)
-        settledUrl = targetUrl
+    // Followed in an effect, not read during composition, so a focus move does not recompose
+    // the backdrop; only a settled change does.
+    LaunchedEffect(state) {
+        snapshotFlow { state.current(currentHero)?.backdropUrl }
+            .collectLatest { targetUrl ->
+                if (settledUrl != null) delay(BACKDROP_SETTLE_MS)
+                settledUrl = targetUrl
+            }
     }
 
     // Warm the next hero slide so its crossfade starts from a loaded image.
@@ -66,13 +76,9 @@ fun HomeBackdrop(
         context.imageLoader.enqueue(backdropRequest(context, url))
     }
 
-    // Offscreen compositing caches the image and both scrims as one texture, so card focus
-    // animations on top composite a single layer instead of redrawing three full-screen fills.
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen },
-    ) {
+    // No offscreen layer: it held a full-screen buffer in memory and re-rendered it on every
+    // frame of a crossfade or image load. The image and the two scrims draw straight to screen.
+    Box(modifier = modifier.fillMaxSize()) {
         Crossfade(
             targetState = settledUrl,
             animationSpec = tween(BACKDROP_FADE_MS),
