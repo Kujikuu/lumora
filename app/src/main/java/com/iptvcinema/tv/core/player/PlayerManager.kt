@@ -55,6 +55,7 @@ class PlayerManager @Inject constructor(
     private var playbackPreferences: PlaybackPreferences? = null
     private var userOverrodeAudio = false
     private var userOverrodeSubtitles = false
+    private var cachedMediaSourceFactory: Pair<PlaybackHeaders, DefaultMediaSourceFactory>? = null
 
     // Dedicated client: no API interceptors (they would override provider user agents),
     // pooled connections so channel zaps reuse sockets to the same provider.
@@ -127,19 +128,32 @@ class PlayerManager @Inject constructor(
         stallJob?.cancel()
         val mediaItem = MediaItem.Builder()
             .setUri(request.streamUrl)
+            .setMimeType(StreamMimeTypes.forUrl(request.streamUrl, request.isLive, isXtreamSource))
             .build()
+        val mediaSource = mediaSourceFactoryFor(request.headers).createMediaSource(mediaItem)
         // setMediaSource replaces the old stream in place. Skipping stop() keeps the last
         // frame on screen until the new one renders, so zaps do not flash black.
-        exoPlayer.setMediaSource(
-            DefaultMediaSourceFactory(buildDataSourceFactory(request.headers))
-                .setLoadErrorHandlingPolicy(LiveAwareLoadErrorPolicy())
-                .createMediaSource(mediaItem),
-        )
-        exoPlayer.prepare()
         if (startPositionMs > 0L && !request.isLive) {
-            exoPlayer.seekTo(startPositionMs)
+            // Passing the start position here, before prepare(), makes the first load start at
+            // the resume point instead of loading from 0 and then seeking.
+            exoPlayer.setMediaSource(mediaSource, startPositionMs)
+        } else {
+            exoPlayer.setMediaSource(mediaSource)
         }
+        exoPlayer.prepare()
         exoPlayer.playWhenReady = true
+    }
+
+    // Zapping usually stays on one provider, so the factory (and the extractor and HLS
+    // factories it loads) is built once per set of headers instead of on every channel.
+    @OptIn(UnstableApi::class)
+    private fun mediaSourceFactoryFor(headers: PlaybackHeaders): DefaultMediaSourceFactory {
+        cachedMediaSourceFactory
+            ?.takeIf { it.first == headers }
+            ?.let { return it.second }
+        return DefaultMediaSourceFactory(buildDataSourceFactory(headers))
+            .setLoadErrorHandlingPolicy(LiveAwareLoadErrorPolicy())
+            .also { cachedMediaSourceFactory = headers to it }
     }
 
     fun handleCommand(command: PlayerCommand) {

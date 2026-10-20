@@ -120,6 +120,13 @@ class RoutingWatchHistoryRepository @Inject constructor(
         return cloudAccountStatus.cloudRead({ null }) { backend.getProgress(profileId, contentId, contentType) }
     }
 
+    // A local read: no cloud status bookkeeping, and a cache miss is not a cloud failure.
+    override suspend fun getCachedProgress(
+        profileId: String,
+        contentId: String,
+        contentType: WatchHistoryContentType,
+    ): WatchHistoryItem? = resolveBackend().getCachedProgress(profileId, contentId, contentType)
+
     override suspend fun upsertProgress(
         profileId: String,
         contentId: String,

@@ -12,6 +12,7 @@ import com.iptvcinema.tv.core.model.PlaylistSourceRecord
 import com.iptvcinema.tv.core.model.SourceStatus
 import com.iptvcinema.tv.core.model.SourceType
 import com.iptvcinema.tv.core.model.UserSettings
+import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.model.WatchHistoryItem
 import java.time.Instant
 import javax.inject.Inject
@@ -50,6 +51,23 @@ class CloudUserDataCache @Inject constructor(
             profileId = profileId,
             items = items.map { it.toEntity() },
         )
+    }
+
+    suspend fun findWatchProgress(
+        profileId: String,
+        contentId: String,
+        contentType: WatchHistoryContentType,
+    ): WatchHistoryItem? =
+        getWatchHistory(profileId, WATCH_PROGRESS_LOOKUP_LIMIT)
+            ?.firstOrNull { it.contentId == contentId && it.contentType == contentType }
+
+    /**
+     * Writes one saved position into the cache so the next playback on this device resumes
+     * from it without asking the server. The next full [saveWatchHistory] replaces it with
+     * the server's rows.
+     */
+    suspend fun saveWatchProgress(item: WatchHistoryItem) {
+        userDataCacheDao.upsertWatchHistory(listOf(item.toEntity()))
     }
 
     suspend fun getUserSettings(userId: String): UserSettings? =
@@ -205,4 +223,9 @@ class CloudUserDataCache @Inject constructor(
         status = SourceStatus.valueOf(status),
         lastSyncedAt = lastSyncedAtEpochMs?.let(Instant::ofEpochMilli),
     )
+
+    private companion object {
+        // Covers everything the cache holds (the server fetch caches up to 50 rows).
+        const val WATCH_PROGRESS_LOOKUP_LIMIT = 200
+    }
 }

@@ -53,10 +53,14 @@ class PlaybackRepository @Inject constructor(
         }
     }
 
+    /**
+     * For channel zaps. Skips the programme lookup: the player starts the stream first and
+     * looks the programme up afterwards for the banner, so reading it here only delayed play.
+     */
     suspend fun resolveChannel(sourceId: String, channelId: String): PlaybackResolveResult {
         val session = appSessionRepository.sessionState.first()
         val headers = buildHeaders(sourceId, session.sourceType)
-        return resolveLive(sourceId, channelId, headers)
+        return resolveLive(sourceId, channelId, headers, includeProgram = false)
     }
 
     suspend fun resolveEpisode(sourceId: String, episode: CatalogEpisode): PlaybackResolveResult {
@@ -74,10 +78,11 @@ class PlaybackRepository @Inject constructor(
         sourceId: String,
         contentId: String,
         headers: PlaybackHeaders,
+        includeProgram: Boolean = true,
     ): PlaybackResolveResult {
         val channel = catalogRepository.getChannel(sourceId, contentId)
             ?: return PlaybackResolveResult.Error(appStrings.get(R.string.playback_error_channel_not_found), "NOT_FOUND")
-        val programTitle = catalogRepository.getCurrentProgram(sourceId, contentId)?.title
+        val programTitle = if (includeProgram) catalogRepository.getCurrentProgram(sourceId, contentId)?.title else null
         return channel.toPlaybackRequest(headers, programTitle)
     }
 
