@@ -1,6 +1,8 @@
 package com.iptvcinema.tv.core.player
 
+import androidx.annotation.OptIn
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
 import java.util.Locale
 
 /**
@@ -8,6 +10,8 @@ import java.util.Locale
  * instead of working it out itself. Null when the URL does not say; ExoPlayer then decides.
  */
 object StreamMimeTypes {
+    // VIDEO_MATROSKA is marked unstable in Media3 1.5; the string value itself is stable.
+    @OptIn(UnstableApi::class)
     fun forUrl(url: String, isLive: Boolean, isXtreamSource: Boolean): String? {
         if (url.isBlank()) return null
         return when (extensionOf(url)) {

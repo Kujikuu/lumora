@@ -462,7 +462,7 @@ class PlayerViewModel @Inject constructor(
                 val useStoredResume = explicitResumeMs == null && continueWatchingEnabled
                 val resumeMs = when {
                     explicitResumeMs != null -> explicitResumeMs
-                    useStoredResume -> loadResumePosition(result.request, fromCache = true)
+                    useStoredResume -> loadResumePosition(result.request, fromCache = true) ?: 0L
                     else -> 0L
                 }
                 _screenState.value = PlayerScreenState(
@@ -1016,7 +1016,11 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private suspend fun loadResumePosition(request: PlaybackRequest, fromCache: Boolean): Long {
+    /**
+     * Where to resume: 0 to start over (no history, or finished), null when the read failed, so
+     * a network error is never mistaken for "start over".
+     */
+    private suspend fun loadResumePosition(request: PlaybackRequest, fromCache: Boolean): Long? {
         if (request.isLive || request.isCatchup) return 0L
         return runCatching {
             val session = appSessionRepository.sessionState.first()
@@ -1025,10 +1029,10 @@ class PlayerViewModel @Inject constructor(
                 watchHistoryRepository.getCachedProgress(profileId, request.contentId, request.contentType)
             } else {
                 watchHistoryRepository.getProgress(profileId, request.contentId, request.contentType)
-            } ?: return 0L
+            } ?: return if (fromCache) 0L else null // A failed cloud read also arrives as "no row".
             val durationMs = history.durationMs ?: request.durationMs ?: return 0L
             WatchHistoryResumePolicy.resumePositionMs(history.positionMs, durationMs)
-        }.getOrDefault(0L)
+        }.getOrNull()
     }
 
     // The cache can be behind the server (another device, or no refresh since the last save

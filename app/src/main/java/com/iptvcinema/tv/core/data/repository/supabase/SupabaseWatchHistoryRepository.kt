@@ -179,6 +179,9 @@ class SupabaseWatchHistoryRepository @Inject constructor(
         try {
             val contentType = WatchHistoryContentType.valueOf(saved.contentType)
             val cached = cloudUserDataCache.findWatchProgress(saved.profileId, saved.contentId, contentType)
+            // Only into a warm cache: a lone row in an empty cache would read as the whole history
+            // (one Continue Watching card) until the next full refresh.
+            if (cached == null && cloudUserDataCache.getWatchHistory(saved.profileId, limit = 1) == null) return
             cloudUserDataCache.saveWatchProgress(
                 WatchHistoryItem(
                     id = cached?.id ?: "${saved.profileId}:${saved.contentType}:${saved.contentId}",

@@ -192,13 +192,27 @@ class WatchHistoryResumePolicyTest {
     }
 
     @Test
-    fun lateResumeSeekMs_null_whenServerHasNoResumePoint() {
-        // A failed read also comes back as "no history", so zero must never rewind playback.
+    fun lateResumeSeekMs_null_whenServerReadFailed() {
+        // A failed read is null, never zero, so a network error cannot rewind playback.
         assertNull(
             WatchHistoryResumePolicy.lateResumeSeekMs(
                 startedFromMs = 600_000L,
-                serverResumeMs = 0L,
+                serverResumeMs = null,
                 currentPositionMs = 600_000L,
+                userSeeked = false,
+            ),
+        )
+    }
+
+    @Test
+    fun lateResumeSeekMs_rewindsToStart_whenServerSaysFinishedOrNoHistory() {
+        // Finished (or removed) on another device: the server's zero beats a stale cached point.
+        assertEquals(
+            0L,
+            WatchHistoryResumePolicy.lateResumeSeekMs(
+                startedFromMs = 600_000L,
+                serverResumeMs = 0L,
+                currentPositionMs = 602_000L,
                 userSeeked = false,
             ),
         )

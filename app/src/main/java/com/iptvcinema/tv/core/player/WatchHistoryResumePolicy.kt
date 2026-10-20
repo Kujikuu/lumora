@@ -68,11 +68,12 @@ object WatchHistoryResumePolicy {
      */
     fun lateResumeSeekMs(
         startedFromMs: Long,
-        serverResumeMs: Long,
+        /** Null when the server could not be read; zero when it says start over (finished or none). */
+        serverResumeMs: Long?,
         currentPositionMs: Long,
         userSeeked: Boolean,
     ): Long? {
-        if (userSeeked || serverResumeMs <= 0L) return null
+        if (userSeeked || serverResumeMs == null) return null
         if (abs(serverResumeMs - startedFromMs) < LATE_RESUME_MIN_DIFFERENCE_MS) return null
         if (abs(currentPositionMs - startedFromMs) > LATE_RESUME_MAX_PLAYED_MS) return null
         return serverResumeMs
