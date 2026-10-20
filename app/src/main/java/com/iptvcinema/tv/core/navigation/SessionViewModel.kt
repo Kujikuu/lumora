@@ -10,32 +10,47 @@ import com.iptvcinema.tv.core.datastore.AppSessionRepository
 import com.iptvcinema.tv.core.datastore.AppSessionState
 import com.iptvcinema.tv.core.tvhome.PendingDeepLinkStore
 import com.iptvcinema.tv.core.tvhome.PlaybackDeepLink
+import dagger.Lazy
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
+/**
+ * Activity-wide session state for the route guards and the shell.
+ *
+ * It is created during the very first composition, so the cloud-backed dependencies are
+ * Lazy and fetched off the main thread: building them builds the Supabase client, which
+ * would otherwise delay the first frame.
+ */
 @HiltViewModel
 class SessionViewModel @Inject constructor(
     private val appSessionRepository: AppSessionRepository,
-    cloudAccountStatus: CloudAccountStatus,
-    private val cloudAccountRetryCoordinator: CloudAccountRetryCoordinator,
-    private val authRepository: AuthRepository,
-    private val profilesRepository: ProfilesRepository,
+    private val cloudAccountStatus: Lazy<CloudAccountStatus>,
+    private val cloudAccountRetryCoordinator: Lazy<CloudAccountRetryCoordinator>,
+    private val authRepository: Lazy<AuthRepository>,
+    private val profilesRepository: Lazy<ProfilesRepository>,
     private val pendingDeepLinkStore: PendingDeepLinkStore,
 ) : ViewModel() {
     val pendingDeepLink: StateFlow<PlaybackDeepLink?> = pendingDeepLinkStore.pending
 
     fun consumeDeepLink(link: PlaybackDeepLink) = pendingDeepLinkStore.consume(link)
 
-    val isCloudDegraded: StateFlow<Boolean> = cloudAccountStatus.isDegraded
+    val isCloudDegraded: StateFlow<Boolean> = flow {
+        emitAll(offMain(cloudAccountStatus).isDegraded)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     private val _isHydrated = MutableStateFlow(false)
     val isHydrated: StateFlow<Boolean> = _isHydrated.asStateFlow()
 
@@ -67,7 +82,7 @@ class SessionViewModel @Inject constructor(
 
     fun retryCloudSync() {
         viewModelScope.launch {
-            cloudAccountRetryCoordinator.retryCloudSync()
+            offMain(cloudAccountRetryCoordinator).retryCloudSync()
         }
     }
 
@@ -77,14 +92,17 @@ class SessionViewModel @Inject constructor(
             _activeProfileName.value = null
             return
         }
-        _accountDisplayName.value = authRepository.currentUserDisplayName().orEmpty()
+        _accountDisplayName.value = offMain(authRepository).currentUserDisplayName().orEmpty()
         val profileId = session.currentProfileId
         _activeProfileName.value = if (profileId == null) {
             null
         } else {
             runCatching {
-                profilesRepository.getProfiles().firstOrNull { it.id == profileId }?.name
+                offMain(profilesRepository).getProfiles().firstOrNull { it.id == profileId }?.name
             }.getOrNull()
         }
     }
+
+    private suspend fun <T : Any> offMain(dependency: Lazy<T>): T =
+        withContext(Dispatchers.Default) { dependency.get() }
 }

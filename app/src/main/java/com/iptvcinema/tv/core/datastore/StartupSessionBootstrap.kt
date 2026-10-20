@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.core.datastore
 
+import android.util.Log
 import com.iptvcinema.tv.core.datastore.AppSessionState
 import com.iptvcinema.tv.core.datastore.SessionRequirement
 import com.iptvcinema.tv.core.player.WatchedSeriesEpisodePrefetcher
@@ -10,11 +11,21 @@ import com.iptvcinema.tv.core.di.ApplicationScope
 import com.iptvcinema.tv.core.model.PlaylistSourceRecord
 import com.iptvcinema.tv.core.model.SourceType
 import com.iptvcinema.tv.core.sync.CatalogSyncScheduler
+import com.iptvcinema.tv.core.util.safeSummary
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+
+/**
+ * True when the saved session already has an account and a source, so startup can open the
+ * app from local data and confirm both in the background. Anything less (first launch, no
+ * session, no source) still waits for the network to decide where the user lands.
+ */
+internal fun canRouteFromLocalSession(state: AppSessionState): Boolean =
+    state.isAuthenticated && state.hasSource && state.currentSourceId != null
 
 internal fun shouldScheduleStartupCatalogSync(state: AppSessionState): Boolean =
     state.meetsRequirement(SessionRequirement.HasSource) &&
@@ -45,6 +56,24 @@ class StartupSessionBootstrap @Inject constructor(
             catalogSyncScheduler.enqueueStartupCheck()
         }
         return state
+    }
+
+    /**
+     * Runs [prepareSessionState] on the app scope, for a start that already routed from the
+     * saved session. A sign-out or a dropped source lands in DataStore, and the route guards
+     * move the user on from there, as they would have before.
+     */
+    fun prepareInBackground() {
+        applicationScope.launch {
+            try {
+                prepareSessionState()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                // The saved session stays; browsing works from the Room cache.
+                Log.w(TAG, "Background session check failed: ${error.safeSummary()}")
+            }
+        }
     }
 
     override suspend fun authenticateLocalDev(): AppSessionState {
@@ -119,5 +148,9 @@ class StartupSessionBootstrap @Inject constructor(
                 watchedSeriesEpisodePrefetcher.prefetchForCurrentSession()
             }
         }
+    }
+
+    private companion object {
+        const val TAG = "StartupSession"
     }
 }

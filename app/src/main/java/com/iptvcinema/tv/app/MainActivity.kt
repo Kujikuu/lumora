@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.OneShotPreDrawListener
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.iptvcinema.tv.core.design.theme.CinemaTheme
 import com.iptvcinema.tv.core.navigation.AppNavGraph
@@ -27,6 +28,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var pendingDeepLinkStore: PendingDeepLinkStore
+
+    @Inject
+    lateinit var firstFrameSignal: FirstFrameSignal
 
     // Many TVs (the Haier test set among them) go to standby without stopping the activity, so
     // the screen-off broadcast is the only signal that nobody is watching any more.
@@ -51,6 +55,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             IptvCinemaAppContent()
         }
+        // Pre-draw fires just before the first frame; the post runs once it is on screen.
+        val decorView = window.decorView
+        OneShotPreDrawListener.add(decorView) { decorView.post(firstFrameSignal::markDrawn) }
         ContextCompat.registerReceiver(
             this,
             screenOffReceiver,

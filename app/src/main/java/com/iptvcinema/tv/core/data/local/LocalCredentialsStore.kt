@@ -9,6 +9,8 @@ import com.iptvcinema.tv.core.model.XtreamCredentials
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -36,13 +38,23 @@ class LocalCredentialsStore @Inject constructor(
     @ApplicationContext context: Context,
     private val json: Json,
 ) {
-    private val preferences: SharedPreferences = EncryptedSharedPreferences.create(
-        context,
-        FILE_NAME,
-        MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-    )
+    // Keystore and EncryptedSharedPreferences setup takes 100-300 ms on a weak TV, so it is not
+    // done in the constructor (which ran on the main thread at startup). The app warms it on IO
+    // with [warmUp]; the lazy lock makes any earlier caller wait for that same instance.
+    private val preferences: SharedPreferences by lazy {
+        EncryptedSharedPreferences.create(
+            context,
+            FILE_NAME,
+            MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+        )
+    }
+
+    /** Opens the encrypted store off the main thread, ahead of the first real read. */
+    suspend fun warmUp() {
+        withContext(Dispatchers.IO) { preferences }
+    }
 
     fun saveXtreamCredentials(sourceId: String, credentials: XtreamCredentials) {
         preferences.edit()
