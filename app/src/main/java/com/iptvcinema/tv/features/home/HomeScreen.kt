@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.features.home
 
+import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -58,6 +59,10 @@ fun HomeScreen(
             onAddToList = viewModel::addHeroToList,
         )
     }
+
+    // Marks the app "fully drawn" once Home shows real rails, so cold start to usable Home
+    // shows up in logcat ("Fully drawn") and in startup benchmarks.
+    ReportDrawnWhen { uiState.loadState == CatalogLoadState.Ready && uiState.sections.isNotEmpty() }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
