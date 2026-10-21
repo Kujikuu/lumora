@@ -232,9 +232,7 @@ interface MovieDao {
     @Query(
         """
         SELECT * FROM movies
-        WHERE sourceId = :sourceId
-            AND backdropUrl IS NOT NULL AND TRIM(backdropUrl) != ''
-            AND plot IS NOT NULL AND TRIM(plot) != ''
+        WHERE sourceId = :sourceId AND hasHeroArt = 1
         ORDER BY addedAt DESC, sortOrder DESC
         LIMIT :limit
         """,

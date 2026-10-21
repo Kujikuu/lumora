@@ -8,6 +8,7 @@ import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.iptvcinema.tv.core.database.di.DatabaseModule
+import com.iptvcinema.tv.core.database.entity.HeroArt
 import com.iptvcinema.tv.core.database.entity.RatingValue
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -174,22 +175,24 @@ class DatabaseMigrationTest {
         }
     }
 
-    /** Room checks every table and index after migrating, so this fails if v10 drifts from the entities. */
+    /** Room checks every table and index after migrating, so this fails if v11 drifts from the entities. */
     @Test
-    fun migration9To10PassesRoomSchemaValidation() = runBlocking {
+    fun migration9To11PassesRoomSchemaValidation() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val databaseName = "migration-9-10-room-test.db"
+        val databaseName = "migration-9-11-room-test.db"
         context.deleteDatabase(databaseName)
 
         val version9 = openHelper(context, databaseName, version = 9) { database ->
             Version9Schema.statements.forEach(database::execSQL)
             insertVersion9Movies(database)
+            database.execSQL("UPDATE movies SET backdropUrl = 'b4', plot = 'Plot' WHERE id = '4'")
+            database.execSQL("UPDATE movies SET backdropUrl = '  ', plot = 'Plot' WHERE id = '1'")
         }
         version9.writableDatabase
         version9.close()
 
         val room = Room.databaseBuilder(context, IptvDatabase::class.java, databaseName)
-            .addMigrations(DatabaseModule.MIGRATION_9_10)
+            .addMigrations(DatabaseModule.MIGRATION_9_10, DatabaseModule.MIGRATION_10_11)
             .build()
         try {
             val topRated = room.movieDao().getTopRated("src", minRating = 7.0, limit = 10)
@@ -199,7 +202,9 @@ class DatabaseMigrationTest {
             listOf("1", "2", "3", "4").forEach { id ->
                 val stored = room.movieDao().getById("src", id)
                 assertEquals(RatingValue.of(stored?.rating), stored?.ratingValue)
+                assertEquals(HeroArt.of(stored?.backdropUrl, stored?.plot), stored?.hasHeroArt)
             }
+            assertEquals(listOf("4"), room.movieDao().getNewestWithArtwork("src", limit = 10).map { it.id })
         } finally {
             room.close()
             context.deleteDatabase(databaseName)

@@ -1,0 +1,34 @@
+# Baseline profile: tells Android which code to compile ahead of time, so it does not run
+# interpreted the first time. On the slow TVs we target, cold code ran Home's section building
+# 10x slower than warm. Compose and the androidx libraries ship their own profiles; these rules
+# cover our code and the libraries that ship none. Installed on sideloaded builds by
+# androidx.profileinstaller, and by the Play Store on store installs.
+#
+# Generated profiles need a device on API 33+; these hand-written wildcard rules work on every
+# version, at the cost of compiling all of our own code (a few MB of extra on-disk code).
+
+# App code
+HSPLcom/iptvcinema/tv/**;->**(**)**
+Lcom/iptvcinema/tv/**;
+
+# Data layer libraries without their own profiles
+HSPLio/github/jan/supabase/**;->**(**)**
+Lio/github/jan/supabase/**;
+HSPLio/ktor/**;->**(**)**
+Lio/ktor/**;
+HSPLkotlinx/serialization/**;->**(**)**
+Lkotlinx/serialization/**;
+HSPLkotlinx/coroutines/**;->**(**)**
+Lkotlinx/coroutines/**;
+HSPLkotlin/**;->**(**)**
+Lkotlin/**;
+HSPLdagger/**;->**(**)**
+Ldagger/**;
+
+# Images
+HSPLcoil/**;->**(**)**
+Lcoil/**;
+HSPLokhttp3/**;->**(**)**
+Lokhttp3/**;
+HSPLokio/**;->**(**)**
+Lokio/**;

@@ -35,6 +35,7 @@ object DatabaseModule {
         MIGRATION_7_8,
         MIGRATION_8_9,
         MIGRATION_9_10,
+        MIGRATION_10_11,
     )
         // Room picks TRUNCATE on low-RAM devices (like our target TVs), where UI reads wait
         // behind sync writes. WAL lets reads run while a sync is writing.
@@ -236,6 +237,23 @@ object DatabaseModule {
             db.execSQL("UPDATE movies SET ratingValue = CAST(rating AS REAL) WHERE rating IS NOT NULL")
             db.execSQL("UPDATE series SET ratingValue = CAST(rating AS REAL) WHERE rating IS NOT NULL")
             CATALOG_INDEXES_V10.forEach(db::execSQL)
+        }
+    }
+
+    internal const val MOVIES_HERO_INDEX_V11 =
+        "CREATE INDEX IF NOT EXISTS `idx_movies_hero` ON `movies` (`sourceId`, `hasHeroArt`, `addedAt`, `sortOrder`)"
+
+    /** Adds the hero-art flag so the Home hero query reads an index instead of every movie. */
+    internal val MIGRATION_10_11 = object : Migration(10, 11) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE movies ADD COLUMN hasHeroArt INTEGER NOT NULL DEFAULT 0")
+            // Same value HeroArt.of() gives new rows; filled before the index exists.
+            db.execSQL(
+                "UPDATE movies SET hasHeroArt = 1 " +
+                    "WHERE backdropUrl IS NOT NULL AND TRIM(backdropUrl) != '' " +
+                    "AND plot IS NOT NULL AND TRIM(plot) != ''",
+            )
+            db.execSQL(MOVIES_HERO_INDEX_V11)
         }
     }
 

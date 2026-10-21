@@ -1,5 +1,6 @@
 package com.iptvcinema.tv.core.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 
@@ -53,6 +54,7 @@ data class LocalChannelEntity(
         Index(value = ["sourceId", "categoryName", "addedAt", "sortOrder"], name = "idx_movies_category_name"),
         Index(value = ["sourceId", "addedAt", "sortOrder"], name = "idx_movies_added"),
         Index(value = ["sourceId", "ratingValue", "year"], name = "idx_movies_rating"),
+        Index(value = ["sourceId", "hasHeroArt", "addedAt", "sortOrder"], name = "idx_movies_hero"),
     ],
 )
 data class LocalMovieEntity(
@@ -76,6 +78,10 @@ data class LocalMovieEntity(
     // Derived from rating so top-rated rails can use an index. Keep it last and never pass it
     // by hand; a copy(rating = ...) must also recompute it.
     val ratingValue: Double? = RatingValue.of(rating),
+    // Derived from backdropUrl and plot so the Home hero query can use an index. Same rules as
+    // ratingValue: never pass it by hand, and recompute it on a copy that changes either field.
+    @ColumnInfo(defaultValue = "0")
+    val hasHeroArt: Boolean = HeroArt.of(backdropUrl, plot),
 )
 
 @Entity(

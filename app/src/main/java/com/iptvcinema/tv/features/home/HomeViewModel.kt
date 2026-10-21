@@ -122,15 +122,20 @@ class HomeViewModel @Inject constructor(
         .distinctUntilChanged()
         .flatMapLatest { (session, continueWatchingEnabled) ->
             val profileId = session.profileId
-            val controlsFlow = profileId?.let { parentalControlsRepository.observeControls(it) } ?: flowOf(null)
-            val historyFlow = profileId?.let { watchHistoryRepository.observeHistory(it, HISTORY_LIMIT) }
-                ?: flowOf(emptyList())
+            // Each source emits its cache and then the server copy, which is usually the same.
+            // Dropping repeats keeps an unchanged copy from rebuilding every rail again.
+            val controlsFlow = (profileId?.let { parentalControlsRepository.observeControls(it) } ?: flowOf(null))
+                .distinctUntilChanged()
+            val historyFlow = (
+                profileId?.let { watchHistoryRepository.observeHistory(it, HISTORY_LIMIT) } ?: flowOf(emptyList())
+                ).distinctUntilChanged()
             val continueFlow = if (profileId != null && continueWatchingEnabled) {
-                watchHistoryRepository.observeContinueWatching(profileId, CONTINUE_WATCHING_LIMIT)
+                watchHistoryRepository.observeContinueWatching(profileId, CONTINUE_WATCHING_LIMIT).distinctUntilChanged()
             } else {
                 flowOf(emptyList())
             }
-            val favoritesFlow = profileId?.let { favoritesRepository.observeFavorites(it) } ?: flowOf(emptyList())
+            val favoritesFlow = (profileId?.let { favoritesRepository.observeFavorites(it) } ?: flowOf(emptyList()))
+                .distinctUntilChanged()
             // The gate is a cheap "is there anything" check; the rails load once, here. A sync
             // writes in batches and the gate re-emits on each; let those settle so the catalog
             // queries run once per burst instead of being cancelled over and over.
