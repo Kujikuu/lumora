@@ -68,6 +68,20 @@ fun HomeRail(
     var entryIndex by remember(section.id) { mutableIntStateOf(initialIndex) }
     // Not read from entryIndex: reading it here would recompose the whole rail on every move.
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex)
+    // The requester must sit on a card that is on screen: an off-screen card is not composed, so
+    // a requester on it is detached and Up/Down into this rail would do nothing. That happens
+    // when the list reorders under a remembered card (Continue Watching after watching a title).
+    val resolvedEntry by remember(lastIndex) {
+        derivedStateOf {
+            val visible = listState.layoutInfo.visibleItemsInfo
+            resolveRailEntry(
+                entryIndex = entryIndex,
+                lastIndex = lastIndex,
+                onScreen = visible.filter { it.offset >= 0 }.map { it.index } +
+                    visible.filter { it.offset < 0 }.map { it.index },
+            )
+        }
+    }
     val scope = rememberCoroutineScope()
     val contentStart = shellContentStart()
 
@@ -101,8 +115,8 @@ fun HomeRail(
             itemsIndexed(section.items, key = { _, card -> "${card.contentType}:${card.contentId}" }) { index, card ->
                 // Each card reads only whether it is the entry card, so a focus move recomposes
                 // the two cards whose answer changed, not every composed card in the rail.
-                val isEntry by remember(index, lastIndex) {
-                    derivedStateOf { isRailEntry(index, entryIndex, lastIndex) }
+                val isEntry by remember(index) {
+                    derivedStateOf { index == resolvedEntry }
                 }
                 HomeCard(
                     card = card,
@@ -130,9 +144,15 @@ fun HomeRail(
     }
 }
 
-/** Whether the card at [index] holds the rail's entry requester; out of range falls back to the last card. */
-internal fun isRailEntry(index: Int, entryIndex: Int, lastIndex: Int): Boolean =
-    index == entryIndex.coerceAtMost(lastIndex)
+/**
+ * The card that holds the rail's entry requester: the card focused last, or the last card when
+ * the rail shrank. When that card is not on screen, the first card on screen takes its place;
+ * [onScreen] lists the on-screen indexes, cards fully past the start edge first.
+ */
+internal fun resolveRailEntry(entryIndex: Int, lastIndex: Int, onScreen: List<Int>): Int {
+    val clamped = entryIndex.coerceIn(0, lastIndex)
+    return if (onScreen.isEmpty() || clamped in onScreen) clamped else onScreen.first()
+}
 
 @Composable
 private fun HomeRailTitle.resolve(): String =
