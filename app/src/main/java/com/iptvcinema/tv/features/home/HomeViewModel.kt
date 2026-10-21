@@ -27,6 +27,8 @@ import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.model.home.HomePersonalSnapshot
 import com.iptvcinema.tv.core.model.home.toFavoriteContentType
 import com.iptvcinema.tv.core.parental.ParentalGate
+import com.iptvcinema.tv.core.util.AppStrings
+import com.iptvcinema.tv.core.util.CatalogLabels
 import com.iptvcinema.tv.core.util.SyncStatusFormatter
 import com.iptvcinema.tv.core.util.continueWatchingKey
 import com.iptvcinema.tv.features.browse.ContinueWatchingCardFactory
@@ -51,7 +53,9 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.withIndex
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -69,6 +73,7 @@ class HomeViewModel @Inject constructor(
     private val catalogRefreshController: CatalogRefreshController,
     private val catalogSyncProgressTracker: CatalogSyncProgressTracker,
     private val continueWatchingCards: ContinueWatchingCardFactory,
+    private val appStrings: AppStrings,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
 
@@ -123,9 +128,11 @@ class HomeViewModel @Inject constructor(
         .flatMapLatest { (session, continueWatchingEnabled) ->
             val profileId = session.profileId
             // Each source emits its cache and then the server copy, which is usually the same.
-            // Dropping repeats keeps an unchanged copy from rebuilding every rail again.
+            // Dropping repeats keeps an unchanged copy from rebuilding every rail again. Sources
+            // read by more than one part of Home are shared so each loads once.
             val controlsFlow = (profileId?.let { parentalControlsRepository.observeControls(it) } ?: flowOf(null))
                 .distinctUntilChanged()
+                .shareIn(viewModelScope, SharingStarted.WhileSubscribed(), replay = 1)
             val historyFlow = (
                 profileId?.let { watchHistoryRepository.observeHistory(it, HISTORY_LIMIT) } ?: flowOf(emptyList())
                 ).distinctUntilChanged()
@@ -136,6 +143,7 @@ class HomeViewModel @Inject constructor(
             }
             val favoritesFlow = (profileId?.let { favoritesRepository.observeFavorites(it) } ?: flowOf(emptyList()))
                 .distinctUntilChanged()
+                .shareIn(viewModelScope, SharingStarted.WhileSubscribed(), replay = 1)
             // The gate is a cheap "is there anything" check; the rails load once, here. A sync
             // writes in batches and the gate re-emits on each; let those settle so the catalog
             // queries run once per burst instead of being cancelled over and over.
@@ -153,12 +161,16 @@ class HomeViewModel @Inject constructor(
                 }
                 // A write that did not change what Home shows must not rebuild the rails.
                 .distinctUntilChanged()
-            val personalFlow = combine(historyFlow, controlsFlow) { history, controls -> history to controls }
-                .mapLatest { (history, controls) ->
+            val favoriteChannelIds = favoritesFlow
+                .map { favorites -> favorites.filter { it.contentType == FavoriteContentType.CHANNEL }.map { it.contentId } }
+                .distinctUntilChanged()
+            val personalFlow = combine(historyFlow, controlsFlow, favoriteChannelIds, ::Triple)
+                .mapLatest { (history, controls, channelIds) ->
                     homeContentRepository.loadPersonal(
                         sourceId = session.sourceId,
                         isDemoMode = session.isDemoMode,
                         history = history,
+                        favoriteChannelIds = channelIds,
                         isCategoryBlocked = { name -> controls != null && parentalGate.isCategoryBlocked(name, controls) },
                     )
                 }
@@ -188,6 +200,8 @@ class HomeViewModel @Inject constructor(
             )
         }
         val controls = inputs.controls
+        val preferArabic = appStrings.prefersArabic()
+        val sourceId = inputs.session.sourceId
         val content = HomeSectionsBuilder.build(
             catalog = inputs.catalog,
             personal = inputs.personal,
@@ -196,6 +210,8 @@ class HomeViewModel @Inject constructor(
                 controls != null && parentalGate.isContentBlocked(category, rating, controls)
             },
             isFavorite = { id, type -> inputs.favorites.isFavorite(id, type) },
+            myList = inputs.favorites.filter { it.sourceId == null || it.sourceId == sourceId },
+            categoryLabel = { name -> CatalogLabels.displayCategory(name, preferArabic) },
         )
         val isEmpty = content.hero.isEmpty() && content.sections.isEmpty()
         return HomeUiState(

@@ -25,6 +25,18 @@ class HomeContentRulesTest {
         assertEquals(8.0, HomeContentRules.ratingValue(" 8 "), 0.0)
         assertEquals(0.0, HomeContentRules.ratingValue("N/A"), 0.0)
         assertEquals(0.0, HomeContentRules.ratingValue(null), 0.0)
+        assertEquals(0.0, HomeContentRules.ratingValue("2018.0"), 0.0)
+    }
+
+    @Test
+    fun `hero skips cam copies and recordings`() {
+        val newest = listOf(
+            movie("wwe", title = "WWE.RAW.19.10.2025", rating = "9.0"),
+            movie("cam", title = "مطلوب عائليا - CAM", rating = "9.0"),
+            movie("ok1", rating = "6.0"),
+            movie("ok2", rating = "7.0"),
+        )
+        assertEquals(listOf("ok2", "ok1"), HomeContentRules.pickHero(newest).map { it.id })
     }
 
     @Test

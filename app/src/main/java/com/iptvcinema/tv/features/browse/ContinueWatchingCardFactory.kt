@@ -8,6 +8,7 @@ import com.iptvcinema.tv.core.model.WatchHistoryItem
 import com.iptvcinema.tv.core.model.home.HomeCardAction
 import com.iptvcinema.tv.core.model.home.HomeContentCard
 import com.iptvcinema.tv.core.util.AppStrings
+import com.iptvcinema.tv.core.util.CatalogLabels
 import com.iptvcinema.tv.core.util.RemainingWatchTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,7 +40,7 @@ class ContinueWatchingCardFactory @Inject constructor(
             contentId = item.contentId,
             contentType = contentType,
             seriesId = item.seriesId,
-            title = display.title,
+            title = CatalogLabels.cleanTitle(display.title),
             subtitle = display.subtitle,
             imageUrl = display.posterUrl,
             backdropUrl = display.backdropUrl,

@@ -244,7 +244,7 @@ interface MovieDao {
     @Query(
         """
         SELECT * FROM movies
-        WHERE sourceId = :sourceId AND ratingValue >= :minRating
+        WHERE sourceId = :sourceId AND ratingValue >= :minRating AND ratingValue <= 10
         ORDER BY ratingValue DESC, year DESC
         LIMIT :limit
         """,
@@ -394,7 +394,7 @@ interface SeriesDao {
     @Query(
         """
         SELECT * FROM series
-        WHERE sourceId = :sourceId AND ratingValue >= :minRating
+        WHERE sourceId = :sourceId AND ratingValue >= :minRating AND ratingValue <= 10
         ORDER BY ratingValue DESC, year DESC
         LIMIT :limit
         """,

@@ -12,7 +12,7 @@ import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.model.WatchHistoryItem
 import com.iptvcinema.tv.core.model.catalog.CatalogChannel
 import com.iptvcinema.tv.core.model.catalog.CatalogMovie
-import com.iptvcinema.tv.core.model.catalog.CatalogSeries
+import com.iptvcinema.tv.core.model.home.BrowseCategory
 import com.iptvcinema.tv.core.model.home.HomeBecauseYouWatched
 import com.iptvcinema.tv.core.model.home.HomeCatalogSnapshot
 import com.iptvcinema.tv.core.model.home.HomeCategoryRail
@@ -40,14 +40,9 @@ class HomeContentRepository @Inject constructor(
         else -> safely("catalog", HomeCatalogSnapshot()) {
             val movies = catalogDaoFacade.movies
             HomeCatalogSnapshot(
-                heroCandidates = movies.getNewestWithArtwork(sourceId, HomeContentRules.HERO_RECENCY_POOL)
+                heroCandidates = movies.getNewestWithArtwork(sourceId, HomeContentRules.HERO_CANDIDATE_FETCH)
                     .map { it.toDomain() },
                 newestMovies = movies.getNewest(sourceId, RAIL_FETCH_LIMIT).map { it.toDomain() },
-                topRatedMovies = movies.getTopRated(sourceId, HomeContentRules.MIN_TOP_RATING, RAIL_FETCH_LIMIT)
-                    .map { it.toDomain() },
-                topRatedSeries = catalogDaoFacade.series
-                    .getTopRated(sourceId, HomeContentRules.MIN_TOP_RATING, RAIL_FETCH_LIMIT)
-                    .map { it.toDomain() },
             )
         }
     }
@@ -56,6 +51,7 @@ class HomeContentRepository @Inject constructor(
         sourceId: String?,
         isDemoMode: Boolean,
         history: List<WatchHistoryItem>,
+        favoriteChannelIds: List<String>,
         isCategoryBlocked: (String) -> Boolean,
     ): HomePersonalSnapshot {
         if (isDemoMode) return demoPersonal(history)
@@ -64,15 +60,64 @@ class HomeContentRepository @Inject constructor(
             .filter { it.contentType == WatchHistoryContentType.MOVIE }
             .mapTo(mutableSetOf()) { it.contentId }
         val becauseYouWatched = safely("because", null) { loadBecauseYouWatched(sourceId, history, watchedMovieIds) }
+        val shelf = safely("categories", HomeCategoryShelf()) {
+            loadCategoryShelf(sourceId, watchedMovieIds.toList(), becauseYouWatched?.second, isCategoryBlocked)
+        }
+        val liveChannels = safely("channels", emptyList()) { loadLiveChannels(sourceId, history, favoriteChannelIds) }
         return HomePersonalSnapshot(
             nextEpisodes = safely("nextEpisodes", emptyList()) { loadNextEpisodes(sourceId, history) },
             becauseYouWatched = becauseYouWatched?.first,
-            categoryRails = safely("categories", emptyList()) {
-                loadCategoryRails(sourceId, watchedMovieIds.toList(), becauseYouWatched?.second, isCategoryBlocked)
+            categoryRails = shelf.rails,
+            categoryTiles = shelf.tiles,
+            liveChannels = liveChannels,
+            nowPlaying = safely("nowPlaying", emptyMap()) {
+                catalogRepository.getCurrentProgramsForChannels(sourceId, liveChannels.map { it.id })
+                    .mapValues { (_, program) -> program.title }
+                    .filterValues { it.isNotBlank() }
             },
-            recentChannels = safely("channels", emptyList()) { loadRecentChannels(sourceId, history) },
             watchedMovieIds = watchedMovieIds,
         )
+    }
+
+    /**
+     * Home's categories: up to [CATEGORY_TILE_COUNT] shortcut tiles, the viewer's categories
+     * first, and full rails for the top [CATEGORY_RAIL_COUNT] of them. [excludedCategory] (the
+     * "Because you watched" anchor's) gets a tile but no second rail.
+     */
+    private suspend fun loadCategoryShelf(
+        sourceId: String,
+        watchedMovieIds: List<String>,
+        excludedCategory: String?,
+        isCategoryBlocked: (String) -> Boolean,
+    ): HomeCategoryShelf {
+        val movieDao = catalogDaoFacade.movies
+        val watchedCategories = watchedMovieIds
+            .take(AFFINITY_HISTORY_LIMIT)
+            .takeIf { it.isNotEmpty() }
+            ?.let { ids -> movieDao.getByIds(sourceId, ids).map { it.categoryName } }
+            .orEmpty()
+        val names = HomeContentRules.rankCategories(
+            watchedCategories = watchedCategories,
+            fallback = movieDao.getLargestCategoryNames(sourceId, CATEGORY_FALLBACK_LIMIT),
+            limit = CATEGORY_TILE_COUNT,
+            isBlocked = isCategoryBlocked,
+        )
+        val rails = names
+            .filterNot { it == excludedCategory }
+            .take(CATEGORY_RAIL_COUNT)
+            .map { name ->
+                HomeCategoryRail(
+                    categoryName = name,
+                    movies = movieDao.getByCategoryNameLimited(sourceId, name, RAIL_FETCH_LIMIT).map { it.toDomain() },
+                )
+            }
+        val railArtwork = rails.associate { rail -> rail.categoryName to rail.movies.firstOrNull() }
+        val tiles = names.map { name ->
+            val sample = railArtwork[name]
+                ?: movieDao.getByCategoryNameLimited(sourceId, name, 1).firstOrNull()?.toDomain()
+            BrowseCategory(name = name, itemCount = 0, backdropUrl = sample?.backdropUrl, posterUrl = sample?.posterUrl)
+        }
+        return HomeCategoryShelf(rails = rails, tiles = tiles)
     }
 
     suspend fun loadNextEpisodes(sourceId: String, history: List<WatchHistoryItem>): List<HomeNextEpisode> =
@@ -127,8 +172,14 @@ class HomeContentRepository @Inject constructor(
         }
     }
 
-    private suspend fun loadRecentChannels(sourceId: String, history: List<WatchHistoryItem>): List<CatalogChannel> {
-        val ids = HomeContentRules.recentChannelIds(history, RECENT_CHANNEL_LIMIT)
+    private suspend fun loadLiveChannels(
+        sourceId: String,
+        history: List<WatchHistoryItem>,
+        favoriteChannelIds: List<String>,
+    ): List<CatalogChannel> {
+        val ids = (HomeContentRules.recentChannelIds(history, RECENT_CHANNEL_LIMIT) + favoriteChannelIds)
+            .distinct()
+            .take(RECENT_CHANNEL_LIMIT)
         if (ids.isEmpty()) return emptyList()
         val byId = catalogDaoFacade.channels.getByIds(sourceId, ids).associateBy { it.id }
         return ids.mapNotNull { byId[it]?.toDomain() }
@@ -139,23 +190,25 @@ class HomeContentRepository @Inject constructor(
         return HomeCatalogSnapshot(
             heroCandidates = movies.filter { !it.backdropUrl.isNullOrBlank() },
             newestMovies = movies,
-            topRatedMovies = movies.sortedByDescending { HomeContentRules.ratingValue(it.rating) },
-            topRatedSeries = FakeDataProvider.seriesList
-                .map { it.toDemoCatalogSeries() }
-                .sortedByDescending { HomeContentRules.ratingValue(it.rating) },
         )
     }
 
     private fun demoPersonal(history: List<WatchHistoryItem>): HomePersonalSnapshot {
         val movies = FakeDataProvider.movies.map { it.toDemoCatalogMovie() }
         val channelIds = HomeContentRules.recentChannelIds(history, RECENT_CHANNEL_LIMIT)
+        val byCategory = movies
+            .groupBy { it.categoryName.orEmpty() }
+            .filterKeys { it.isNotBlank() }
         return HomePersonalSnapshot(
-            categoryRails = movies
-                .groupBy { it.categoryName.orEmpty() }
-                .filterKeys { it.isNotBlank() }
+            categoryRails = byCategory
                 .map { (name, items) -> HomeCategoryRail(name, items) }
                 .take(CATEGORY_RAIL_COUNT),
-            recentChannels = channelIds.mapNotNull { id ->
+            categoryTiles = byCategory
+                .map { (name, items) ->
+                    BrowseCategory(name, items.size, items.first().backdropUrl, items.first().posterUrl)
+                }
+                .take(CATEGORY_TILE_COUNT),
+            liveChannels = channelIds.mapNotNull { id ->
                 FakeDataProvider.channels.find { it.id == id }?.toDemoCatalogChannel()
             },
         )
@@ -178,7 +231,13 @@ class HomeContentRepository @Inject constructor(
         const val NEXT_EPISODE_LIMIT = 8
         const val RECENT_CHANNEL_LIMIT = 12
         const val AFFINITY_HISTORY_LIMIT = 50
-        const val CATEGORY_FALLBACK_LIMIT = 6
-        const val CATEGORY_RAIL_COUNT = 3
+        const val CATEGORY_FALLBACK_LIMIT = 12
+        const val CATEGORY_RAIL_COUNT = 2
+        const val CATEGORY_TILE_COUNT = 8
     }
 }
+
+private data class HomeCategoryShelf(
+    val rails: List<HomeCategoryRail> = emptyList(),
+    val tiles: List<BrowseCategory> = emptyList(),
+)

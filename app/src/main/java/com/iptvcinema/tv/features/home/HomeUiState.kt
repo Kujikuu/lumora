@@ -43,7 +43,8 @@ object HomeSectionIds {
     const val BECAUSE_YOU_WATCHED = "because_you_watched"
     const val TOP_RATED_MOVIES = "top_rated_movies"
     const val TOP_RATED_SERIES = "top_rated_series"
-    const val RECENT_CHANNELS = "recent_channels"
+    const val LIVE_NOW = "live_now"
+    const val MY_LIST = "my_list"
     const val CATEGORIES = "categories"
     const val LATEST_SERIES = "latest_series"
     const val BECAUSE_YOU_WATCHED_SERIES = "because_you_watched_series"
@@ -114,9 +115,10 @@ sealed interface HomeSection {
         override fun withItems(items: List<HomeContentCard>) = copy(items = items)
     }
 
-    data class RecentChannels(override val items: List<HomeContentCard>) : HomeSection {
-        override val id = HomeSectionIds.RECENT_CHANNELS
-        override val title = HomeRailTitle(R.string.home_recent_channels)
+    /** Channels the viewer watched lately or saved, with what is on now. */
+    data class LiveNow(override val items: List<HomeContentCard>) : HomeSection {
+        override val id = HomeSectionIds.LIVE_NOW
+        override val title = HomeRailTitle(R.string.home_live_now)
         override fun withItems(items: List<HomeContentCard>) = copy(items = items)
     }
 }

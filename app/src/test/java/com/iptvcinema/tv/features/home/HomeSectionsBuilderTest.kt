@@ -1,5 +1,8 @@
 package com.iptvcinema.tv.features.home
 
+import com.iptvcinema.tv.core.model.FavoriteContentType
+import com.iptvcinema.tv.core.model.FavoriteItem
+import com.iptvcinema.tv.core.model.home.BrowseCategory
 import com.iptvcinema.tv.core.model.home.HomeBecauseYouWatched
 import com.iptvcinema.tv.core.model.home.HomeCatalogSnapshot
 import com.iptvcinema.tv.core.model.home.HomeCategoryRail
@@ -18,12 +21,16 @@ class HomeSectionsBuilderTest {
         personal: HomePersonalSnapshot = HomePersonalSnapshot(),
         continueWatching: List<HomeContentCard> = emptyList(),
         isBlocked: (String?, String?) -> Boolean = { _, _ -> false },
+        myList: List<FavoriteItem> = emptyList(),
+        categoryLabel: (String) -> String = { it },
     ) = HomeSectionsBuilder.build(
         catalog = catalog,
         personal = personal,
         continueWatching = continueWatching,
         isBlocked = isBlocked,
         isFavorite = { _, _ -> false },
+        myList = myList,
+        categoryLabel = categoryLabel,
     )
 
     @Test
@@ -32,27 +39,27 @@ class HomeSectionsBuilderTest {
             catalog = HomeCatalogSnapshot(
                 heroCandidates = movies("h1"),
                 newestMovies = movies("n1", "n2", "n3", "n4"),
-                topRatedMovies = movies("t1", "t2", "t3", "t4"),
-                topRatedSeries = listOf(series("s1"), series("s2"), series("s3"), series("s4")),
             ),
             personal = HomePersonalSnapshot(
                 nextEpisodes = listOf(HomeNextEpisode(series("s9"), episode("e2", "s9", number = 2))),
                 becauseYouWatched = HomeBecauseYouWatched("Anchor", movies("b1", "b2", "b3", "b4")),
                 categoryRails = listOf(HomeCategoryRail("Drama", movies("d1", "d2", "d3", "d4"))),
-                recentChannels = listOf(channel("c1")),
+                categoryTiles = listOf(BrowseCategory("Drama", 0)),
+                liveChannels = listOf(channel("c1")),
             ),
             continueWatching = listOf(continueCard),
+            myList = listOf(favorite("m1", FavoriteContentType.MOVIE)),
         )
         assertEquals(
             listOf(
                 HomeSectionIds.CONTINUE,
                 HomeSectionIds.NEXT_EPISODE,
+                HomeSectionIds.LIVE_NOW,
+                HomeSectionIds.CATEGORIES,
                 HomeSectionIds.NEW_MOVIES,
                 HomeSectionIds.BECAUSE_YOU_WATCHED,
-                HomeSectionIds.TOP_RATED_MOVIES,
-                HomeSectionIds.TOP_RATED_SERIES,
                 HomeSectionIds.category("Drama"),
-                HomeSectionIds.RECENT_CHANNELS,
+                HomeSectionIds.MY_LIST,
             ),
             content.sections.map { it.id },
         )
@@ -81,11 +88,11 @@ class HomeSectionsBuilderTest {
     fun `discovery rails with fewer than four items are hidden but personal rails are not`() {
         val content = build(
             catalog = HomeCatalogSnapshot(heroCandidates = movies("h1"), newestMovies = movies("n1", "n2", "n3")),
-            personal = HomePersonalSnapshot(recentChannels = listOf(channel("c1"))),
+            personal = HomePersonalSnapshot(liveChannels = listOf(channel("c1"))),
             continueWatching = listOf(continueCard),
         )
         assertEquals(
-            listOf(HomeSectionIds.CONTINUE, HomeSectionIds.RECENT_CHANNELS),
+            listOf(HomeSectionIds.CONTINUE, HomeSectionIds.LIVE_NOW),
             content.sections.map { it.id },
         )
     }
@@ -106,18 +113,62 @@ class HomeSectionsBuilderTest {
     }
 
     @Test
-    fun `top rated rails are ranked, capped at ten and exempt from de-duplication`() {
-        val rated = (1..14).map { movie("t$it", rating = "8.0") }
+    fun `live now shows what is on, else the cleaned category`() {
+        val content = build(
+            personal = HomePersonalSnapshot(
+                liveChannels = listOf(channel("c1", category = "NEWS | أخبار"), channel("c2", category = "Sport")),
+                nowPlaying = mapOf("c2" to "Evening match"),
+            ),
+            categoryLabel = { it.substringBefore(" |").lowercase() },
+        )
+        val live = content.sections.single()
+        assertEquals(listOf("news", "Evening match"), live.items.map { it.subtitle })
+    }
+
+    @Test
+    fun `category tiles and rails show labels but keep raw names for navigation`() {
+        val raw = "Mohamed HENEDI | محمد هنيدي"
+        val content = build(
+            personal = HomePersonalSnapshot(
+                categoryTiles = listOf(BrowseCategory(raw, 0, posterUrl = "https://img/p.jpg")),
+                categoryRails = listOf(HomeCategoryRail(raw, movies("d1", "d2", "d3", "d4"))),
+            ),
+            categoryLabel = { "Mohamed Henedi" },
+        )
+        val tile = content.sections.first { it.id == HomeSectionIds.CATEGORIES }.items.single()
+        assertEquals(raw, tile.contentId)
+        assertEquals("Mohamed Henedi", tile.title)
+        val rail = content.sections.first { it.id == HomeSectionIds.category(raw) }
+        assertEquals("Mohamed Henedi", rail.title.text)
+    }
+
+    @Test
+    fun `cam copies never lead the hero and rails show them without the tag`() {
         val content = build(
             catalog = HomeCatalogSnapshot(
-                heroCandidates = listOf(rated.first()),
-                topRatedMovies = rated,
+                heroCandidates = listOf(movie("cam", title = "The Fix (HDTS)"), movie("h1")),
+                newestMovies = listOf(movie("n1", title = "Sacrifice - CAM")) + movies("n2", "n3", "n4"),
             ),
         )
-        val top = content.sections.single { it.id == HomeSectionIds.TOP_RATED_MOVIES }
-        assertEquals(10, top.items.size)
-        assertEquals("t1", top.items.first().contentId)
-        assertEquals((1..10).toList(), top.items.map { it.rank })
+        assertEquals(listOf("h1"), content.hero.map { it.id })
+        val newest = content.sections.single { it.id == HomeSectionIds.NEW_MOVIES }
+        assertEquals("Sacrifice", newest.items.first().title)
+    }
+
+    @Test
+    fun `my list holds saved movies and series only`() {
+        val content = build(
+            myList = listOf(
+                favorite("m1", FavoriteContentType.MOVIE),
+                favorite("s1", FavoriteContentType.SERIES),
+                favorite("c1", FavoriteContentType.CHANNEL),
+                favorite("e1", FavoriteContentType.EPISODE),
+            ),
+        )
+        val myList = content.sections.single()
+        assertEquals(HomeSectionIds.MY_LIST, myList.id)
+        assertEquals(listOf("movie" to "m1", "series" to "s1"), myList.items.map { it.contentType to it.contentId })
+        assertTrue(myList.items.all { it.isFavorite })
     }
 
     @Test
@@ -141,7 +192,7 @@ class HomeSectionsBuilderTest {
                 newestMovies = movies("n1", "n2", "n3", "n4") + movie("a1", category = "Adult"),
             ),
             personal = HomePersonalSnapshot(
-                recentChannels = listOf(channel("c1", category = "Adult"), channel("c2", category = "News")),
+                liveChannels = listOf(channel("c1", category = "Adult"), channel("c2", category = "News")),
             ),
             isBlocked = { category, _ -> category == "Adult" },
         )
@@ -184,15 +235,25 @@ class HomeSectionsBuilderTest {
             catalog = HomeCatalogSnapshot(
                 heroCandidates = movies("h1"),
                 newestMovies = movies("n1", "n2", "n3", "n4"),
-                topRatedMovies = movies("n1", "t2", "t3", "t4"),
             ),
+            myList = listOf(favorite("n1", FavoriteContentType.MOVIE)),
         )
         val updated = content.sections.withFavorite(
             contentId = "n1",
-            type = com.iptvcinema.tv.core.model.FavoriteContentType.MOVIE,
+            type = FavoriteContentType.MOVIE,
             isFavorite = true,
         )
         val flags = updated.flatMap { s -> s.items.filter { it.contentId == "n1" }.map { it.isFavorite } }
         assertEquals(listOf(true, true), flags)
     }
+
+    private fun favorite(id: String, type: FavoriteContentType) = FavoriteItem(
+        id = "f-$id",
+        profileId = "p",
+        sourceId = "src",
+        contentId = id,
+        contentType = type,
+        title = "Saved $id",
+        posterUrl = "https://img/$id.jpg",
+    )
 }

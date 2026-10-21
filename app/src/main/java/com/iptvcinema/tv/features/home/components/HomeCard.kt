@@ -1,15 +1,20 @@
 package com.iptvcinema.tv.features.home.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -37,7 +42,7 @@ enum class HomeCardStyle {
     Poster,
     /** 16:9 frame for Continue Watching and Next episode, with a progress bar. */
     Landscape,
-    /** 16:9 tile with the channel logo fitted on a dark surface. */
+    /** 16:9 channel tile: logo or initial, name, and what is on now. */
     Channel,
     /** 16:9 category tile: dimmed artwork from the category under its name. */
     Category,
@@ -74,23 +79,7 @@ fun HomeCard(
         contentDescription = card.title,
     ) { _ ->
         when (style) {
-            HomeCardStyle.Channel -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(CinemaColors.Surface),
-                contentAlignment = Alignment.Center,
-            ) {
-                CinemaAsyncImage(
-                    imageUrl = card.imageUrl,
-                    contentDescription = card.title,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 28.dp, vertical = 18.dp),
-                    contentScale = ContentScale.Fit,
-                    fallbackLabel = card.title,
-                    showLoadingSkeleton = false,
-                )
-            }
+            HomeCardStyle.Channel -> ChannelTile(card)
             HomeCardStyle.Category -> CategoryTile(card)
             HomeCardStyle.Landscape -> CinemaAsyncImage(
                 imageUrl = card.imageUrl ?: card.backdropUrl,
@@ -115,6 +104,52 @@ fun HomeCard(
         }
     }
 }
+
+/** Logo (or the name's first letter when the provider has none), name, and a live line. */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun ChannelTile(card: HomeContentCard) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CinemaColors.Surface)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            CinemaAsyncImage(
+                imageUrl = card.imageUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(ChannelLogoSize)
+                    .clip(CinemaShapes.Small)
+                    .background(CinemaColors.SurfaceRaised),
+                contentScale = ContentScale.Fit,
+                fallbackLabel = card.title.trim().take(1),
+                showLoadingSkeleton = false,
+            )
+            Text(
+                text = card.title.isolateDirection(),
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = CinemaColors.White),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        card.subtitle?.takeIf { it.isNotBlank() }?.let { now ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(modifier = Modifier.size(6.dp).background(CinemaColors.LiveRed, CircleShape))
+                Text(
+                    text = now.isolateDirection(),
+                    style = MaterialTheme.typography.labelSmall.copy(color = CinemaColors.TextSecondary),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+private val ChannelLogoSize = 40.dp
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable

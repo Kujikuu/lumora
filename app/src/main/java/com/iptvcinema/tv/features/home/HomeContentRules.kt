@@ -4,24 +4,42 @@ import com.iptvcinema.tv.core.model.WatchHistoryContentType
 import com.iptvcinema.tv.core.model.WatchHistoryItem
 import com.iptvcinema.tv.core.model.catalog.CatalogMovie
 import com.iptvcinema.tv.core.player.WatchHistoryResumePolicy
+import com.iptvcinema.tv.core.util.CatalogLabels
+import com.iptvcinema.tv.core.util.RatingFormatter
 
 /** Pure selection rules behind the Home sections, kept free of Android so they are unit tested. */
 object HomeContentRules {
     const val HERO_COUNT = 5
     const val HERO_RECENCY_POOL = 15
+    /** Hero candidates read from the catalog; the quality filter drops some before the pool. */
+    const val HERO_CANDIDATE_FETCH = 40
     const val MIN_TOP_RATING = 6.0
 
     private val leadingNumber = Regex("""^\d+(\.\d+)?""")
 
-    /** The newest movies with artwork, reordered so the best rated lead. Ties keep recency order. */
+    /**
+     * The newest movies with artwork that are worth leading Home, reordered so the best rated
+     * lead. Ties keep recency order.
+     */
     fun pickHero(newestWithArtwork: List<CatalogMovie>): List<CatalogMovie> =
         newestWithArtwork
+            .filter { isHeroWorthy(it.title, it.categoryName) }
             .take(HERO_RECENCY_POOL)
             .sortedByDescending { ratingValue(it.rating) }
             .take(HERO_COUNT)
 
+    /** Cinema-camera copies and match or show recordings make a poor first impression. */
+    fun isHeroWorthy(title: String, categoryName: String? = null): Boolean =
+        !CatalogLabels.isCamCopy(title) &&
+            !CatalogLabels.looksLikeRecording(title) &&
+            !CatalogLabels.isRecordingCategory(categoryName)
+
+    /** The leading score on a 0-10 scale; junk and out-of-scale numbers (a year) read as zero. */
     fun ratingValue(rating: String?): Double =
-        rating?.trim()?.let { leadingNumber.find(it)?.value?.toDoubleOrNull() } ?: 0.0
+        rating?.trim()
+            ?.let { leadingNumber.find(it)?.value?.toDoubleOrNull() }
+            ?.takeIf { it <= RatingFormatter.MAX_SCORE }
+            ?: 0.0
 
     /**
      * Categories the viewer watches most, most-watched first. Ties keep the order they were

@@ -256,9 +256,9 @@
     <string name="home_trending">Trending Now</string>
     <string name="home_top_10_lumora">⚡ Top 10 in Lumora</string>
     <string name="home_live_channels">Live Channels</string>
-    <string name="home_live_now">Live Now</string>
+    <string name="home_live_now">Live now</string>
     <string name="home_popular_movies">Popular Movies</string>
-    <string name="home_recently_added">Recently Added</string>
+    <string name="home_recently_added">Recently added</string>
     <string name="home_favorites">Favorites</string>
     <string name="home_new_releases">New Releases</string>
     <string name="home_recommended_series">Recommended Series</string>
@@ -268,7 +268,6 @@
     <string name="home_top_rated_movies">Top rated movies</string>
     <string name="home_top_rated_series">Top rated series</string>
     <string name="home_more_in_category">More in %1$s</string>
-    <string name="home_recent_channels">Recently watched channels</string>
     <string name="home_kind_movie">Movie</string>
     <string name="home_kind_series">Series</string>
     <string name="home_kind_episode">Episode</string>

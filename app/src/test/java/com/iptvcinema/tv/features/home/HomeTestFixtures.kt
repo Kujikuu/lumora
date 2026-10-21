@@ -13,10 +13,11 @@ internal fun movie(
     rating: String? = null,
     category: String? = null,
     backdrop: String? = "https://img/$id-bg.jpg",
+    title: String = "Movie $id",
 ) = CatalogMovie(
     id = id,
     sourceId = "src",
-    title = "Movie $id",
+    title = title,
     streamUrl = "",
     posterUrl = "https://img/$id.jpg",
     backdropUrl = backdrop,

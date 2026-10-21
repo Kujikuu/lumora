@@ -22,6 +22,9 @@ class AppStrings @Inject constructor(
     fun get(@StringRes id: Int, vararg formatArgs: Any): String =
         localizedContext().getString(id, *formatArgs)
 
+    /** Whether the app is shown in Arabic, for picking one side of a bilingual provider label. */
+    fun prefersArabic(): Boolean = AppLocaleHelper.currentLanguageTag(context).startsWith("ar")
+
     fun getQuantity(@PluralsRes id: Int, quantity: Int, vararg formatArgs: Any): String =
         localizedContext().resources.getQuantityString(id, quantity, *formatArgs)
 

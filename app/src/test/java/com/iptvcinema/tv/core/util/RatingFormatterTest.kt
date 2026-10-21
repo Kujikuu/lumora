@@ -25,4 +25,11 @@ class RatingFormatterTest {
         assertNull(RatingFormatter.formatForDisplay(""))
         assertNull(RatingFormatter.formatForDisplay("   "))
     }
+
+    @Test
+    fun `formatForDisplay hides numbers that are not scores`() {
+        assertNull(RatingFormatter.formatForDisplay("2018.0"))
+        assertNull(RatingFormatter.formatForDisplay("10.5"))
+        assertEquals("10.0", RatingFormatter.formatForDisplay("10"))
+    }
 }

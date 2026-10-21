@@ -248,7 +248,6 @@
     <string name="home_top_rated_movies">الأفلام الأعلى تقييمًا</string>
     <string name="home_top_rated_series">المسلسلات الأعلى تقييمًا</string>
     <string name="home_more_in_category">المزيد من %1$s</string>
-    <string name="home_recent_channels">قنوات شاهدتها مؤخرًا</string>
     <string name="home_kind_movie">فيلم</string>
     <string name="home_kind_series">مسلسل</string>
     <string name="home_kind_episode">حلقة</string>

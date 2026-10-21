@@ -9,16 +9,19 @@ import com.iptvcinema.tv.core.model.catalog.CatalogSeries
 data class HomeCatalogSnapshot(
     val heroCandidates: List<CatalogMovie> = emptyList(),
     val newestMovies: List<CatalogMovie> = emptyList(),
-    val topRatedMovies: List<CatalogMovie> = emptyList(),
-    val topRatedSeries: List<CatalogSeries> = emptyList(),
 )
 
-/** Home content derived from the profile's watch history. */
+/** Home content derived from the profile's watch history and saved channels. */
 data class HomePersonalSnapshot(
     val nextEpisodes: List<HomeNextEpisode> = emptyList(),
     val becauseYouWatched: HomeBecauseYouWatched? = null,
     val categoryRails: List<HomeCategoryRail> = emptyList(),
-    val recentChannels: List<CatalogChannel> = emptyList(),
+    /** Shortcut tiles, most relevant first: the viewer's categories, then the largest ones. */
+    val categoryTiles: List<BrowseCategory> = emptyList(),
+    /** Recently watched channels, then favorite ones. */
+    val liveChannels: List<CatalogChannel> = emptyList(),
+    /** What each of [liveChannels] is showing now, by channel id, when the guide knows. */
+    val nowPlaying: Map<String, String> = emptyMap(),
     val watchedMovieIds: Set<String> = emptySet(),
 )
 
