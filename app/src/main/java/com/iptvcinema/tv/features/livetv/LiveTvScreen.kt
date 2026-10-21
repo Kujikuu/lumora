@@ -188,8 +188,14 @@ fun LiveTvScreen(
     }
 
     LaunchedEffect(categories.getOrNull(selectedCategory), isResolvingChannelSelection) {
-        if (isResolvingChannelSelection) return@LaunchedEffect
-        viewModel.selectCategory(categories.getOrNull(selectedCategory))
+        if (isResolvingChannelSelection || categories.isEmpty()) return@LaunchedEffect
+        // Only the first sync comes from here; tab presses call the view model directly. Once
+        // the view model has a category (a channel opened from Home or My List chose it), a tab
+        // index that has not caught up yet must not send Live TV back to the first category.
+        val current = categories.getOrNull(selectedCategory)
+        val active = activeCategoryName
+        if (active != null && !active.equals(current, ignoreCase = true)) return@LaunchedEffect
+        viewModel.selectCategory(current)
     }
 
     LaunchedEffect(initialOpenGuide) {

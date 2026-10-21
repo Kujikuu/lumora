@@ -114,6 +114,10 @@ class LiveTvViewModel @Inject constructor(
     private val favoriteChannelIds = MutableStateFlow<Set<String>>(emptySet())
     private val fullGuideOpen = MutableStateFlow(false)
     private val pendingChannelId = MutableStateFlow<String?>(null)
+    // The category a requested channel lives in, once looked up. Until then a channel list that
+    // lacks the channel is just the list Live TV opened with, not proof the channel is gone.
+    private var pendingCategoryResolved = false
+    private var pendingCategory: String? = null
     private var currentParentalControls: com.iptvcinema.tv.core.model.ParentalControls? = null
     private val browseState = MutableStateFlow(
         LiveTvBrowseSlice(
@@ -178,6 +182,7 @@ class LiveTvViewModel @Inject constructor(
                     }
                     LiveTvBrowseResult(
                         slice = LiveTvBrowseSlice(
+                            categoryName = categoryName,
                             loadState = state.loadState,
                             categories = filteredCategories,
                             channels = filteredChannels,
@@ -207,7 +212,14 @@ class LiveTvViewModel @Inject constructor(
                         startPlayback(matchedPending.id)
                     }
                     pendingChannelId.value = null
-                } else if (!pending.isNullOrBlank() && slice.loadState == CatalogLoadState.Ready) {
+                } else if (
+                    !pending.isNullOrBlank() &&
+                    slice.loadState == CatalogLoadState.Ready &&
+                    pendingCategoryResolved &&
+                    slice.categoryName == pendingCategory
+                ) {
+                    // The channel's own category loaded without it (hidden or filtered): play it
+                    // directly rather than leave the request hanging.
                     val channelId = pending
                     pendingChannelId.value = null
                     startPlayback(channelId)
@@ -297,6 +309,12 @@ class LiveTvViewModel @Inject constructor(
     }
 
     fun selectCategory(categoryName: String?) {
+        // While a requested channel is being found, its category wins over the screen's default.
+        if (pendingChannelId.value != null) return
+        applyCategory(categoryName)
+    }
+
+    private fun applyCategory(categoryName: String?) {
         selectedCategory.value = categoryName
         focusedProgram.value = null
     }
@@ -410,9 +428,17 @@ class LiveTvViewModel @Inject constructor(
     fun selectChannelById(channelId: String?) {
         if (channelId.isNullOrBlank()) return
         pendingChannelId.value = channelId
+        pendingCategoryResolved = false
+        pendingCategory = null
         viewModelScope.launch {
             resolveCategoryForChannel(channelId)
         }
+    }
+
+    private fun resolvePendingCategory(categoryName: String?) {
+        pendingCategory = categoryName
+        pendingCategoryResolved = true
+        applyCategory(categoryName)
     }
 
     private suspend fun resolveCategoryForChannel(channelId: String) {
@@ -421,7 +447,7 @@ class LiveTvViewModel @Inject constructor(
             val category = FakeDataProvider.liveCategories.firstOrNull { categoryName ->
                 FakeDataProvider.channelsForCategory(categoryName).any { it.id == channelId }
             }
-            selectCategory(category)
+            resolvePendingCategory(category)
             return
         }
         val sourceId = session.currentSourceId
@@ -431,7 +457,7 @@ class LiveTvViewModel @Inject constructor(
         }
         val catalogChannel = catalogRepository.getChannel(sourceId, channelId)
         if (catalogChannel != null) {
-            selectCategory(catalogChannel.categoryName)
+            resolvePendingCategory(catalogChannel.categoryName)
         } else {
             pendingChannelId.value = null
             startPlayback(channelId)
@@ -555,6 +581,8 @@ class LiveTvViewModel @Inject constructor(
             .toSet()
 
     private data class LiveTvBrowseSlice(
+        /** The category this list was loaded for; null is the default list. */
+        val categoryName: String? = null,
         val loadState: CatalogLoadState,
         val categories: List<String>,
         val channels: List<ChannelItem>,
