@@ -123,7 +123,9 @@ dependencies {
     implementation(libs.supabase.auth)
     implementation(libs.supabase.postgrest)
     implementation(libs.supabase.realtime)
-    implementation(libs.ktor.client.android)
+    // OkHttp, not the Android engine: Supabase Realtime needs WebSockets, which
+    // HttpURLConnection cannot open.
+    implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.websockets)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
