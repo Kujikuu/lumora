@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Info
@@ -102,6 +103,9 @@ fun HomeSpotlightPanel(
 
     Column(
         modifier = modifier
+            // Never squeezed: when something above takes height (the account banner), the panel
+            // grows upward into the free space instead of clipping the buttons.
+            .wrapContentHeight(align = Alignment.Bottom, unbounded = true)
             .fillMaxWidth(0.58f)
             .padding(start = shellHeroContentStart(), bottom = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.Bottom),

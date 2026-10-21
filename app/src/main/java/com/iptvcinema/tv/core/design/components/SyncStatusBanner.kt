@@ -30,6 +30,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
@@ -208,12 +210,15 @@ fun CatalogRefreshBanner(
 fun AccountDegradedBanner(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    startInset: Dp = 0.dp,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
+            // Starts after the nav rail so the logo stays visible.
+            .padding(start = startInset)
             .background(CinemaColors.SurfaceRaised)
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+            .padding(horizontal = 24.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -226,7 +231,9 @@ fun AccountDegradedBanner(
         Text(
             text = stringResource(R.string.account_degraded_message),
             modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyMedium.copy(color = CinemaColors.TextSecondary),
+            style = MaterialTheme.typography.bodySmall.copy(color = CinemaColors.TextSecondary),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
         )
         CinemaButton(
             text = stringResource(R.string.account_degraded_retry),

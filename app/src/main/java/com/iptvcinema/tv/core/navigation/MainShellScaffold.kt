@@ -12,6 +12,7 @@ import androidx.navigation.NavController
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.components.AccountDegradedBanner
 import com.iptvcinema.tv.core.design.components.CinemaScreen
+import com.iptvcinema.tv.core.design.theme.CinemaSpacing
 
 private fun shellNavigate(
     navController: NavController,
@@ -68,7 +69,10 @@ fun MainShellScaffold(
     ) {
         Column {
             if (isCloudDegraded) {
-                AccountDegradedBanner(onRetry = sessionViewModel::retryCloudSync)
+                AccountDegradedBanner(
+                    onRetry = sessionViewModel::retryCloudSync,
+                    startInset = CinemaSpacing.NavRailWidth,
+                )
             }
             content()
         }
