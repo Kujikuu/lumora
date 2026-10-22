@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Same values as CinemaColors.Background and CinemaColors.Accent. -->
+    <color name="home_background">#05070C</color>
+    <color name="home_accent">#E70302</color>
+</resources>

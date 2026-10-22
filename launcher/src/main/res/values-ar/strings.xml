@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="row_continue">متابعة المشاهدة</string>
+    <string name="row_favorites">القنوات المفضلة</string>
+    <string name="row_live">يُعرض الآن</string>
+    <string name="row_new">جديد هذا الأسبوع</string>
+    <string name="row_apps">التطبيقات</string>
+    <string name="row_inputs">المدخلات</string>
+
+    <string name="placeholder_open_app">افتح Lumora Play</string>
+    <string name="placeholder_install_app">ثبّت Lumora Play</string>
+    <string name="placeholder_empty_row">لا يوجد شيء بعد</string>
+    <string name="placeholder_no_inputs">لم يتم العثور على مدخلات</string>
+
+    <string name="shortcut_settings">الإعدادات</string>
+    <string name="shortcut_network">الشبكة</string>
+    <string name="shortcut_manage_apps">إدارة التطبيقات</string>
+
+    <string name="network_ethernet">إيثرنت</string>
+    <string name="network_offline">غير متصل</string>
+
+    <string name="app_action_open">فتح</string>
+    <string name="app_action_info">معلومات التطبيق</string>
+    <string name="app_action_uninstall">إلغاء التثبيت</string>
+
+    <string name="input_tuner">الموالف</string>
+    <string name="input_connected">متصل</string>
+    <string name="input_disconnected">غير متصل</string>
+    <string name="input_unavailable">تعذر عرض هذا المدخل</string>
+    <string name="input_connecting">جارٍ الاتصال…</string>
+</resources>

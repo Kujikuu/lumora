@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Posters and channel logos come from the IPTV provider's servers. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Uninstall from the Apps row long-press menu (the system still asks for confirmation). -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <!-- Home rows from Lumora Play. Declared here too, so the grant does not depend on which
+         APK was installed first; both APKs are signed with the same key. -->
+    <permission
+        android:name="com.iptvcinema.tv.permission.READ_LAUNCHER_ROWS"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.iptvcinema.tv.permission.READ_LAUNCHER_ROWS" />
+
+    <queries>
+        <package android:name="com.iptvcinema.tv" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="content" android:host="android.media.tv" />
+        </intent>
+        <intent>
+            <action android:name="com.toptech.tv.action.INPUT_ACTIVITY" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.DELETE" />
+            <data android:scheme="package" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.APPLICATION_DETAILS_SETTINGS" />
+            <data android:scheme="package" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.WIFI_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.MANAGE_APPLICATIONS_SETTINGS" />
+        </intent>
+    </queries>
+
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+
+    <application
+        android:name=".LauncherApp"
+        android:allowBackup="false"
+        android:banner="@drawable/tv_banner"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.LumoraHome"
+        android:usesCleartextTraffic="true">
+
+        <!-- The home activity: never recreated for config changes, never in recents, and its
+             state is rebuilt from the row caches rather than saved. -->
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenSize|smallestScreenSize|screenLayout|orientation|density|keyboard|keyboardHidden|navigation|fontScale"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="landscape"
+            android:stateNotNeeded="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <!-- Also listed by the stock launcher, so it can be opened and chosen as home. -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Shows an HDMI/VGA/YPbPr/AV input through a TvView when the system has no viewer. -->
+        <activity
+            android:name=".inputs.InputViewerActivity"
+            android:configChanges="locale|layoutDirection|uiMode|screenSize|smallestScreenSize|screenLayout|orientation|density|keyboard|keyboardHidden|navigation|fontScale"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.LumoraHome.Viewer" />
+    </application>
+
+</manifest>

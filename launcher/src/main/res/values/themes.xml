@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark window from the first frame; no splash, no preview animation. -->
+    <style name="Theme.LumoraHome" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/home_background</item>
+        <item name="android:colorAccent">@color/home_accent</item>
+        <item name="android:navigationBarColor">@color/home_background</item>
+        <item name="android:statusBarColor">@color/home_background</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
+    <style name="Theme.LumoraHome.Viewer">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>

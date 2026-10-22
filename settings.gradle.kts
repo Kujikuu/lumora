@@ -22,3 +22,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "iptv-cinema"
 include(":app")
+include(":core:design")
+include(":launcher")

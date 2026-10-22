@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Lumora Home</string>
+    <string name="main_app_name" translatable="false">Lumora Play</string>
+
+    <string name="row_continue">Continue watching</string>
+    <string name="row_favorites">Favorite channels</string>
+    <string name="row_live">Live now</string>
+    <string name="row_new">New this week</string>
+    <string name="row_apps">Apps</string>
+    <string name="row_inputs">Inputs</string>
+
+    <string name="placeholder_open_app">Open Lumora Play</string>
+    <string name="placeholder_install_app">Install Lumora Play</string>
+    <string name="placeholder_empty_row">Nothing here yet</string>
+    <string name="placeholder_no_inputs">No inputs found</string>
+
+    <string name="shortcut_settings">Settings</string>
+    <string name="shortcut_network">Network</string>
+    <string name="shortcut_manage_apps">Manage apps</string>
+
+    <string name="network_wifi" translatable="false">Wi-Fi</string>
+    <string name="network_ethernet">Ethernet</string>
+    <string name="network_offline">Offline</string>
+
+    <string name="app_action_open">Open</string>
+    <string name="app_action_info">App info</string>
+    <string name="app_action_uninstall">Uninstall</string>
+
+    <string name="input_hdmi" translatable="false">HDMI</string>
+    <string name="input_vga" translatable="false">VGA</string>
+    <string name="input_component" translatable="false">YPbPr</string>
+    <string name="input_av" translatable="false">AV</string>
+    <string name="input_tuner">Tuner</string>
+    <string name="input_connected">Connected</string>
+    <string name="input_disconnected">Not connected</string>
+    <string name="input_unavailable">This input could not be shown</string>
+    <string name="input_connecting">Connecting…</string>
+</resources>
