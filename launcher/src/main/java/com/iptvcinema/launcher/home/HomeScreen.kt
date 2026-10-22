@@ -67,6 +67,17 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel { HomeViewModel() }) {
 
     // Focus is placed once, on the first row; Home while already home returns there.
     LaunchedEffect(Unit) { focus.toRow(0) }
+    // When the focused row's cards are replaced (placeholders giving way to real rows, or a
+    // refresh after watching something), the focused node may leave the composition and
+    // Compose does not refocus on its own; put focus back on that row's entry card.
+    val rowKeys = rows.map { row -> row.cards.map { it.key } }
+    var lastRowKeys by remember { mutableStateOf(rowKeys) }
+    LaunchedEffect(rowKeys) {
+        val changedRow = focus.focusedRow
+        val changed = changedRow >= 0 && rowKeys.getOrNull(changedRow) != lastRowKeys.getOrNull(changedRow)
+        lastRowKeys = rowKeys
+        if (changed) focus.restore()
+    }
     LaunchedEffect(Unit) { LauncherGraph.homePresses.collect { focus.toRow(0) } }
     // A home activity must never finish on Back; Back goes to the top instead.
     BackHandler { if (focus.focusedRow != 0) focus.toRow(0) }
