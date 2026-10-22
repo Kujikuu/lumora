@@ -6,6 +6,11 @@
     <!-- Lets the app publish its Continue Watching items to the TV home screen's Watch Next row. -->
     <uses-permission android:name="com.android.providers.tv.permission.WRITE_EPG_DATA" />
 
+    <!-- Only APKs signed with this app's key (the Lumora Home launcher) may read the home rows. -->
+    <permission
+        android:name="com.iptvcinema.tv.permission.READ_LAUNCHER_ROWS"
+        android:protectionLevel="signature" />
+
     <!-- Voice search: lets the app see the system speech recognizer on Android 11+. -->
     <queries>
         <intent>
@@ -65,6 +70,13 @@
                     android:scheme="lumora" />
             </intent-filter>
         </activity>
+
+        <!-- Home rows for the Lumora Home launcher; serves a snapshot file, never the database. -->
+        <provider
+            android:name=".core.tvhome.launcher.LauncherContentProvider"
+            android:authorities="com.iptvcinema.tv.launcher"
+            android:exported="true"
+            android:permission="com.iptvcinema.tv.permission.READ_LAUNCHER_ROWS" />
 
         <receiver
             android:name=".core.tvhome.WatchNextRemovedReceiver"

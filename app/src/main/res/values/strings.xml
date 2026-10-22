@@ -591,5 +591,6 @@
     <string name="reminder_dismiss">Dismiss</string>
     <string name="tv_channel_continue">Continue watching</string>
     <string name="tv_channel_favorites">Favorite channels</string>
+    <string name="tv_channel_live">Live now</string>
     <string name="tv_channel_new">New this week</string>
 </resources>

@@ -562,5 +562,6 @@
     <string name="reminder_dismiss">تجاهل</string>
     <string name="tv_channel_continue">متابعة المشاهدة</string>
     <string name="tv_channel_favorites">القنوات المفضلة</string>
+    <string name="tv_channel_live">يُعرض الآن</string>
     <string name="tv_channel_new">جديد هذا الأسبوع</string>
 </resources>

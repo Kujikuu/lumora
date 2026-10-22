@@ -405,6 +405,11 @@ class CatalogRepository @Inject constructor(
     suspend fun getChannel(sourceId: String, channelId: String): CatalogChannel? =
         catalogDaoFacade.channels.getById(sourceId, channelId)?.toDomain()
 
+    suspend fun getChannelsByIds(sourceId: String, channelIds: List<String>): List<CatalogChannel> {
+        if (channelIds.isEmpty()) return emptyList()
+        return catalogDaoFacade.channels.getByIds(sourceId, channelIds).map { it.toDomain() }
+    }
+
     suspend fun getOrderedChannels(sourceId: String): List<CatalogChannel> =
         catalogDaoFacade.channels.getAllOrdered(sourceId).map { it.toDomain() }
 

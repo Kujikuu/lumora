@@ -17,8 +17,10 @@ class FirstFrameSignal @Inject constructor() {
         drawn.complete(Unit)
     }
 
-    /** Waits for the first frame, or [timeoutMs] when no activity starts (a job woke the app). */
-    suspend fun await(timeoutMs: Long) {
-        withTimeoutOrNull(timeoutMs) { drawn.await() }
-    }
+    /**
+     * Waits for the first frame; false after [timeoutMs] when no activity started (a job or the
+     * launcher's content provider woke the process).
+     */
+    suspend fun await(timeoutMs: Long): Boolean =
+        withTimeoutOrNull(timeoutMs) { drawn.await() } != null
 }

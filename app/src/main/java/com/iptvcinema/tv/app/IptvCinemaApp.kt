@@ -60,12 +60,16 @@ class IptvCinemaApp : Application(), ImageLoaderFactory, Configuration.Provider 
             warmUp("credentials") { localCredentialsStore.get().warmUp() }
             // Sync scheduling, realtime and Watch Next compete with the first screen for CPU
             // and disk, so they start once it has drawn.
-            firstFrameSignal.await(FIRST_FRAME_TIMEOUT_MS)
+            val drawn = firstFrameSignal.await(FIRST_FRAME_TIMEOUT_MS)
+            // The home rows sync also serves the launcher, so it runs however the process started.
+            homeChannelsSync.get()
+            // A process started only for the launcher's provider must stay light: no realtime,
+            // no sync scheduling, no Watch Next, so it does not compete with the launcher.
+            if (!drawn) return@launch
             // Ready before Home asks for its first poster, so the main thread never builds it.
             warmUp("images") { imageLoader.get() }
             cloudSyncInitializer.get()
             watchNextSync.get()
-            homeChannelsSync.get()
             programReminderAlerts.get()
         }
     }
