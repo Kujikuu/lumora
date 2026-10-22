@@ -567,4 +567,29 @@
     <string name="source_check_auth">Account verified</string>
     <string name="parental_error_load">Couldn\'t load parental controls. Check your connection and try again.</string>
     <string name="parental_error_save">Couldn\'t save parental controls. Try again.</string>
+    <!-- Remote feel and discovery -->
+    <string name="livetv_no_channel_number">No channel %1$d</string>
+    <string name="player_last_channel">Last channel</string>
+    <string name="player_options">Options</string>
+    <string name="player_picture">Picture</string>
+    <string name="player_aspect_fit">Original</string>
+    <string name="player_aspect_fill">Zoom to fill</string>
+    <string name="player_aspect_stretch">Stretch</string>
+    <string name="player_speed">Speed</string>
+    <string name="player_sleep_timer">Sleep timer</string>
+    <string name="player_sleep_minutes">%1$d minutes</string>
+    <string name="player_sleep_timer_done">Sleep timer: playback paused</string>
+    <string name="search_voice">Voice</string>
+    <string name="search_voice_prompt">Say a title, actor or channel</string>
+    <string name="search_voice_unavailable">Voice search is not available on this device</string>
+    <string name="reminder_set">Reminder set for %1$s</string>
+    <string name="reminder_removed">Reminder removed</string>
+    <string name="reminder_badge">Reminder</string>
+    <string name="reminder_alert_title">Starting now</string>
+    <string name="reminder_alert_body">%1$s on %2$s</string>
+    <string name="reminder_watch">Watch</string>
+    <string name="reminder_dismiss">Dismiss</string>
+    <string name="tv_channel_continue">Continue watching</string>
+    <string name="tv_channel_favorites">Favorite channels</string>
+    <string name="tv_channel_new">New this week</string>
 </resources>

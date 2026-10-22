@@ -1,6 +1,12 @@
 package com.iptvcinema.tv.features.search
 
+import android.app.Activity
+import android.speech.RecognizerIntent
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -75,6 +81,22 @@ fun SearchScreen(
     val browse = rememberImmersiveBrowseState(focusState)
     val catalogCallbacks = rememberCatalogStateCallbacks(navController, onRetry = viewModel::retry)
     var keyboardLayout by remember { mutableStateOf(SearchKeyboardLayout.English) }
+    val context = LocalContext.current
+    val voiceAvailable = remember(context) { VoiceSearch.isAvailable(context) }
+    val voicePrompt = stringResource(R.string.search_voice_prompt)
+    val voiceUnavailable = stringResource(R.string.search_voice_unavailable)
+    val voiceLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
+        val spoken = VoiceSearch.bestTranscript(
+            result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS),
+        ) ?: return@rememberLauncherForActivityResult
+        viewModel.updateQuery(spoken)
+    }
+    fun startVoiceSearch() {
+        val intent = VoiceSearch.recognizeIntent(VoiceSearch.languageTag(keyboardLayout), voicePrompt)
+        runCatching { voiceLauncher.launch(intent) }
+            .onFailure { Toast.makeText(context, voiceUnavailable, Toast.LENGTH_SHORT).show() }
+    }
     // Coming back from a result: focus returns to it. Typing first cancels that.
     val restoreIntoRails = remember { focusState.sectionId.isNotBlank() }
     var keyboardUsed by remember { mutableStateOf(false) }
@@ -172,6 +194,7 @@ fun SearchScreen(
                         onBackspace = { type(viewModel::deleteLastCharacter) },
                         onClear = { type(viewModel::clearSearch) },
                         firstKeyFocusRequester = keyboardFocus,
+                        onVoiceSearch = if (voiceAvailable) ::startVoiceSearch else null,
                     )
                 }
             },

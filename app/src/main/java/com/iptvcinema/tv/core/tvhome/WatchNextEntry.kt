@@ -92,20 +92,7 @@ object WatchNextDiff {
      * wanted are updated in place; duplicates and rows no longer wanted are deleted.
      */
     fun plan(existing: List<Pair<Long, String?>>, desired: List<WatchNextEntry>): WatchNextPlan {
-        val desiredByKey = desired.associateBy { it.key }
-        val kept = mutableMapOf<String, Long>()
-        val deletes = mutableListOf<Long>()
-        existing.forEach { (rowId, key) ->
-            if (key != null && key in desiredByKey && key !in kept) {
-                kept[key] = rowId
-            } else {
-                deletes += rowId
-            }
-        }
-        return WatchNextPlan(
-            inserts = desiredByKey.values.filter { it.key !in kept },
-            updates = kept.map { (key, rowId) -> rowId to desiredByKey.getValue(key) },
-            deletes = deletes,
-        )
+        val plan = ProviderRowDiff.plan(existing, desired) { it.key }
+        return WatchNextPlan(inserts = plan.inserts, updates = plan.updates, deletes = plan.deletes)
     }
 }

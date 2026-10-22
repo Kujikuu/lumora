@@ -65,6 +65,7 @@ import com.iptvcinema.tv.features.states.ErrorStateScreen
 import com.iptvcinema.tv.features.states.ExpiredAccountScreen
 import com.iptvcinema.tv.features.states.InvalidPlaylistScreen
 import com.iptvcinema.tv.features.welcome.WelcomeScreen
+import com.iptvcinema.tv.features.reminders.ReminderAlertHost
 
 @Composable
 fun AppNavGraph(
@@ -74,6 +75,7 @@ fun AppNavGraph(
     val sessionViewModel: SessionViewModel = hiltViewModel(activity)
 
     PendingDeepLinkHandler(navController = navController, sessionViewModel = sessionViewModel)
+    ReminderAlertHost(navController = navController)
 
     // The default NavHost crossfade is 700 ms, which feels sluggish on a remote.
     NavHost(

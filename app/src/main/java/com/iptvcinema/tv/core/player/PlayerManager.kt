@@ -5,6 +5,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.util.UnstableApi
@@ -140,6 +141,8 @@ class PlayerManager @Inject constructor(
         } else {
             exoPlayer.setMediaSource(mediaSource)
         }
+        // A new stream always starts at normal speed; live streams cannot play faster anyway.
+        if (exoPlayer.playbackParameters.speed != 1f) exoPlayer.setPlaybackSpeed(1f)
         exoPlayer.prepare()
         exoPlayer.playWhenReady = true
     }
@@ -175,8 +178,10 @@ class PlayerManager @Inject constructor(
             is PlayerCommand.SelectSubtitleTrack -> selectSubtitleTrack(command.index)
             PlayerCommand.DisableSubtitles -> disableSubtitles()
             PlayerCommand.Retry -> retry()
+            is PlayerCommand.SetPlaybackSpeed -> player?.setPlaybackSpeed(command.speed.coerceIn(0.25f, 4f))
             PlayerCommand.ChannelPrevious,
             PlayerCommand.ChannelNext,
+            PlayerCommand.ChannelLast,
             PlayerCommand.EpisodePrevious,
             PlayerCommand.EpisodeNext,
                 -> Unit
@@ -427,6 +432,10 @@ class PlayerManager @Inject constructor(
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _state.update { it.copy(isPlaying = isPlaying) }
+        }
+
+        override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
+            _state.update { it.copy(playbackSpeed = playbackParameters.speed) }
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {

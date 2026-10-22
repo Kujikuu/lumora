@@ -30,7 +30,7 @@ class PlaybackDeepLinkTest {
         assertNull(PlaybackDeepLink.parse(null))
         assertNull(PlaybackDeepLink.parse("https://play?type=movie&id=1"))
         assertNull(PlaybackDeepLink.parse("lumora://other?type=movie&id=1"))
-        assertNull(PlaybackDeepLink.parse("lumora://play?type=live&id=1"))
+        assertNull(PlaybackDeepLink.parse("lumora://play?type=podcast&id=1"))
         assertNull(PlaybackDeepLink.parse("lumora://play?type=movie"))
         assertNull(PlaybackDeepLink.parse("not a uri"))
     }

@@ -18,6 +18,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -226,6 +227,7 @@ fun ProgramLineupCard(
     nowMs: Long,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    hasReminder: Boolean = false,
 ) {
     FocusableCinemaCard(
         modifier = modifier
@@ -259,6 +261,14 @@ fun ProgramLineupCard(
                 )
                 if (isNowPlaying) {
                     BadgeChip(text = stringResource(R.string.badge_live))
+                }
+                if (hasReminder) {
+                    Icon(
+                        imageVector = Icons.Default.NotificationsActive,
+                        contentDescription = stringResource(R.string.reminder_badge),
+                        tint = CinemaColors.Accent,
+                        modifier = Modifier.size(16.dp),
+                    )
                 }
             }
             Text(

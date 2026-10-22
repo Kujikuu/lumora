@@ -29,6 +29,13 @@ class DeepLinkNavigationTest {
     }
 
     @Test
+    fun liveAndSeriesCards_openTheirTargets() {
+        assertEquals("player/c1/live", deepLinkRoute(PlaybackDeepLink("live", "c1", profileId = "p1"), ready))
+        assertEquals(AppRoute.channelDetails("c1"), deepLinkRoute(PlaybackDeepLink("live", "c1", profileId = "p2"), ready))
+        assertEquals(AppRoute.seriesDetails("s1"), deepLinkRoute(PlaybackDeepLink("series", "s1", profileId = "p1"), ready))
+    }
+
+    @Test
     fun notReady_dropsTheLink() {
         val link = PlaybackDeepLink(contentType = "movie", contentId = "m1")
 

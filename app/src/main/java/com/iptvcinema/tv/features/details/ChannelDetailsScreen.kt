@@ -77,6 +77,8 @@ fun ChannelDetailsScreen(
     val openInLiveTvLabel = stringResource(R.string.btn_open_in_live_tv)
     val startOverLabel = stringResource(R.string.catchup_start_over)
     val catchupTitle = stringResource(R.string.catchup_title)
+    val reminderRemoved = stringResource(R.string.reminder_removed)
+    val reminderSetTemplate = stringResource(R.string.reminder_set)
 
     LaunchedEffect(channelId) {
         viewModel.loadChannelDetails(channelId)
@@ -196,7 +198,22 @@ fun ChannelDetailsScreen(
                                 program = program,
                                 isNowPlaying = program.id == uiState.currentProgram?.id,
                                 nowMs = uiState.nowMs,
-                                onClick = {},
+                                hasReminder = program.id in uiState.reminderProgramIds,
+                                onClick = {
+                                    if (viewModel.canRemind(program)) {
+                                        viewModel.toggleReminder(program) { added ->
+                                            showFeedback(
+                                                if (added) {
+                                                    reminderSetTemplate.format(
+                                                        GuideLayoutHelper.formatSlotLabel(program.startEpochMs),
+                                                    )
+                                                } else {
+                                                    reminderRemoved
+                                                },
+                                            )
+                                        }
+                                    }
+                                },
                             )
                         }
                     }

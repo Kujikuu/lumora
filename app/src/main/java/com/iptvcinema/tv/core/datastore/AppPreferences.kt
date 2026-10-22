@@ -12,6 +12,8 @@ object AppPreferences {
     val SOURCE_TYPE = stringPreferencesKey("source_type")
     val IS_DEMO_MODE = booleanPreferencesKey("is_demo_mode")
     val SEARCH_KEYBOARD_LAYOUT = stringPreferencesKey("search_keyboard_layout")
+    val VIDEO_ASPECT_MODE = stringPreferencesKey("video_aspect_mode")
+    val HOME_CHANNEL_BROWSABLE_ASKED = booleanPreferencesKey("home_channel_browsable_asked")
 
     val SESSION_KEYS = listOf(
         IS_AUTHENTICATED,

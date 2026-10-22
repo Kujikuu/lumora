@@ -1,6 +1,7 @@
 package com.iptvcinema.tv.features.player
 
 import androidx.compose.ui.input.key.Key
+import com.iptvcinema.tv.features.livetv.ChannelNumberEntry
 import com.iptvcinema.tv.core.player.PlayerCommand
 
 sealed interface PlayerKeyAction {
@@ -12,6 +13,8 @@ sealed interface PlayerKeyAction {
     data object EpisodeNext : PlayerKeyAction
     data object ChannelPrevious : PlayerKeyAction
     data object ChannelNext : PlayerKeyAction
+    data object ChannelLast : PlayerKeyAction
+    data class Digit(val digit: Char) : PlayerKeyAction
     data object RevealOverlay : PlayerKeyAction
 }
 
@@ -26,6 +29,11 @@ object PlayerKeyHandler {
         pickerOpen: Boolean,
     ): PlayerKeyAction? {
         if (pickerOpen) return null
+
+        if (isLive) {
+            ChannelNumberEntry.digitFor(key)?.let { return PlayerKeyAction.Digit(it) }
+            if (key == Key.LastChannel) return PlayerKeyAction.ChannelLast
+        }
 
         when (key) {
             Key.MediaPlayPause, Key.Spacebar -> return PlayerKeyAction.PlayPause
@@ -94,6 +102,7 @@ object PlayerKeyHandler {
         PlayerKeyAction.EpisodeNext -> PlayerCommand.EpisodeNext
         PlayerKeyAction.ChannelPrevious -> PlayerCommand.ChannelPrevious
         PlayerKeyAction.ChannelNext -> PlayerCommand.ChannelNext
+        PlayerKeyAction.ChannelLast -> PlayerCommand.ChannelLast
         else -> null
     }
 }

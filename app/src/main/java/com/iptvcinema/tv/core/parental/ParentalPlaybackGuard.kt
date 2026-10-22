@@ -65,6 +65,14 @@ class ParentalPlaybackGuard @Inject constructor(
         }
     }
 
+    /** Which films and shows the profile may see, by provider category and rating, read once. */
+    suspend fun catalogFilter(session: AppSessionState): (categoryName: String?, rating: String?) -> Boolean {
+        if (session.isDemoMode) return { _, _ -> true }
+        val profileId = session.currentProfileId ?: return { _, _ -> true }
+        val controls = parentalControlsRepository.getControls(profileId) ?: return { _, _ -> true }
+        return { categoryName, rating -> !parentalGate.isContentBlocked(categoryName, rating, controls) }
+    }
+
     /** Which channels may play for the current profile, read once so zapping can skip the rest. */
     suspend fun channelFilter(session: AppSessionState): (CatalogChannel) -> Boolean {
         if (session.isDemoMode) return { true }

@@ -10,7 +10,7 @@ import java.nio.charset.StandardCharsets
  * It carries no position: the player resumes from watch history, which is always newer.
  */
 data class PlaybackDeepLink(
-    /** "movie" or "episode", the same strings the player route uses. */
+    /** "movie", "episode" or "live" (played), or "series" (opens the show's page). */
     val contentType: String,
     val contentId: String,
     val seriesId: String? = null,
@@ -30,7 +30,7 @@ data class PlaybackDeepLink(
     companion object {
         const val SCHEME = "lumora"
         const val HOST = "play"
-        private val PLAYABLE_TYPES = setOf("movie", "episode")
+        private val PLAYABLE_TYPES = setOf("movie", "episode", "live", "series")
 
         fun parse(uri: String?): PlaybackDeepLink? {
             if (uri.isNullOrBlank()) return null

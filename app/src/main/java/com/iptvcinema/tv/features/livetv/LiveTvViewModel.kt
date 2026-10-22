@@ -114,6 +114,7 @@ class LiveTvViewModel @Inject constructor(
     private val favoriteChannelIds = MutableStateFlow<Set<String>>(emptySet())
     private val fullGuideOpen = MutableStateFlow(false)
     private val pendingChannelId = MutableStateFlow<String?>(null)
+    private var lastChannelId: String? = null
     // The category a requested channel lives in, once looked up. Until then a channel list that
     // lacks the channel is just the list Live TV opened with, not proof the channel is gone.
     private var pendingCategoryResolved = false
@@ -364,6 +365,26 @@ class LiveTvViewModel @Inject constructor(
         }
     }
 
+    /** The channel watched before the current one, like a remote's "last channel" key. */
+    fun swapToLastChannel() {
+        val target = lastChannelId ?: return
+        val current = selectedChannel.value?.id
+        if (target == current) return
+        val inList = _uiState.value.channels.find { it.id == target }
+        if (inList != null) {
+            onChannelSelected(inList)
+        } else {
+            // It lives in another category: resolve the category and tune there.
+            selectChannelById(target)
+        }
+    }
+
+    /** The channel a typed number stands for in the current list, or null. */
+    fun channelForNumber(number: Int): ChannelItem? =
+        ChannelNumberResolver.resolve(_uiState.value.channels, number) { channel ->
+            channel.channelNumber.takeIf { it > 0 }
+        }
+
     fun onScreenVisible() {
         selectedChannel.value?.id?.let { channelId ->
             if (activePlaybackChannelId != channelId || !playerManager.state.value.isPlaying) {
@@ -409,6 +430,8 @@ class LiveTvViewModel @Inject constructor(
                         )
                         return@launch
                     }
+                    // Only a channel that really played counts as "last"; scrolled-past ones do not.
+                    activePlaybackChannelId?.takeIf { it != channelId }?.let { lastChannelId = it }
                     activePlaybackChannelId = channelId
                     playbackToken = playerManager.play(
                         request = result.request,

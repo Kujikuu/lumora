@@ -11,6 +11,8 @@ import com.iptvcinema.tv.core.data.repository.AuthRepository
 import com.iptvcinema.tv.core.di.ApplicationScope
 import com.iptvcinema.tv.core.sync.CloudSyncInitializer
 import com.iptvcinema.tv.core.tvhome.WatchNextSync
+import com.iptvcinema.tv.core.tvhome.HomeChannelsSync
+import com.iptvcinema.tv.core.reminders.ProgramReminderAlerts
 import com.iptvcinema.tv.core.util.safeSummary
 import dagger.Lazy
 import dagger.hilt.android.HiltAndroidApp
@@ -31,6 +33,8 @@ class IptvCinemaApp : Application(), ImageLoaderFactory, Configuration.Provider 
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var cloudSyncInitializer: Lazy<CloudSyncInitializer>
     @Inject lateinit var watchNextSync: Lazy<WatchNextSync>
+    @Inject lateinit var homeChannelsSync: Lazy<HomeChannelsSync>
+    @Inject lateinit var programReminderAlerts: Lazy<ProgramReminderAlerts>
     @Inject lateinit var authRepository: Lazy<AuthRepository>
     @Inject lateinit var localCredentialsStore: Lazy<LocalCredentialsStore>
     @Inject lateinit var firstFrameSignal: FirstFrameSignal
@@ -61,6 +65,8 @@ class IptvCinemaApp : Application(), ImageLoaderFactory, Configuration.Provider 
             warmUp("images") { imageLoader.get() }
             cloudSyncInitializer.get()
             watchNextSync.get()
+            homeChannelsSync.get()
+            programReminderAlerts.get()
         }
     }
 

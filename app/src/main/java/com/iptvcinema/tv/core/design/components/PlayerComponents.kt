@@ -8,6 +8,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material.icons.automirrored.filled.Backspace
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -109,7 +110,7 @@ fun PlayerBufferingOverlay(modifier: Modifier = Modifier) {
 }
 
 private val PlayerSidebarWidth = 380.dp
-private val PlayerSidebarFill = CinemaColors.Background.copy(alpha = 0.94f)
+internal val PlayerSidebarFill = CinemaColors.Background.copy(alpha = 0.94f)
 
 @Composable
 fun PlayerScrimOverlay(
@@ -194,7 +195,7 @@ fun PlayerQualityPill(
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun PlayerOptionRow(
+internal fun PlayerOptionRow(
     label: String,
     isSelected: Boolean,
     onClick: () -> Unit,
@@ -333,7 +334,7 @@ fun PlayerTrackSidebar(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun PlayerSidePanel(
+internal fun PlayerSidePanel(
     title: String,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
@@ -466,6 +467,32 @@ fun ChannelChangeBanner(
             .fillMaxWidth()
             .padding(top = CinemaSpacing.ScreenPadding),
         contentAlignment = Alignment.TopCenter,
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier
+                .background(PlayerSidebarFill, CinemaShapes.Pill)
+                .padding(horizontal = 24.dp, vertical = 10.dp),
+            style = MaterialTheme.typography.titleMedium.copy(
+                color = CinemaColors.White,
+                fontWeight = FontWeight.ExtraBold,
+            ),
+        )
+    }
+}
+
+/** "+30s · 1:02:10" near the bottom while the viewer skips with the overlay hidden. */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun SeekFeedbackBanner(
+    message: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(bottom = 40.dp),
+        contentAlignment = Alignment.BottomCenter,
     ) {
         Text(
             text = message,
@@ -733,6 +760,8 @@ fun SearchKeyboard(
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
     firstKeyFocusRequester: FocusRequester? = null,
+    /** Shown when the device can take dictation from the remote's mic. */
+    onVoiceSearch: (() -> Unit)? = null,
 ) {
     val rows = SearchKeyboardLayouts.rowsFor(layout)
     val keyGap = 6.dp
@@ -783,6 +812,14 @@ fun SearchKeyboard(
                     label = stringResource(R.string.search_device_keyboard),
                     onClick = onDeviceKeyboard,
                     modifier = Modifier.size(width = 140.dp, height = KeyboardKeySize),
+                )
+            }
+            if (onVoiceSearch != null) {
+                KeyboardKey(
+                    label = stringResource(R.string.search_voice),
+                    onClick = onVoiceSearch,
+                    modifier = Modifier.size(width = 88.dp, height = KeyboardKeySize),
+                    icon = Icons.Default.Mic,
                 )
             }
             KeyboardKey(

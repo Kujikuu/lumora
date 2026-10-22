@@ -12,6 +12,8 @@ sealed interface PlayerCommand {
     data object Retry : PlayerCommand
     data object ChannelPrevious : PlayerCommand
     data object ChannelNext : PlayerCommand
+    data object ChannelLast : PlayerCommand
+    data class SetPlaybackSpeed(val speed: Float) : PlayerCommand
     data object EpisodePrevious : PlayerCommand
     data object EpisodeNext : PlayerCommand
 }

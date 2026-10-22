@@ -39,13 +39,21 @@ fun PendingDeepLinkHandler(
 internal fun deepLinkRoute(link: PlaybackDeepLink, session: AppSessionState): String? {
     if (!session.meetsRequirement(SessionRequirement.Ready)) return null
     val sameProfile = link.profileId == null || link.profileId == session.currentProfileId
-    if (sameProfile) {
-        return AppRoute.player(link.contentId, link.contentType, seriesId = link.seriesId)
-    }
-    // Another profile's card: open the title instead of playing on this profile's history.
     return when (link.contentType) {
-        "episode" -> link.seriesId?.let(AppRoute::seriesDetails)
-        "movie" -> AppRoute.movieDetails(link.contentId)
+        // A series card always opens the show's page; the viewer picks the episode there.
+        "series" -> AppRoute.seriesDetails(link.contentId)
+        "live" -> if (sameProfile) AppRoute.player(link.contentId, "live") else AppRoute.channelDetails(link.contentId)
+        // Another profile's card: open the title instead of playing on this profile's history.
+        "episode" -> if (sameProfile) {
+            AppRoute.player(link.contentId, link.contentType, seriesId = link.seriesId)
+        } else {
+            link.seriesId?.let(AppRoute::seriesDetails)
+        }
+        "movie" -> if (sameProfile) {
+            AppRoute.player(link.contentId, link.contentType, seriesId = link.seriesId)
+        } else {
+            AppRoute.movieDetails(link.contentId)
+        }
         else -> null
     }
 }

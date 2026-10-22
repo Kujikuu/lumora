@@ -48,6 +48,12 @@ import androidx.navigation.NavController
 import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.design.components.AutoplayCountdownOverlay
 import com.iptvcinema.tv.core.design.components.ChannelChangeBanner
+import com.iptvcinema.tv.core.design.components.ChannelNumberOverlay
+import com.iptvcinema.tv.core.design.components.PlayerOptionsSidebar
+import com.iptvcinema.tv.core.design.components.SeekFeedbackBanner
+import com.iptvcinema.tv.core.player.PlaybackSpeedOption
+import com.iptvcinema.tv.core.player.VideoAspectMode
+import com.iptvcinema.tv.features.livetv.ChannelNumberEntry
 import com.iptvcinema.tv.core.design.components.ErrorState
 import com.iptvcinema.tv.core.design.components.PlayerBufferingOverlay
 import com.iptvcinema.tv.core.design.components.PlayerChannelSidebar
@@ -85,6 +91,9 @@ fun PlayerScreen(
     val playPauseFocus = remember { FocusRequester() }
     val videoSurfaceFocus = remember { FocusRequester() }
     var trackPickerOpen by remember { mutableStateOf(false) }
+    var optionsOpen by remember { mutableStateOf(false) }
+    var seekRamp by remember { mutableStateOf(SeekRamp()) }
+    var numberEntry by remember { mutableStateOf(ChannelNumberEntry()) }
     var trackPickerTab by remember { mutableStateOf(PlayerTrackTab.Subtitles) }
     var isOverlayVisible by remember { mutableStateOf(true) }
     var overlayActivityToken by remember { mutableIntStateOf(0) }
@@ -118,11 +127,18 @@ fun PlayerScreen(
             // channel press would cover the picture and cost frames on slow TVs.
             PlayerKeyAction.ChannelPrevious,
             PlayerKeyAction.ChannelNext,
+            PlayerKeyAction.ChannelLast,
             -> PlayerKeyHandler.toCommand(action)?.let { viewModel.onCommand(it) }
+            is PlayerKeyAction.Digit -> numberEntry = numberEntry.append(action.digit)
+            // Held Left/Right ramps from 10s to 60s steps and shows a small position banner
+            // instead of the full overlay, so the picture stays visible while skipping.
+            is PlayerKeyAction.SeekRelative -> {
+                seekRamp = seekRamp.press(System.currentTimeMillis(), if (action.deltaMs < 0) -1 else 1)
+                viewModel.seekWithFeedback(seekRamp.deltaMs)
+            }
             PlayerKeyAction.PlayPause,
             PlayerKeyAction.Play,
             PlayerKeyAction.Pause,
-            is PlayerKeyAction.SeekRelative,
             PlayerKeyAction.EpisodePrevious,
             PlayerKeyAction.EpisodeNext,
             -> {
@@ -133,12 +149,21 @@ fun PlayerScreen(
         }
     }
 
+    // Typed digits tune once the viewer pauses, or at once when the number is full.
+    LaunchedEffect(numberEntry) {
+        if (numberEntry.isEmpty) return@LaunchedEffect
+        if (!numberEntry.isComplete) delay(ChannelNumberEntry.COMMIT_DELAY_MS)
+        numberEntry.number?.let(viewModel::switchToChannelNumber)
+        numberEntry = ChannelNumberEntry()
+    }
+
     BackHandler {
         when {
             screenState.showAutoplayCountdown -> viewModel.cancelAutoplayCountdown()
             screenState.episodePickerOpen -> viewModel.dismissEpisodePicker()
             screenState.channelPickerOpen -> viewModel.dismissChannelPicker()
             trackPickerOpen -> trackPickerOpen = false
+            optionsOpen -> optionsOpen = false
             isOverlayVisible -> navController.popBackStack()
             else -> revealOverlay()
         }
@@ -148,12 +173,14 @@ fun PlayerScreen(
         isOverlayVisible,
         overlayActivityToken,
         trackPickerOpen,
+        optionsOpen,
         pickerOpen,
         screenState.isLoading,
     ) {
         if (
             !screenState.isLoading &&
             !trackPickerOpen &&
+            !optionsOpen &&
             !pickerOpen &&
             isOverlayVisible &&
             !screenState.showAutoplayCountdown
@@ -163,8 +190,8 @@ fun PlayerScreen(
         }
     }
 
-    LaunchedEffect(isOverlayVisible, trackPickerOpen, pickerOpen) {
-        if (trackPickerOpen || pickerOpen || !isOverlayVisible) {
+    LaunchedEffect(isOverlayVisible, trackPickerOpen, optionsOpen, pickerOpen) {
+        if (trackPickerOpen || optionsOpen || pickerOpen || !isOverlayVisible) {
             videoSurfaceFocus.requestFocusWhenReady()
         } else {
             playPauseFocus.requestFocusWhenReady()
@@ -238,6 +265,7 @@ fun PlayerScreen(
 
     val controlsVisible = isOverlayVisible &&
         !trackPickerOpen &&
+        !optionsOpen &&
         !pickerOpen &&
         !screenState.showAutoplayCountdown
     val resumeHint = screenState.resumeFromMs.takeIf { it > 0L }?.let {
@@ -299,7 +327,7 @@ fun PlayerScreen(
             .background(CinemaColors.Background)
             .onPreviewKeyEvent { event ->
                     // The next-episode card has its own buttons; let them get OK and arrows.
-                    if (trackPickerOpen || pickerOpen || screenState.showAutoplayCountdown) {
+                    if (trackPickerOpen || optionsOpen || pickerOpen || screenState.showAutoplayCountdown) {
                         return@onPreviewKeyEvent false
                     }
                     if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
@@ -325,7 +353,7 @@ fun PlayerScreen(
                     .fillMaxSize()
                     .pointerInput(Unit) {
                         detectTapGestures {
-                            if (!trackPickerOpen && !pickerOpen) {
+                            if (!trackPickerOpen && !optionsOpen && !pickerOpen) {
                                 toggleOverlay()
                             }
                         }
@@ -344,10 +372,15 @@ fun PlayerScreen(
                 },
                 update = { playerView ->
                     playerView.player = viewModel.getExoPlayer()
+                    playerView.resizeMode = when (screenState.aspectMode) {
+                        VideoAspectMode.FIT -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        VideoAspectMode.FILL -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                        VideoAspectMode.STRETCH -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+                    }
                 },
             )
 
-            if (!controlsVisible && !trackPickerOpen && !pickerOpen) {
+            if (!controlsVisible && !trackPickerOpen && !optionsOpen && !pickerOpen) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -373,6 +406,10 @@ fun PlayerScreen(
             screenState.channelChangeBanner?.let { banner ->
                 ChannelChangeBanner(message = banner)
             }
+            if (!controlsVisible) {
+                screenState.seekBanner?.let { banner -> SeekFeedbackBanner(message = banner) }
+            }
+            ChannelNumberOverlay(digits = numberEntry.digits)
 
             AnimatedVisibility(
                 visible = controlsVisible,
@@ -409,6 +446,7 @@ fun PlayerScreen(
                     showNextEpisode = screenState.isEpisode,
                     showEpisodes = screenState.isEpisode,
                     showChannels = playerState.isLive,
+                    showLastChannel = playerState.isLive && screenState.hasLastChannel,
                     onPlayPause = {
                         revealOverlay()
                         viewModel.onCommand(PlayerCommand.PlayPause)
@@ -436,10 +474,18 @@ fun PlayerScreen(
                         revealOverlay()
                         viewModel.openChannelPicker()
                     },
+                    onLastChannel = {
+                        revealOverlay()
+                        viewModel.swapToLastChannel()
+                    },
                     onTracks = {
                         revealOverlay()
                         trackPickerTab = PlayerTrackTab.Subtitles
                         trackPickerOpen = true
+                    },
+                    onOptions = {
+                        revealOverlay()
+                        optionsOpen = true
                     },
                     playPauseFocusRequester = playPauseFocus,
                     modifier = Modifier.fillMaxSize(),
@@ -496,6 +542,26 @@ fun PlayerScreen(
                     },
                     onDismiss = {
                         viewModel.dismissChannelPicker()
+                        revealOverlay()
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+
+            AnimatedVisibility(
+                visible = optionsOpen,
+                enter = slideInHorizontally(initialOffsetX = sidebarSlideOffset),
+                exit = slideOutHorizontally(targetOffsetX = sidebarSlideOffset),
+            ) {
+                PlayerOptionsSidebar(
+                    aspectMode = screenState.aspectMode,
+                    speed = if (playerState.isLive) null else PlaybackSpeedOption.fromSpeed(playerState.playbackSpeed),
+                    sleepTimer = screenState.sleepTimer,
+                    onSelectAspectMode = viewModel::setAspectMode,
+                    onSelectSpeed = viewModel::setPlaybackSpeed,
+                    onSelectSleepTimer = viewModel::setSleepTimer,
+                    onDismiss = {
+                        optionsOpen = false
                         revealOverlay()
                     },
                     modifier = Modifier.fillMaxSize(),

@@ -81,6 +81,7 @@ import com.iptvcinema.tv.core.design.components.FocusableCinemaCard
 import com.iptvcinema.tv.core.design.components.KeepScreenOn
 import com.iptvcinema.tv.core.design.components.LivePill
 import com.iptvcinema.tv.core.design.components.roundedProgressTrack
+import com.iptvcinema.tv.core.design.components.ChannelNumberOverlay
 import com.iptvcinema.tv.core.design.components.PlayerBufferingOverlay
 import com.iptvcinema.tv.core.design.components.PlayerRebufferOverlay
 import com.iptvcinema.tv.core.design.theme.CinemaColors
@@ -147,6 +148,23 @@ fun LiveTvScreen(
         channelFocusState.saveFocusIndex(index)
         viewModel.onChannelSelected(channel)
         revealOverlays()
+    }
+
+    // Digits typed on the remote tune by channel number once the viewer pauses.
+    var numberEntry by remember { mutableStateOf(ChannelNumberEntry()) }
+    val noSuchChannelMessage = stringResource(R.string.livetv_no_channel_number)
+    LaunchedEffect(numberEntry) {
+        if (numberEntry.isEmpty) return@LaunchedEffect
+        if (!numberEntry.isComplete) delay(ChannelNumberEntry.COMMIT_DELAY_MS)
+        val number = numberEntry.number
+        val channel = number?.let(viewModel::channelForNumber)
+        val index = channel?.let { target -> uiState.channels.indexOfFirst { it.id == target.id } } ?: -1
+        if (index >= 0) {
+            selectChannelAt(index)
+        } else if (number != null) {
+            showFeedback(noSuchChannelMessage.format(number))
+        }
+        numberEntry = ChannelNumberEntry()
     }
 
     fun selectCategoryAt(index: Int) {
@@ -222,6 +240,7 @@ fun LiveTvScreen(
         val index = uiState.channels.indexOfFirst { it.id == uiState.selectedChannel?.id }
             .takeIf { it >= 0 } ?: 0
         focusedChannelIndex = index
+        channelFocusState.saveFocusIndex(index)
     }
 
     LaunchedEffect(uiState.channels.size, overlaysVisible) {
@@ -283,7 +302,16 @@ fun LiveTvScreen(
                 .fillMaxSize()
                 .onPreviewKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown || !isReady) return@onPreviewKeyEvent false
+                    ChannelNumberEntry.digitFor(event.key)?.let { digit ->
+                        numberEntry = numberEntry.append(digit)
+                        return@onPreviewKeyEvent true
+                    }
                     when (event.key) {
+                        Key.LastChannel -> {
+                            viewModel.swapToLastChannel()
+                            revealOverlays()
+                            true
+                        }
                         Key.DirectionLeft -> {
                             if (!overlaysVisible) {
                                 if (focusedChannelIndex > 0) {
@@ -332,6 +360,8 @@ fun LiveTvScreen(
             } else if (playerState.isBuffering && playerState.hasFirstFrame || playerState.isReconnecting) {
                 PlayerRebufferOverlay()
             }
+
+            ChannelNumberOverlay(digits = numberEntry.digits)
 
             CatalogStateContent(
                 loadState = uiState.loadState,

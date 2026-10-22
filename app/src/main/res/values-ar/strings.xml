@@ -538,4 +538,29 @@
     <string name="source_check_auth">التحقق من الحساب</string>
     <string name="parental_error_load">تعذّر تحميل الرقابة الأبوية. تحقق من الاتصال ثم حاول مجددًا.</string>
     <string name="parental_error_save">تعذّر حفظ الرقابة الأبوية. حاول مجددًا.</string>
+    <!-- Remote feel and discovery -->
+    <string name="livetv_no_channel_number">لا توجد قناة برقم %1$d</string>
+    <string name="player_last_channel">القناة السابقة</string>
+    <string name="player_options">خيارات</string>
+    <string name="player_picture">الصورة</string>
+    <string name="player_aspect_fit">الحجم الأصلي</string>
+    <string name="player_aspect_fill">تكبير لملء الشاشة</string>
+    <string name="player_aspect_stretch">تمديد</string>
+    <string name="player_speed">السرعة</string>
+    <string name="player_sleep_timer">مؤقت النوم</string>
+    <string name="player_sleep_minutes">%1$d دقيقة</string>
+    <string name="player_sleep_timer_done">مؤقت النوم: تم إيقاف التشغيل مؤقتًا</string>
+    <string name="search_voice">صوت</string>
+    <string name="search_voice_prompt">قل اسم فيلم أو ممثل أو قناة</string>
+    <string name="search_voice_unavailable">البحث الصوتي غير متاح على هذا الجهاز</string>
+    <string name="reminder_set">تم ضبط تذكير الساعة %1$s</string>
+    <string name="reminder_removed">تمت إزالة التذكير</string>
+    <string name="reminder_badge">تذكير</string>
+    <string name="reminder_alert_title">يبدأ الآن</string>
+    <string name="reminder_alert_body">%1$s على %2$s</string>
+    <string name="reminder_watch">مشاهدة</string>
+    <string name="reminder_dismiss">تجاهل</string>
+    <string name="tv_channel_continue">متابعة المشاهدة</string>
+    <string name="tv_channel_favorites">القنوات المفضلة</string>
+    <string name="tv_channel_new">جديد هذا الأسبوع</string>
 </resources>

@@ -24,6 +24,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -131,10 +133,13 @@ fun PlayerOverlay(
     showNextEpisode: Boolean = false,
     showEpisodes: Boolean = false,
     showChannels: Boolean = false,
+    showLastChannel: Boolean = false,
     onNextEpisode: () -> Unit = {},
     onEpisodes: () -> Unit = {},
     onChannels: () -> Unit = {},
+    onLastChannel: () -> Unit = {},
     onTracks: () -> Unit = {},
+    onOptions: () -> Unit = {},
     playPauseFocusRequester: FocusRequester? = null,
 ) {
     PlayerScrimOverlay(modifier = modifier) {
@@ -170,12 +175,15 @@ fun PlayerOverlay(
                     nextEpisodeCode = nextEpisodeCode,
                     showEpisodes = showEpisodes,
                     showChannels = showChannels,
+                    showLastChannel = showLastChannel,
                     onPlayPause = onPlayPause,
                     onSeekRelative = onSeekRelative,
                     onNextEpisode = onNextEpisode,
                     onEpisodes = onEpisodes,
                     onChannels = onChannels,
+                    onLastChannel = onLastChannel,
                     onTracks = onTracks,
+                    onOptions = onOptions,
                     playPauseFocusRequester = playPauseFocusRequester,
                 )
             }
@@ -425,12 +433,15 @@ private fun PlayerControlRow(
     nextEpisodeCode: String?,
     showEpisodes: Boolean,
     showChannels: Boolean,
+    showLastChannel: Boolean,
     onPlayPause: () -> Unit,
     onSeekRelative: (Long) -> Unit,
     onNextEpisode: () -> Unit,
     onEpisodes: () -> Unit,
     onChannels: () -> Unit,
+    onLastChannel: () -> Unit,
     onTracks: () -> Unit,
+    onOptions: () -> Unit,
     playPauseFocusRequester: FocusRequester?,
 ) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -488,10 +499,22 @@ private fun PlayerControlRow(
                     onClick = onChannels,
                 )
             }
+            if (showLastChannel) {
+                ControlButton(
+                    icon = Icons.Default.SwapHoriz,
+                    label = stringResource(R.string.player_last_channel),
+                    onClick = onLastChannel,
+                )
+            }
             ControlButton(
                 icon = Icons.Default.Subtitles,
                 label = stringResource(R.string.player_track_settings),
                 onClick = onTracks,
+            )
+            ControlButton(
+                icon = Icons.Default.Tune,
+                label = stringResource(R.string.player_options),
+                onClick = onOptions,
             )
         }
     }

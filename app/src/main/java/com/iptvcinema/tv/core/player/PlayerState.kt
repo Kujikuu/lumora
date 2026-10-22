@@ -57,4 +57,5 @@ data class PlayerUiState(
     val selectedAudioIndex: Int = 0,
     val selectedSubtitleIndex: Int = -1,
     val qualityLabel: String? = null,
+    val playbackSpeed: Float = 1f,
 )

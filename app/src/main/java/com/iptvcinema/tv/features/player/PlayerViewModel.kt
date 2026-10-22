@@ -29,6 +29,11 @@ import com.iptvcinema.tv.core.player.PlaybackSessionTracker
 import com.iptvcinema.tv.core.player.PlaybackTuning
 import com.iptvcinema.tv.core.player.PlaybackPreferences
 import com.iptvcinema.tv.core.player.PlayerCommand
+import com.iptvcinema.tv.core.player.PlayerDisplayPreferences
+import com.iptvcinema.tv.core.player.PlaybackSpeedOption
+import com.iptvcinema.tv.core.player.SleepTimerOption
+import com.iptvcinema.tv.core.player.VideoAspectMode
+import com.iptvcinema.tv.core.design.components.PlayerScrubLogic
 import com.iptvcinema.tv.core.player.PlayerManager
 import com.iptvcinema.tv.core.player.PlayerUiState
 import com.iptvcinema.tv.core.player.WatchHistoryResumePolicy
@@ -36,6 +41,7 @@ import com.iptvcinema.tv.R
 import com.iptvcinema.tv.core.parental.ParentalPlaybackGuard
 import com.iptvcinema.tv.core.util.isolateDirection
 import com.iptvcinema.tv.core.util.AppStrings
+import com.iptvcinema.tv.features.livetv.ChannelNumberResolver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -75,6 +81,13 @@ data class PlayerScreenState(
     val seriesPosterUrl: String? = null,
     val currentLiveProgram: PlayerLiveProgramUi? = null,
     val nextLiveProgram: PlayerLiveProgramUi? = null,
+    /** A previous live channel exists to flip back to. */
+    val hasLastChannel: Boolean = false,
+    val aspectMode: VideoAspectMode = VideoAspectMode.FIT,
+    val sleepTimer: SleepTimerOption = SleepTimerOption.OFF,
+    val sleepTimerEndsAtMs: Long? = null,
+    /** Short-lived "+30s · 12:34" text while seeking with the overlay hidden. */
+    val seekBanner: String? = null,
 )
 
 data class PlayerLiveProgramUi(
@@ -99,6 +112,7 @@ class PlayerViewModel @Inject constructor(
     private val playbackSessionTracker: PlaybackSessionTracker,
     private val parentalPlaybackGuard: ParentalPlaybackGuard,
     private val appStrings: AppStrings,
+    private val displayPreferences: PlayerDisplayPreferences,
     @ApplicationScope private val applicationScope: CoroutineScope,
 ) : ViewModel() {
     private val contentId: String = savedStateHandle.get<String>("contentId").orEmpty()
@@ -133,6 +147,9 @@ class PlayerViewModel @Inject constructor(
     private var channelZapJob: Job? = null
     private val channelZapMutex = Mutex()
     private var pendingZapChannelId: String? = null
+    private var lastChannelId: String? = null
+    private var sleepTimerJob: Job? = null
+    private var seekBannerJob: Job? = null
     private var playbackToken: Int? = null
     private var userSeekedSinceStart = false
     private var cachedZapChannelFilter: ((CatalogChannel) -> Boolean)? = null
@@ -150,6 +167,11 @@ class PlayerViewModel @Inject constructor(
         }
         viewModelScope.launch {
             loadPlayback()
+        }
+        viewModelScope.launch {
+            displayPreferences.observeAspectMode().collect { mode ->
+                _screenState.value = _screenState.value.copy(aspectMode = mode)
+            }
         }
         viewModelScope.launch {
             playerManager.state.collect { state ->
@@ -192,6 +214,7 @@ class PlayerViewModel @Inject constructor(
             }
             PlayerCommand.ChannelPrevious -> changeChannel(ChannelDirection.PREVIOUS)
             PlayerCommand.ChannelNext -> changeChannel(ChannelDirection.NEXT)
+            PlayerCommand.ChannelLast -> swapToLastChannel()
             PlayerCommand.EpisodePrevious -> skipToPreviousEpisode()
             PlayerCommand.EpisodeNext -> skipToNextEpisode()
             else -> playerManager.handleCommand(command)
@@ -370,6 +393,92 @@ class PlayerViewModel @Inject constructor(
             val sourceId = request.sourceId ?: return@launch
             switchToResolvedChannel(sourceId, channelId)
             dismissChannelPicker()
+        }
+    }
+
+    fun setAspectMode(mode: VideoAspectMode) {
+        _screenState.value = _screenState.value.copy(aspectMode = mode)
+        viewModelScope.launch { runCatching { displayPreferences.setAspectMode(mode) } }
+    }
+
+    fun setPlaybackSpeed(option: PlaybackSpeedOption) {
+        if (playerState.value.isLive) return
+        playerManager.handleCommand(PlayerCommand.SetPlaybackSpeed(option.speed))
+    }
+
+    /** Pauses playback once [option] runs out; picking Off cancels a running timer. */
+    fun setSleepTimer(option: SleepTimerOption) {
+        sleepTimerJob?.cancel()
+        sleepTimerJob = null
+        if (option.isOff) {
+            _screenState.value = _screenState.value.copy(sleepTimer = option, sleepTimerEndsAtMs = null)
+            return
+        }
+        val endsAt = System.currentTimeMillis() + option.durationMs
+        _screenState.value = _screenState.value.copy(sleepTimer = option, sleepTimerEndsAtMs = endsAt)
+        sleepTimerJob = viewModelScope.launch {
+            delay(option.durationMs)
+            playerManager.handleCommand(PlayerCommand.Pause)
+            scheduleProgressSave()
+            _screenState.value = _screenState.value.copy(sleepTimer = SleepTimerOption.OFF, sleepTimerEndsAtMs = null)
+            showInfoBanner(appStrings.get(R.string.player_sleep_timer_done))
+        }
+    }
+
+    /** Seeks by [deltaMs] and shows where playback lands, without opening the full overlay. */
+    fun seekWithFeedback(deltaMs: Long) {
+        val state = playerState.value
+        val duration = state.durationMs?.takeIf { it > 0L } ?: Long.MAX_VALUE
+        // The state flow's position lags behind a run of presses; ask the player directly.
+        val positionMs = playerManager.getExoPlayer().currentPosition
+        val target = (positionMs + deltaMs).coerceIn(0L, duration)
+        onCommand(PlayerCommand.SeekRelative(deltaMs))
+        seekBannerJob?.cancel()
+        _screenState.value = _screenState.value.copy(
+            seekBanner = SeekRamp.label(deltaMs) + " · " + PlayerScrubLogic.format(target),
+        )
+        seekBannerJob = viewModelScope.launch {
+            delay(SEEK_BANNER_MS)
+            _screenState.value = _screenState.value.copy(seekBanner = null)
+        }
+    }
+
+    /** Flips back to the channel watched before this one, like a remote's "last" key. */
+    fun swapToLastChannel() {
+        val target = lastChannelId ?: return
+        viewModelScope.launch {
+            val request = _screenState.value.playbackRequest ?: return@launch
+            if (!request.isLive || request.contentId == target) return@launch
+            val sourceId = request.sourceId ?: return@launch
+            channelZapJob?.cancel()
+            pendingZapChannelId = null
+            switchToResolvedChannel(sourceId, target)
+        }
+    }
+
+    /** Tunes to the channel a typed [number] stands for, or says there is none. */
+    fun switchToChannelNumber(number: Int) {
+        viewModelScope.launch {
+            val request = _screenState.value.playbackRequest ?: return@launch
+            if (!request.isLive) return@launch
+            val sourceId = request.sourceId ?: return@launch
+            val channels = try {
+                val allowed = zapChannelFilter()
+                catalogRepository.getOrderedChannels(sourceId).filter(allowed)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                emptyList()
+            }
+            val target = ChannelNumberResolver.resolve(channels, number) { it.channelNumber }
+            if (target == null) {
+                showInfoBanner(appStrings.get(R.string.livetv_no_channel_number, number))
+                return@launch
+            }
+            if (target.id == request.contentId) return@launch
+            channelZapJob?.cancel()
+            pendingZapChannelId = null
+            switchToResolvedChannel(sourceId, target.id, vettedByChannelFilter = true)
         }
     }
 
@@ -753,7 +862,13 @@ class PlayerViewModel @Inject constructor(
                 }
                 // Start the stream first; channel and programme lookups only feed the banner.
                 val liveRequest = result.request.copy(metadata = listOf("LIVE"))
-                _screenState.value = _screenState.value.copy(playbackRequest = liveRequest)
+                _screenState.value.playbackRequest?.contentId
+                    ?.takeIf { it != channelId }
+                    ?.let { lastChannelId = it }
+                _screenState.value = _screenState.value.copy(
+                    playbackRequest = liveRequest,
+                    hasLastChannel = lastChannelId != null,
+                )
                 playbackToken = playerManager.play(liveRequest, 0L, isXtreamSource())
                 val channel = runCatching { catalogRepository.getChannel(sourceId, channelId) }.getOrNull()
                 val programTitle = runCatching { catalogRepository.getCurrentProgram(sourceId, channelId)?.title }.getOrNull()
@@ -1159,6 +1274,8 @@ class PlayerViewModel @Inject constructor(
         autoplayJob?.cancel()
         channelBannerJob?.cancel()
         channelZapJob?.cancel()
+        sleepTimerJob?.cancel()
+        seekBannerJob?.cancel()
         stopEpgRefresh()
         playbackSessionTracker.setCurrentLiveChannel(null)
         if (finalRequest != null) {
@@ -1206,6 +1323,7 @@ class PlayerViewModel @Inject constructor(
     companion object {
         private const val PROGRESS_SAVE_DEBOUNCE_MS = 10_000L
         private const val EPG_REFRESH_INTERVAL_MS = 60_000L
+        private const val SEEK_BANNER_MS = 1_500L
     }
 }
 

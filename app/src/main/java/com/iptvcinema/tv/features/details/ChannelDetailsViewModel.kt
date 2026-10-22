@@ -23,6 +23,9 @@ import com.iptvcinema.tv.core.player.CatchupDay
 import com.iptvcinema.tv.core.player.CatchupPolicy
 import com.iptvcinema.tv.core.player.CatchupSchedule
 import com.iptvcinema.tv.core.util.AppStrings
+import com.iptvcinema.tv.core.reminders.ProgramReminder
+import com.iptvcinema.tv.core.reminders.ProgramReminderPolicy
+import com.iptvcinema.tv.core.reminders.ProgramReminderRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -49,6 +52,8 @@ data class ChannelDetailsUiState(
     val isDemoMode: Boolean = false,
     val archiveDays: Int = 0,
     val catchupDays: List<CatchupDay> = emptyList(),
+    /** Programme ids the viewer asked to be reminded about. */
+    val reminderProgramIds: Set<String> = emptySet(),
 ) {
     val hasCatchup: Boolean get() = archiveDays > 0
 
@@ -68,12 +73,49 @@ class ChannelDetailsViewModel @Inject constructor(
     private val parentalControlsRepository: ParentalControlsRepository,
     private val parentalGate: ParentalGate,
     private val appStrings: AppStrings,
+    private val reminderRepository: ProgramReminderRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ChannelDetailsUiState())
     val uiState: StateFlow<ChannelDetailsUiState> = _uiState.asStateFlow()
 
     private var clockJob: Job? = null
     private var favoriteToggleJob: Job? = null
+    private var remindersJob: Job? = null
+
+    private fun observeReminders(profileId: String?, channelId: String) {
+        remindersJob?.cancel()
+        if (profileId == null) return
+        remindersJob = viewModelScope.launch {
+            reminderRepository.observe(profileId).collect { reminders ->
+                val ids = reminders.filter { it.channelId == channelId }.map { it.programId }.toSet()
+                _uiState.value = _uiState.value.copy(reminderProgramIds = ids)
+            }
+        }
+    }
+
+    /** Whether a reminder can be set on [program]: only for programmes still ahead. */
+    fun canRemind(program: EpgProgram): Boolean =
+        ProgramReminderPolicy.canRemind(program.startEpochMs, _uiState.value.nowMs)
+
+    /** Sets or clears a reminder on [program]; [onResult] gets true when one was set. */
+    fun toggleReminder(program: EpgProgram, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val profileId = appSessionRepository.sessionState.first().currentProfileId ?: return@launch
+            val state = _uiState.value
+            val reminder = ProgramReminder(
+                id = ProgramReminder.idFor(profileId, state.channelId, program.id),
+                profileId = profileId,
+                channelId = state.channelId,
+                channelName = state.channelName,
+                programId = program.id,
+                title = program.title,
+                startEpochMs = program.startEpochMs,
+                endEpochMs = program.endEpochMs,
+            )
+            val added = runCatching { reminderRepository.toggle(reminder) }.getOrNull() ?: return@launch
+            onResult(added)
+        }
+    }
 
     fun loadChannelDetails(channelId: String) {
         viewModelScope.launch {
@@ -83,6 +125,7 @@ class ChannelDetailsViewModel @Inject constructor(
             )
             val session = appSessionRepository.sessionState.first()
             val profileId = session.currentProfileId
+            observeReminders(profileId, channelId)
             val isFavorite = if (profileId != null) {
                 favoritesRepository.isFavorite(profileId, channelId, FavoriteContentType.CHANNEL)
             } else {
@@ -370,6 +413,7 @@ class ChannelDetailsViewModel @Inject constructor(
 
     override fun onCleared() {
         clockJob?.cancel()
+        remindersJob?.cancel()
         super.onCleared()
     }
 }
