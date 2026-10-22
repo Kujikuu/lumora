@@ -22,3 +22,5 @@ output.json
 supabase/activation-companion/config.js
 .worktrees/
 /app/build/
+# Module build outputs (app/build was covered by the app module; new modules need this too)
+build/

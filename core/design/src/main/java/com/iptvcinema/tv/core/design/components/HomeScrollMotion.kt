@@ -1,10 +1,9 @@
-package com.iptvcinema.tv.features.home.components
+package com.iptvcinema.tv.core.design.components
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.lazy.LazyListState
-import com.iptvcinema.tv.core.design.components.TvScrollMotion
 
 private val glideTween = tween<Float>(
     durationMillis = TvScrollMotion.HORIZONTAL_MS,

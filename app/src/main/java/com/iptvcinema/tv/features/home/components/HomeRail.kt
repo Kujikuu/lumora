@@ -27,6 +27,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptvcinema.tv.core.design.components.clipUnderNavRail
+import com.iptvcinema.tv.core.design.components.glideItemToStart
 import com.iptvcinema.tv.core.design.components.shellContentStart
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaSpacing

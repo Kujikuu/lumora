@@ -70,6 +70,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:design"))
     implementation(libs.androidx.core.ktx)
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation(libs.androidx.core.splashscreen)
@@ -134,6 +135,8 @@ dependencies {
     implementation(libs.zxing.core)
 
     testImplementation(libs.junit)
+    // android.jar stubs org.json; unit tests of the launcher snapshot codec need the real one.
+    testImplementation(libs.org.json)
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

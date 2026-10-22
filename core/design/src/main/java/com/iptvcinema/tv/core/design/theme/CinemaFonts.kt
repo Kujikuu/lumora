@@ -5,7 +5,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.design.R
 
 val GraphikArabicFontFamily: FontFamily = FontFamily(
     Font(R.font.graphik_arabic_light, FontWeight.Light),

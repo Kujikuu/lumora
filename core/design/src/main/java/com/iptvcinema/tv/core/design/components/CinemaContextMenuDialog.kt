@@ -26,7 +26,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import com.iptvcinema.tv.R
+import com.iptvcinema.tv.core.design.R
 import com.iptvcinema.tv.core.design.theme.CinemaColors
 import com.iptvcinema.tv.core.design.theme.CinemaShapes
 

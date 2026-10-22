@@ -48,7 +48,7 @@ import com.iptvcinema.tv.features.home.components.HomeDimens
 import com.iptvcinema.tv.features.home.components.HomeRail
 import com.iptvcinema.tv.features.home.components.HomeSpotlightPanel
 import com.iptvcinema.tv.features.home.components.HomeSpotlightState
-import com.iptvcinema.tv.features.home.components.glideItemToStart
+import com.iptvcinema.tv.core.design.components.glideItemToStart
 import com.iptvcinema.tv.features.home.components.rememberHomeSpotlightState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job

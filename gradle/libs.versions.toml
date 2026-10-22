@@ -6,6 +6,8 @@ core-ktx = "1.15.0"
 core-splashscreen = "1.0.1"
 activity-compose = "1.10.1"
 compose-bom = "2025.02.00"
+# What the app resolves after conflict resolution (lifecycle 2.9 pulls it); shared by :core:design.
+compose-resolved = "1.10.3"
 tv-material = "1.0.0"
 tvprovider = "1.0.0"
 tv-foundation = "1.0.0"
@@ -78,6 +80,7 @@ androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref 
 androidx-hilt-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hilt-work" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "security-crypto" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+org-json = { group = "org.json", name = "json", version = "20250107" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version = "1.10.1" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-junit" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso-core" }
@@ -87,6 +90,7 @@ zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" 
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
